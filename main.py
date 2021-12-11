@@ -1,3 +1,4 @@
+from selenium.common.exceptions import NoSuchElementException
 from selenium.webdriver.common.by import By
 from selenium.webdriver.common.keys import Keys
 from selenium import webdriver
@@ -41,30 +42,34 @@ class InstagramBot:
         print(f"Количество подписок: {following_count}")
 
         while True:
-            count = 10
-            browser.get(f"https://www.instagram.com/{username}/")
+            try:
+                count = 10
+                browser.get(f"https://www.instagram.com/{username}/")
 
-            following_button = browser.find_element(By.XPATH, "//li[3]/a")
-            following_button.click()
+                following_button = browser.find_element(By.XPATH, "//li[3]/a")
+                following_button.click()
 
-            # забираем все li из ul, в них хранится кнопка отписки и ссылки на подписки
-            following_div_block = browser.find_element(By.XPATH, "/html/body/div[6]/div/div/div[3]/ul/div")
-            following_users = following_div_block.find_elements(By.TAG_NAME, "li")
+                # забираем все li из ul, в них хранится кнопка отписки и ссылки на подписки
+                following_div_block = browser.find_element(By.XPATH, "/html/body/div[6]/div/div/div[3]/ul/div")
+                following_users = following_div_block.find_elements(By.TAG_NAME, "li")
 
-            for user in following_users:
-                if not count:
-                    time.sleep(sleep_between_iterations)
-                    break
+                for user in following_users:
+                    if not count:
+                        time.sleep(sleep_between_iterations)
+                        break
 
-                user_url = user.find_element(By.TAG_NAME, "a").get_attribute("href")
-                user_name = user_url.split("/")[-2]
+                    user_url = user.find_element(By.TAG_NAME, "a").get_attribute("href")
+                    user_name = user_url.split("/")[-2]
 
-                user.find_element(By.TAG_NAME, "button").click()
-                browser.find_element(By.XPATH, "/html/body/div[7]/div/div/div/div[3]/button[1]").click()
+                    user.find_element(By.TAG_NAME, "button").click()
+                    browser.find_element(By.XPATH, "/html/body/div[7]/div/div/div/div[3]/button[1]").click()
 
-                print(f"Итерация #{count} >>> Отписался от пользователя {user_name}")
-                count -= 1
-                time.sleep(random.randrange(min_sleep, max_sleep))
+                    print(f"Итерация #{count} >>> Отписался от пользователя {user_name}")
+                    count -= 1
+                    time.sleep(random.randrange(min_sleep, max_sleep))
+            except NoSuchElementException:
+                print('----------- Элемент не найден, перезапуск. -----------')
+                continue
 
 
 my_bot = InstagramBot(username, password)
