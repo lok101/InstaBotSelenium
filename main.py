@@ -33,6 +33,17 @@ class InstagramBot:
     def close_browser(self):
         self.browser.quit()
 
+    # проверяет, стоит ли лайк
+    def should_be_like(self):
+        browser = self.browser
+        try:
+            browser.find_element(By.CSS_SELECTOR, 'span.fr66n > button > div.QBdPU.B58H7 > svg')
+            exist = True
+        except NoSuchElementException:
+            exist = False
+        return exist
+
+    # отписка от всех
     def unsubscribe_for_all_users(self, min_sleep=5, max_sleep=10, sleep_between_iterations=20):
         browser = self.browser
         browser.get(f"https://www.instagram.com/{username}/")
@@ -69,6 +80,36 @@ class InstagramBot:
                     time.sleep(random.randrange(min_sleep, max_sleep))
             except NoSuchElementException:
                 print('----------- Элемент не найден, перезапуск. -----------')
+                continue
+
+    # ставит лайки по хэштегу
+    def like_photo_by_hashtag(self, hashtag, min_sleep=10, max_sleep=30):
+
+        browser = self.browser
+        browser.get(f'https://www.instagram.com/explore/tags/{hashtag}/')
+        time.sleep(6)
+
+        for i in range(1, 4):
+            browser.execute_script("window.scrollTo(0, document.body.scrollHeight);")
+            time.sleep(random.randrange(2, 4))
+
+        hrefs = browser.find_elements(By.TAG_NAME, 'a')
+        posts_urls = [item.get_attribute('href') for item in hrefs if "/p/" in item.get_attribute('href')]
+        print(f'Колличество постов для лайка >>> {len(posts_urls)}')
+
+        for url in posts_urls:
+            try:
+                browser.get(url)
+                assert self.should_be_like()
+                button_like = browser.find_element(By.XPATH, '//section[1]/span[1]/button')
+                button_like.click()
+                print(f'Лайк на пост по ссылке: {url} --- поставлен!')
+                time.sleep(random.randrange(min_sleep, max_sleep))
+            except NoSuchElementException:
+                print('----------- Ошибка при постановке лайка, переход к следующему посту. -----------')
+                continue
+            except AssertionError:
+                print('----------- Лайк уже есть, переход к следующему посту. -----------')
                 continue
 
 
