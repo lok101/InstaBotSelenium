@@ -44,7 +44,7 @@ class InstagramBot:
         return exist
 
     # отписка от всех
-    def unsubscribe_for_all_users(self, min_sleep=5, max_sleep=10, sleep_between_iterations=20):
+    def unsubscribe_for_all_users(self, min_sleep=5, max_sleep=10, sleep_between_iterations=20, error_max=5):
         browser = self.browser
         browser.get(f"https://www.instagram.com/{username}/")
 
@@ -53,6 +53,9 @@ class InstagramBot:
         print(f"Количество подписок: {following_count}")
 
         while True:
+            error_count = 0
+            if error_count >= error_max:
+                break
             try:
                 count = 10
                 browser.get(f"https://www.instagram.com/{username}/")
@@ -79,7 +82,11 @@ class InstagramBot:
                     count -= 1
                     time.sleep(random.randrange(min_sleep, max_sleep))
             except NoSuchElementException:
-                print('----------- Элемент не найден, перезапуск. -----------')
+                error_count += 1
+                if error_count == error_max:
+                    print(f'----------- Элемент не найден, лимит перезапусков превышен, завершение. -----------')
+                else:
+                    print(f'----------- Элемент не найден, перезапуск # {error_count}. -----------')
                 continue
 
     # ставит лайки по хэштегу
