@@ -32,15 +32,13 @@ class InstagramBot:
     def close_browser(self):
         self.browser.quit()
 
-    def unsubscribe_for_all_users(self, min_sleep=5, max_sleep=10):
+    def unsubscribe_for_all_users(self, min_sleep=5, max_sleep=10, sleep_between_iterations=20):
         browser = self.browser
         browser.get(f"https://www.instagram.com/{username}/")
 
         following_count = browser.find_element(
             By.XPATH, '/html/body/div[1]/div/div/section/main/div/header/section/ul/li[3]/a/span').text
         print(f"Количество подписок: {following_count}")
-
-        following_users_dict = {}
 
         while True:
             count = 10
@@ -55,14 +53,11 @@ class InstagramBot:
 
             for user in following_users:
                 if not count:
-                    time.sleep(10)
+                    time.sleep(sleep_between_iterations)
                     break
 
                 user_url = user.find_element(By.TAG_NAME, "a").get_attribute("href")
                 user_name = user_url.split("/")[-2]
-
-                # добавляем в словарь пару имя_пользователя: ссылка на аккаунт
-                following_users_dict[user_name] = user_url
 
                 user.find_element(By.TAG_NAME, "button").click()
                 browser.find_element(By.XPATH, "/html/body/div[7]/div/div/div/div[3]/button[1]").click()
