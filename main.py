@@ -54,6 +54,49 @@ class InstagramBot:
             exist = True
         return exist
 
+    # возвращает список из девяти постов по хештегу
+    def select_url_posts_to_hashtag(self, hashtag):
+        browser = self.browser
+        browser.get(f'https://www.instagram.com/explore/tags/{hashtag}/')
+        posts_block = browser.find_element(By.XPATH, '//main/article/div[1]/div/div')
+        posts = posts_block.find_elements_by_tag_name('a')
+        posts_url_list = []
+
+        for post in posts:
+            post_url = post.get_attribute('href')
+            if '/p/' in post_url:
+                posts_url_list.append(post_url)
+        print('Ссылки на посты собраны.')
+        return posts_url_list
+
+    # собирает список тех, кто комменировал посты, для сбора ссылок на посты вызывает "select_url_posts_to_hashtag"
+    def select_commentators(self, hashtag='природа', number_scrolls=5, scrolls_timeout=1):
+        browser = self.browser
+        link_list = self.select_url_posts_to_hashtag(hashtag=hashtag)
+        users_urls = set()
+        for link in link_list:
+            browser.get(link)
+            comments_ul = browser.find_element(By.XPATH, '//div[2]/div/div[2]/div[1]/ul')
+
+            for number in range(number_scrolls):
+                browser.execute_script("arguments[0].scrollTop = arguments[0].scrollHeight", comments_ul)
+                time.sleep(scrolls_timeout)
+
+                plus_button = browser.find_element(By.XPATH, '//div/div[2]/div[1]/ul/li/div/button')
+                plus_button.click()
+                time.sleep(scrolls_timeout)
+
+            comments_block = browser.find_element(By.XPATH, '//article/div/div[2]/div/div[2]/div[1]/ul')
+            user_comment_block = comments_block.find_elements(By.TAG_NAME, 'a')
+
+            for user_comment in user_comment_block:
+                user_url = user_comment.get_attribute('href')
+                len_user_url = len(user_url.split('/'))   # у ссылки на профиль пользователя это параметр равен пяти(5)
+                if len_user_url == 5:
+                    users_urls.add(user_url)
+            print(f'Колличество собранных пользователей: {len(users_urls)}')
+        return users_urls
+
     # отписка от всех
     def unsubscribe_for_all_users(self, min_sleep=1, max_sleep=5, sleep_between_iterations=20, error_max=5):
         browser = self.browser
@@ -140,32 +183,6 @@ class InstagramBot:
                 print('----------- Лайк уже есть, переход к следующему посту. -----------')
                 continue
 
-    # собирает множестово из тех, кто комменировал пост
-    def select_commentators(self, link, number_scrolls=5, scrolls_timeout=1):
-        browser = self.browser
-        browser.get(link)
-        comments_ul = browser.find_element(By.XPATH, '//div[2]/div/div[2]/div[1]/ul')
-
-        for i in range(number_scrolls):
-            browser.execute_script("arguments[0].scrollTop = arguments[0].scrollHeight", comments_ul)
-            time.sleep(scrolls_timeout)
-
-            plus_button = browser.find_element(By.XPATH, '//div/div[2]/div[1]/ul/li/div/button')
-            plus_button.click()
-            time.sleep(scrolls_timeout)
-
-        comments_block = browser.find_element(By.XPATH, '//article/div/div[2]/div/div[2]/div[1]/ul')
-        user_comment_block = comments_block.find_elements(By.TAG_NAME, 'a')
-        users_urls = set()
-
-        for user_comment in user_comment_block:
-            user_url = user_comment.get_attribute('href')
-            len_user_url = len(user_url.split('/'))   # у ссылки на профиль пользователя это параметр равен пяти(5)
-            if len_user_url == 5:
-                users_urls.add(user_url)
-        print(f'Колличество собранных пользователей: {len(users_urls)}')
-        return users_urls
-
     # подписыватеся на юзеров из списка, если нет списка, то вызывает "select_commentators"
     def subscribe_to_user_list(self, user_list=None, timeout=40, scatter_timeout=10):
         """
@@ -176,7 +193,7 @@ class InstagramBot:
         browser = self.browser
         if user_list is None:
             print('Списка нет, вызываю "select_commentators"')
-            user_list = self.select_commentators('https://www.instagram.com/p/CXfunm-Alrp/')
+            user_list = self.select_commentators()
             print('Список получен, перехожу к подписке.')
 
         for user in user_list:
@@ -188,18 +205,19 @@ class InstagramBot:
                 subscribe_button = browser.find_element(By.XPATH, '//div/div/div/span/span[1]/button')
                 subscribe_button.click()
                 print(f'Подпислся на пользователя: {user_name}')
+
             except AssertionError:
-                print('----------- Уже подписан, переход к следующему юзеру. -----------')
+                print('----------- Уже подписан, переход к следующему пользователю. -----------')
                 time.sleep(2)
                 continue
-
 
 
 my_bot = InstagramBot(username, password)
 try:
     my_bot.login()
-    # my_bot.select_commentators('https://www.instagram.com/p/CXbevBlgtJF/')
-    my_bot.subscribe_to_user_list()
+    my_bot.select_commentators()
+    # my_bot.subscribe_to_user_list()
     # my_bot.unsubscribe_for_all_users()
+    # my_bot.select_commentators_many_posts()
 finally:
     my_bot.close_browser()
