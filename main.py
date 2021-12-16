@@ -2,23 +2,23 @@ from selenium.common.exceptions import NoSuchElementException
 from selenium.webdriver.common.by import By
 from selenium.webdriver.common.keys import Keys
 from selenium import webdriver
-from data import username, password
+from data import username, password, tag
 import random
 import time
 
 
 class InstagramBot:
-    def __init__(self, username, password, link='https://www.instagram.com/', timeout=10):
+    def __init__(self, user_name, pass_word, link='https://www.instagram.com/', timeout=10):
         self.browser = webdriver.Chrome()
         self.link = link
         self.browser.implicitly_wait(timeout)
-        self.username = username
-        self.password = password
+        self.username = user_name
+        self.password = pass_word
 
     def login(self):
         browser = self.browser
         browser.get(self.link)
-        time.sleep(2)
+        time.sleep(3)
 
         username_input = browser.find_element(By.NAME, 'username')
         username_input.clear()
@@ -29,7 +29,7 @@ class InstagramBot:
         password_input.send_keys(password)
 
         password_input.send_keys(Keys.ENTER)
-        time.sleep(5)
+        time.sleep(6)
 
     def close_browser(self):
         self.browser.quit()
@@ -46,9 +46,38 @@ class InstagramBot:
 
     # проверяет, подписан ли на пользователя
     def should_be_subscribe(self):
+        """
+        вернёт False если если подписка уже есть
+        """
         browser = self.browser
         try:
             browser.find_element(By.XPATH, '//section/div[1]/div[1]/div/div[1]/button')
+            exist = False
+        except NoSuchElementException:
+            exist = True
+        return exist
+
+    # проверяет, есть ли публикации в профиле
+    def should_be_posts(self):
+        """
+        вернёт False если найдёт надпись "Публикаций пока нет"
+        """
+        browser = self.browser
+        try:
+            browser.find_element(By.XPATH, '//article/div[1]/div/div[2]/h1')
+            exist = False
+        except NoSuchElementException:
+            exist = True
+        return exist
+
+    # проверяет, не является ли профиль закрытым
+    def should_be_privat_profile(self):
+        """
+        вернёт False если профиль закрыт
+        """
+        browser = self.browser
+        try:
+            browser.find_element(By.XPATH, '//article/div[1]/div/h2')
             exist = False
         except NoSuchElementException:
             exist = True
@@ -70,7 +99,8 @@ class InstagramBot:
         return posts_url_list
 
     # собирает список тех, кто комменировал посты, для сбора ссылок на посты вызывает "select_url_posts_to_hashtag"
-    def select_commentators(self, hashtag='природа', number_scrolls=5, scrolls_timeout=1):
+    def select_commentators(self, hashtag=tag, number_scrolls=1, scrolls_timeout=1):
+
         browser = self.browser
         link_list = self.select_url_posts_to_hashtag(hashtag=hashtag)
         users_urls = set()
@@ -164,8 +194,8 @@ class InstagramBot:
             browser.execute_script("window.scrollTo(0, document.body.scrollHeight);")
             time.sleep(random.randrange(2, 4))
 
-        hrefs = browser.find_elements(By.TAG_NAME, 'a')
-        posts_urls = [item.get_attribute('href') for item in hrefs if "/p/" in item.get_attribute('href')]
+        tags = browser.find_elements(By.TAG_NAME, 'a')
+        posts_urls = [item.get_attribute('href') for item in tags if "/p/" in item.get_attribute('href')]
         print(f'Колличество постов для лайка >>> {len(posts_urls)}')
 
         for url in posts_urls:
@@ -184,30 +214,46 @@ class InstagramBot:
                 continue
 
     # подписыватеся на юзеров из списка, если нет списка, то вызывает "select_commentators"
-    def subscribe_to_user_list(self, user_list=None, timeout=40, scatter_timeout=10):
+    def subscribe_to_user_list(self, user_list=None,
+                               timeout=4, scatter_timeout=2, subscribe_in_session=50, grand_timeout=60):
         """
         user_list - список юзеров для подписки
         timeout - среднее время на одну подписку
         scatter_timeout - разброс при вычислении таймаута
+        grand_timeout - дополнительный таймаут на каждые 50 подписок
         """
         browser = self.browser
         if user_list is None:
             print('Списка нет, вызываю "select_commentators"')
             user_list = self.select_commentators()
             print('Список получен, перехожу к подписке.')
+        subscribe_count = 0
 
         for user in user_list:
             try:
+                if subscribe_count % subscribe_in_session == 0:
+                    print(f'Подписался на очередные {subscribe_in_session} пользователей.\
+                    Таймаут {grand_timeout} минут.')
+                    time.sleep(grand_timeout * 60)
+
                 browser.get(user)
-                assert self.should_be_subscribe()
-                time.sleep(random.randrange(timeout - scatter_timeout, timeout + scatter_timeout))
                 user_name = user.split("/")[-2]
+                print(f'Перешёл в профиль: {user_name}')
+
+                assert self.should_be_privat_profile(),\
+                    '----------- Профиль закрыт, переход к следующему пользователю. -----------'
+                assert self.should_be_subscribe(),\
+                    '----------- Уже подписан, переход к следующему пользователю. -----------'
+                assert self.should_be_posts(), \
+                    '----------- В профиле нет публикаций, переход к следующему пользователю. -----------'
+
+                time.sleep(random.randrange(timeout - scatter_timeout, timeout + scatter_timeout))
                 subscribe_button = browser.find_element(By.XPATH, '//div/div/div/span/span[1]/button')
                 subscribe_button.click()
-                print(f'Подпислся на пользователя: {user_name}')
+                subscribe_count += 1
+                print(f'Подпислся на пользователя: {user_name}, всего подписок: {subscribe_count}')
 
             except AssertionError:
-                print('----------- Уже подписан, переход к следующему пользователю. -----------')
                 time.sleep(2)
                 continue
 
@@ -215,8 +261,8 @@ class InstagramBot:
 my_bot = InstagramBot(username, password)
 try:
     my_bot.login()
-    my_bot.select_commentators()
-    # my_bot.subscribe_to_user_list()
+    # my_bot.select_commentators()
+    my_bot.subscribe_to_user_list()
     # my_bot.unsubscribe_for_all_users()
     # my_bot.select_commentators_many_posts()
 finally:
