@@ -3,15 +3,22 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.common.keys import Keys
 from selenium import webdriver
 from data import username, password, tag
+from datetime import datetime
 import random
 import time
 
 
 class InstagramBot:
-    def __init__(self, user_name, pass_word, link='https://www.instagram.com/', timeout=10):
+    def __init__(self, user_name, pass_word, link='https://www.instagram.com/', timeout=10, assertion_timeout=1):
+        """
+        timeout - таймаут параметра implicitly_wait для всех методов
+        assertion_timeout - таймаут параметра implicitly_wait для методов проверки (что бы не ждать полный timeout)
+        """
         self.browser = webdriver.Chrome()
-        self.link = link
+        self.assertion = webdriver.Chrome()
         self.browser.implicitly_wait(timeout)
+        self.assertion.implicitly_wait(assertion_timeout)
+        self.link = link
         self.username = user_name
         self.password = pass_word
 
@@ -36,7 +43,7 @@ class InstagramBot:
 
     # проверяет, стоит ли лайк
     def should_be_like(self):
-        browser = self.browser
+        browser = self.assertion
         try:
             browser.find_element(By.CSS_SELECTOR, 'span.fr66n > button > div.QBdPU.B58H7 > svg')
             exist = True
@@ -49,7 +56,7 @@ class InstagramBot:
         """
         вернёт False если если подписка уже есть
         """
-        browser = self.browser
+        browser = self.assertion
         try:
             browser.find_element(By.XPATH, '//section/div[1]/div[1]/div/div[1]/button')
             exist = False
@@ -62,7 +69,7 @@ class InstagramBot:
         """
         вернёт False если найдёт надпись "Публикаций пока нет"
         """
-        browser = self.browser
+        browser = self.assertion
         try:
             browser.find_element(By.XPATH, '//article/div[1]/div/div[2]/h1')
             exist = False
@@ -70,12 +77,21 @@ class InstagramBot:
             exist = True
         return exist
 
+    # проверяет, являяется ли переданное число больше числа подписчиков на странице
+    def should_be_limit_subscribes(self, limit_subscribes):
+        browser = self.browser
+        button_subscribes = browser.find_element(By.XPATH, '//header/section/ul/li[2]/a/span')
+        number_subscribes = int(button_subscribes.get_attribute('title'))
+        if limit_subscribes > number_subscribes:
+            return True
+        return False
+
     # проверяет, не является ли профиль закрытым
     def should_be_privat_profile(self):
         """
         вернёт False если профиль закрыт
         """
-        browser = self.browser
+        browser = self.assertion
         try:
             browser.find_element(By.XPATH, '//article/div[1]/div/h2')
             exist = False
@@ -100,7 +116,10 @@ class InstagramBot:
 
     # собирает список тех, кто комменировал посты, для сбора ссылок на посты вызывает "select_url_posts_to_hashtag"
     def select_commentators(self, hashtag=tag, number_scrolls=1, scrolls_timeout=1):
-
+        """
+        number_scrolls - колличество прокруток поля комметнариев у поста
+        scrolls_timeout - задержка перед прокруткой (иначе может падать с ошибкой NoSuchElement)
+        """
         browser = self.browser
         link_list = self.select_url_posts_to_hashtag(hashtag=hashtag)
         users_urls = set()
@@ -128,12 +147,12 @@ class InstagramBot:
         return users_urls
 
     # отписка от всех
-    def unsubscribe_for_all_users(self, min_sleep=1, max_sleep=5, sleep_between_iterations=20, error_max=5):
+    def unsubscribe_for_all_users(self, min_sleep=4, max_sleep=9, sleep_between_iterations=20, error_max=5):
         browser = self.browser
         browser.get(f"https://www.instagram.com/{username}/")
 
         following_count = browser.find_element(
-            By.XPATH, '/html/body/div[1]/div/div/section/main/div/header/section/ul/li[3]/a/span').text
+            By.XPATH, '//main/div/header/section/ul/li[3]/a/span').text
         print(f"Количество подписок: {following_count}")
         # счётчик перезапусков
         error_count = 0
@@ -180,7 +199,8 @@ class InstagramBot:
                     ----------- Элемент не найден, перезапуск # {error_count}. ------------------------
                     -----------------------------------------------------------------------------------
                            ''')
-                time.sleep(20)
+                input('============= Жми Enter =============')
+                time.sleep(3)
                 continue
 
     # ставит лайки по хэштегу
@@ -214,44 +234,52 @@ class InstagramBot:
                 continue
 
     # подписыватеся на юзеров из списка, если нет списка, то вызывает "select_commentators"
-    def subscribe_to_user_list(self, user_list=None,
-                               timeout=4, scatter_timeout=2, subscribe_in_session=50, grand_timeout=60):
+    def subscribe_to_user_list(self, user_list=None, limit_subscribes=5000,
+                               timeout=2, scatter_timeout=1, subscribe_in_session=50, grand_timeout=60):
         """
         user_list - список юзеров для подписки
         timeout - среднее время на одну подписку
         scatter_timeout - разброс при вычислении таймаута
         grand_timeout - дополнительный таймаут на каждые 50 подписок
+        limit_subscribes - максимальное число подписчиков у профиля (если больше, то пропустит этот профиль)
         """
         browser = self.browser
         if user_list is None:
             print('Списка нет, вызываю "select_commentators"')
             user_list = self.select_commentators()
             print('Список получен, перехожу к подписке.')
-        subscribe_count = 0
+        subscribe_count = 1
 
         for user in user_list:
             try:
                 if subscribe_count % subscribe_in_session == 0:
-                    print(f'Подписался на очередные {subscribe_in_session} пользователей.\
-                    Таймаут {grand_timeout} минут.')
+                    print(f'{datetime.now().strftime("%H:%M")} Подписался на очередные \
+{subscribe_in_session} пользователей. Таймаут {grand_timeout} минут.')
                     time.sleep(grand_timeout * 60)
 
                 browser.get(user)
                 user_name = user.split("/")[-2]
                 print(f'Перешёл в профиль: {user_name}')
 
-                assert self.should_be_privat_profile(),\
+                assert self.should_be_privat_profile(), \
                     '----------- Профиль закрыт, переход к следующему пользователю. -----------'
-                assert self.should_be_subscribe(),\
+                assert self.should_be_subscribe(), \
                     '----------- Уже подписан, переход к следующему пользователю. -----------'
                 assert self.should_be_posts(), \
                     '----------- В профиле нет публикаций, переход к следующему пользователю. -----------'
+                assert self.should_be_limit_subscribes(limit_subscribes), \
+                    f'----------- Слишком много подписчиков. Усатновлен лимит: {limit_subscribes}-----------'
 
                 time.sleep(random.randrange(timeout - scatter_timeout, timeout + scatter_timeout))
                 subscribe_button = browser.find_element(By.XPATH, '//div/div/div/span/span[1]/button')
                 subscribe_button.click()
                 subscribe_count += 1
-                print(f'Подпислся на пользователя: {user_name}, всего подписок: {subscribe_count}')
+                print(f'Подпислся на пользователя: {user_name}, всего подписок: {subscribe_count - 1}')
+
+            except NoSuchElementException:
+                print('----------- Ошибка подписке, переход к следующему посту. -----------')
+                input('============= Жми Enter =============')
+                continue
 
             except AssertionError:
                 time.sleep(2)
