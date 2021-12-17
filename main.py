@@ -9,15 +9,9 @@ import time
 
 
 class InstagramBot:
-    def __init__(self, user_name, pass_word, link='https://www.instagram.com/', timeout=10, assertion_timeout=1):
-        """
-        timeout - таймаут параметра implicitly_wait для всех методов
-        assertion_timeout - таймаут параметра implicitly_wait для методов проверки (что бы не ждать полный timeout)
-        """
+    def __init__(self, user_name, pass_word, link='https://www.instagram.com/', timeout=10):
         self.browser = webdriver.Chrome()
-        self.assertion = webdriver.Chrome()
         self.browser.implicitly_wait(timeout)
-        self.assertion.implicitly_wait(assertion_timeout)
         self.link = link
         self.username = user_name
         self.password = pass_word
@@ -43,7 +37,8 @@ class InstagramBot:
 
     # проверяет, стоит ли лайк
     def should_be_like(self):
-        browser = self.assertion
+        browser = self.browser
+        self.browser.implicitly_wait(1)
         try:
             browser.find_element(By.CSS_SELECTOR, 'span.fr66n > button > div.QBdPU.B58H7 > svg')
             exist = True
@@ -56,7 +51,8 @@ class InstagramBot:
         """
         вернёт False если если подписка уже есть
         """
-        browser = self.assertion
+        browser = self.browser
+        self.browser.implicitly_wait(1)
         try:
             browser.find_element(By.XPATH, '//section/div[1]/div[1]/div/div[1]/button')
             exist = False
@@ -69,7 +65,8 @@ class InstagramBot:
         """
         вернёт False если найдёт надпись "Публикаций пока нет"
         """
-        browser = self.assertion
+        browser = self.browser
+        self.browser.implicitly_wait(1)
         try:
             browser.find_element(By.XPATH, '//article/div[1]/div/div[2]/h1')
             exist = False
@@ -91,7 +88,8 @@ class InstagramBot:
         """
         вернёт False если профиль закрыт
         """
-        browser = self.assertion
+        browser = self.browser
+        self.browser.implicitly_wait(1)
         try:
             browser.find_element(By.XPATH, '//article/div[1]/div/h2')
             exist = False
