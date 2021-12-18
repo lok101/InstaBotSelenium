@@ -7,8 +7,11 @@ import time
 
 
 class BaseClass:
-    def __init__(self, user_name, pass_word, link='https://www.instagram.com/', timeout=10):
-        self.browser = webdriver.Chrome()
+    def __init__(self, user_name, pass_word, proxy=None, link='https://www.instagram.com/', timeout=10):
+        if proxy is not None:
+            self.browser = self.proxy_browser(proxy)
+        else:
+            self.browser = webdriver.Chrome()
         self.browser.implicitly_wait(timeout)
         self.link = link
         self.username = user_name
@@ -32,6 +35,16 @@ class BaseClass:
 
     def close_browser(self):
         self.browser.quit()
+
+    def proxy_browser(self, proxy):
+        chrome_options = webdriver.ChromeOptions()
+        chrome_options.add_argument('--proxy-server=%s' % proxy)
+        self.browser = webdriver.Chrome(options=chrome_options)
+        self.browser.get('https://2ip.ru/')
+        ip = self.browser.find_element(By.CSS_SELECTOR, 'div.ip span').text
+        assert ip in proxy
+        print(f'Подключение через прокси: {proxy}')
+        return self.browser
 
     # проверяет, стоит ли лайк
     def should_be_like(self):

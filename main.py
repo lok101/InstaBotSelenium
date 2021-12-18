@@ -2,7 +2,7 @@ from selenium.common.exceptions import NoSuchElementException
 from selenium.webdriver.common.by import By
 from module.base_module import BaseClass
 from datetime import datetime
-from data import username, password
+from data import username, password, proxy
 import random
 import time
 
@@ -145,12 +145,12 @@ class FunctionClass(BaseClass):
                 continue
 
 
-my_bot = FunctionClass(username, password)
+my_bot = FunctionClass(username, password, proxy)
 try:
     my_bot.login()
     # my_bot.select_commentators()
-    my_bot.subscribe_to_user_list()
-    # my_bot.unsubscribe_for_all_users()
+    # my_bot.subscribe_to_user_list()
+    my_bot.unsubscribe_for_all_users()
     # my_bot.select_commentators_many_posts()
 finally:
     my_bot.close_browser()
