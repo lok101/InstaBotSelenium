@@ -2,7 +2,7 @@ from selenium.common.exceptions import NoSuchElementException
 from selenium.webdriver.common.by import By
 from selenium.webdriver.common.keys import Keys
 from selenium import webdriver
-from data import username, password, tag
+from data import username, password
 import time
 
 
@@ -10,6 +10,7 @@ class BaseClass:
     def __init__(self, user_name, pass_word, proxy=None, link='https://www.instagram.com/', timeout=10):
         if proxy is not None:
             self.browser = self.proxy_browser(proxy)
+            time.sleep(3)
         else:
             self.browser = webdriver.Chrome()
         self.browser.implicitly_wait(timeout)
@@ -110,52 +111,17 @@ class BaseClass:
             exist = True
         return exist
 
-    # возвращает список из девяти постов по хештегу
-    def select_url_posts_to_hashtag(self, hashtag):
-        browser = self.browser
-        browser.get(f'https://www.instagram.com/explore/tags/{hashtag}/')
-        posts_block = browser.find_element(By.XPATH, '//main/article/div[1]/div/div')
-        posts = posts_block.find_elements_by_tag_name('a')
-        posts_url_list = []
-
-        for post in posts:
-            post_url = post.get_attribute('href')
-            if '/p/' in post_url:
-                posts_url_list.append(post_url)
-        print('Ссылки на посты собраны.')
-        return posts_url_list
-
-    # собирает список тех, кто комменировал посты, для сбора ссылок на посты вызывает "select_url_posts_to_hashtag"
-    def select_commentators(self, hashtag=tag, number_scrolls=1, scrolls_timeout=1):
-        """
-        number_scrolls - колличество прокруток поля комметнариев у поста
-        scrolls_timeout - задержка перед прокруткой (иначе может падать с ошибкой NoSuchElement)
-        """
-        browser = self.browser
-        link_list = self.select_url_posts_to_hashtag(hashtag=hashtag)
-        users_urls = set()
-        for link in link_list:
-            browser.get(link)
-            comments_ul = browser.find_element(By.XPATH, '//div[2]/div/div[2]/div[1]/ul')
-
-            for number in range(number_scrolls):
-                browser.execute_script("arguments[0].scrollTop = arguments[0].scrollHeight", comments_ul)
-                time.sleep(scrolls_timeout)
-
-                plus_button = browser.find_element(By.XPATH, '//div/div[2]/div[1]/ul/li/div/button')
-                plus_button.click()
-                time.sleep(scrolls_timeout)
-
-            comments_block = browser.find_element(By.XPATH, '//article/div/div[2]/div/div[2]/div[1]/ul')
-            user_comment_block = comments_block.find_elements(By.TAG_NAME, 'a')
-
-            for user_comment in user_comment_block:
-                user_url = user_comment.get_attribute('href')
-                len_user_url = len(user_url.split('/'))   # у ссылки на профиль пользователя это параметр равен пяти(5)
-                if len_user_url == 5:
-                    users_urls.add(user_url)
-            print(f'Колличество собранных пользователей: {len(users_urls)}')
-        return users_urls
+    # возвращает список пользователей/пабликов по тегу
+    def tag_search(self):
+        list_urls = set()
+        time.sleep(4)
+        tags = self.browser.find_elements(By.TAG_NAME, 'a')
+        for public_block in tags:
+            public_url = public_block.get_attribute('href')
+            len_user_url = len(public_url.split('/'))  # у ссылки на профиль пользователя это параметр равен пяти(5)
+            if len_user_url == 5 and 'www.instagram.com' in public_url and username not in public_url:
+                list_urls.add(public_url)
+        return list_urls
 
     def test_method(self, link):
         browser = self.browser
