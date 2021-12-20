@@ -6,13 +6,17 @@ import time
 
 class SupportClass(BaseClass):
     # собирает список тех, кто комменировал посты, для сбора ссылок на посты вызывает "select_url_posts_to_hashtag"
-    def select_commentators(self, hashtag=tag, number_scrolls=1, scrolls_timeout=1):
+    def select_commentators(self, hashtag=tag, number_scrolls=1, scrolls_timeout=1, delete_file='yes'):
         """
         number_scrolls - колличество прокруток поля комметнариев у поста
         scrolls_timeout - задержка перед прокруткой (иначе может падать с ошибкой NoSuchElement)
+        delete_file - если "yes", то очистит файл со ссылками перед записью
         """
         browser = self.browser
         link_list = self.select_url_posts_to_hashtag(hashtag=hashtag)
+        if delete_file == 'yes':
+            with open('data/User_urls_commentators.txt', 'w'):
+                print('Файл со списком ссылок очищен.')
         for link in link_list:
             browser.get(link)
             comments_ul = browser.find_element(By.XPATH, '//div[2]/div/div[2]/div[1]/ul')
@@ -39,7 +43,11 @@ class SupportClass(BaseClass):
                 print(f'Колличество собранных пользователей: {size}')
 
     # собирает список подписчиков "по конкуренту"
-    def select_subscribes(self, search_name=tag):
+    def select_subscribes(self, search_name=tag, delete_file='yes'):
+        """
+        search_name - имя, которое будет вводится в строку поиска по профилям
+        delete_file - если "yes", то очистит файл со ссылками перед записью
+        """
         browser = self.browser
         browser.get(f"https://www.instagram.com/{username}/")
 
@@ -47,7 +55,9 @@ class SupportClass(BaseClass):
         search_input.send_keys(search_name)
 
         public_urls = self.tag_search(ignore=username)
-
+        if delete_file == 'yes':
+            with open('data/User_urls_subscribers.txt', 'w'):
+                print('Файл со списком ссылок очищен.')
         for url in public_urls:
             browser.get(url)
             subscribes_button = browser.find_element(By.XPATH, '//header/section/ul/li[2]/a')

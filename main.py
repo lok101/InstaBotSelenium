@@ -93,7 +93,7 @@ class FunctionClass(SupportClass):
                 print('----------- Лайк уже есть, переход к следующему посту. -----------')
                 continue
 
-    # подписыватеся на юзеров из списка, если нет списка, то вызывает "select_commentators"
+    # подписыватеся в разных режимах
     def subscribe(self, operating_mode=1, limit_subscribes=5000,
                   timeout=5, scatter_timeout=3, subscribe_in_session=40, grand_timeout=50):
         """
@@ -107,7 +107,7 @@ class FunctionClass(SupportClass):
         """
         browser = self.browser
         subscribe_count = 1
-        user_list = []
+        user_list, ignore_list = set(), set()
         path = ''
 
         if operating_mode == 1:
@@ -121,9 +121,14 @@ class FunctionClass(SupportClass):
             path = 'data/User_urls_subscribers.txt'
             print('Список получен, перехожу к подписке.')
 
-        with open(path, 'r')as file:
+        with open(path, 'r') as file:
             for link in file:
-                user_list.append(link)
+                user_list.add(link)
+        with open('data/ignore_list.txt', 'r') as file:
+            for link in file:
+                ignore_list.add(link)
+
+        user_list = user_list.difference(ignore_list)
 
         for user in user_list:
             try:
@@ -145,6 +150,7 @@ class FunctionClass(SupportClass):
                 time.sleep(random.randrange(timeout - scatter_timeout, timeout + scatter_timeout))
                 subscribe_button = browser.find_element(By.XPATH, '//div/div/div/span/span[1]/button')
                 subscribe_button.click()
+                ignore_list.add(user)
                 subscribe_count += 1
                 print(f'Подпислся на пользователя: {user_name}, всего подписок: {subscribe_count - 1}')
 
@@ -156,6 +162,12 @@ class FunctionClass(SupportClass):
             except AssertionError:
                 time.sleep(2)
                 continue
+
+            finally:
+                with open('data/ignore_list.txt', 'w'):
+                    for user_url in ignore_list:
+                        file.write(user_url + '\n')
+                print('Игнор лист дополнен.')
 
 
 my_bot = FunctionClass(username, password, proxy)
