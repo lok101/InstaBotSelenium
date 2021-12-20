@@ -18,6 +18,7 @@ class SupportClass(BaseClass):
             comments_ul = browser.find_element(By.XPATH, '//div[2]/div/div[2]/div[1]/ul')
 
             for number in range(number_scrolls):
+                time.sleep(2)
                 browser.execute_script("arguments[0].scrollTop = arguments[0].scrollHeight", comments_ul)
                 time.sleep(scrolls_timeout)
 
@@ -25,10 +26,15 @@ class SupportClass(BaseClass):
                 plus_button.click()
                 time.sleep(scrolls_timeout)
 
-            user_urls = self.tag_search()
+            # находит ссылку на профиль, опубликовавший запись, что бы кинуть его в игнор поиска по тегу
+            block_profile = browser.find_element(By.XPATH, '//header/div[2]/div[1]/div[1]/span/a')
+            name_profile = block_profile.get_attribute('href')
+
+            user_urls = self.tag_search(ignore=name_profile)
             with open('data/User_urls_commentators.txt', 'a') as file:
                 for user_url in user_urls:
                     file.write(user_url + '\n')
+            with open('data/User_urls_commentators.txt', 'r') as file:
                 size = len(file.readlines())
                 print(f'Колличество собранных пользователей: {size}')
 
@@ -40,7 +46,7 @@ class SupportClass(BaseClass):
         search_input = browser.find_element(By.XPATH, '//div/div/div[2]/input')
         search_input.send_keys(search_name)
 
-        public_urls = self.tag_search()
+        public_urls = self.tag_search(ignore=username)
 
         for url in public_urls:
             browser.get(url)
@@ -50,14 +56,15 @@ class SupportClass(BaseClass):
             subscribes_ul = browser.find_element(By.XPATH, '/html/body/div[6]/div/div/div[2]')
             browser.execute_script("arguments[0].scrollTop = arguments[0].scrollHeight", subscribes_ul)
 
-            user_urls = self.tag_search()
+            user_urls = self.tag_search(ignore=username)
             with open('data/User_urls_subscribers.txt', 'a') as file:
                 for user_url in user_urls:
                     file.write(user_url + '\n')
+            with open('data/User_urls_subscribers.txt', 'r') as file:
                 size = len(file.readlines())
                 print(f'Колличество собранных пользователей: {size}')
 
-    # возвращает список из девяти постов по хештегу
+    # возвращает список из 9 постов по хештегу
     def select_url_posts_to_hashtag(self, hashtag):
         browser = self.browser
         browser.get(f'https://www.instagram.com/explore/tags/{hashtag}/')

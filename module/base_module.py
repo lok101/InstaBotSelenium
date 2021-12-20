@@ -111,16 +111,31 @@ class BaseClass:
             exist = True
         return exist
 
-    # возвращает список пользователей/пабликов по тегу
-    def tag_search(self):
+    # возвращает список по тегу
+    def tag_search(self, parameter=1, ignore=None):
+        """
+        parameter=1 - возвращает список ссылок на профили
+        parameter=2 - возвращает список ссылок на посты
+        ignore - ключевое слово для игнора (сверяется со ссылкой)
+        """
+        print(f'Вызван tag_search с параметром: {parameter}')
         list_urls = set()
         time.sleep(4)
-        tags = self.browser.find_elements(By.TAG_NAME, 'a')
-        for public_block in tags:
-            public_url = public_block.get_attribute('href')
-            len_user_url = len(public_url.split('/'))  # у ссылки на профиль пользователя это параметр равен пяти(5)
-            if len_user_url == 5 and 'www.instagram.com' in public_url and username not in public_url:
-                list_urls.add(public_url)
+        if parameter == 1:
+            tags = self.browser.find_elements(By.TAG_NAME, 'a')
+            for public_block in tags:
+                profile_url = public_block.get_attribute('href')
+                len_user_url = len(profile_url.split('/'))  # у ссылки на профиль пользователя это параметр равен пяти.
+                if len_user_url == 5 and 'www.instagram.com' in profile_url and username not in profile_url\
+                        and 'explore' not in profile_url and ignore not in profile_url:
+                    list_urls.add(profile_url)
+
+        elif parameter == 2:
+            tags = self.browser.find_elements(By.TAG_NAME, 'a')
+            for post in tags:
+                post_url = post.get_attribute('href')
+                if '/p/' in post_url:
+                    list_urls.add(post_url)
         return list_urls
 
     def test_method(self, link):

@@ -94,27 +94,42 @@ class FunctionClass(SupportClass):
                 continue
 
     # подписыватеся на юзеров из списка, если нет списка, то вызывает "select_commentators"
-    def subscribe_to_user_list(self, user_list=None, limit_subscribes=5000,
-                               timeout=5, scatter_timeout=3, subscribe_in_session=40, grand_timeout=50):
+    def subscribe(self, operating_mode=1, limit_subscribes=5000,
+                  timeout=5, scatter_timeout=3, subscribe_in_session=40, grand_timeout=50):
         """
-        user_list - список юзеров для подписки
+        operating_mode1 - подписка на активных комментаторов по хэштегу
+        operating_mode2 - подписка на подписчиков "по конкуренту"
         timeout - среднее время на одну подписку
         scatter_timeout - разброс при вычислении таймаута
         grand_timeout - дополнительный таймаут на каждые 50 подписок
+        subscribe_in_session - колличество подписок в одной сессии, по истечению - ожидание grand_timeout
         limit_subscribes - максимальное число подписчиков у профиля (если больше, то пропустит этот профиль)
         """
         browser = self.browser
-        if user_list is None:
-            print('Списка нет, вызываю "select_commentators"')
-            user_list = self.select_commentators()
-            print('Список получен, перехожу к подписке.')
         subscribe_count = 1
+        user_list = []
+        path = ''
+
+        if operating_mode == 1:
+            print('Списка нет, вызываю "select_commentators"')
+            self.select_commentators()
+            path = 'data/User_urls_commentators.txt'
+            print('Список получен, перехожу к подписке.')
+        elif operating_mode == 2:
+            print('Списка нет, вызываю "select_subscribes"')
+            self.select_subscribes()
+            path = 'data/User_urls_subscribers.txt'
+            print('Список получен, перехожу к подписке.')
+
+        with open(path, 'r')as file:
+            for link in file:
+                user_list.append(link)
 
         for user in user_list:
             try:
                 if subscribe_count % subscribe_in_session == 0:
                     print(f'{datetime.now().strftime("%H:%M")} Подписался на очередные \
-{subscribe_in_session} пользователей. Таймаут {grand_timeout} минут.')
+    {subscribe_in_session} пользователей. Таймаут {grand_timeout} минут.')
                     time.sleep(grand_timeout * 60)
 
                 browser.get(user)
@@ -143,13 +158,13 @@ class FunctionClass(SupportClass):
                 continue
 
 
-my_bot = SupportClass(username, password, proxy)
+my_bot = FunctionClass(username, password, proxy)
 try:
     my_bot.login()
     # my_bot.select_commentators()
-    # my_bot.subscribe_to_user_list()
+    my_bot.subscribe()
     # my_bot.unsubscribe_for_all_users()
-    my_bot.select_subscribes()
+    # my_bot.select_subscribes()
     # my_bot.select_commentators_many_posts()
 finally:
     my_bot.close_browser()
