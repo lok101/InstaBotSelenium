@@ -1,4 +1,4 @@
-from selenium.common.exceptions import NoSuchElementException
+from selenium.common.exceptions import NoSuchElementException, ElementClickInterceptedException
 from selenium.webdriver.common.by import By
 from module.support_funtion import SupportClass
 from datetime import datetime
@@ -20,6 +20,7 @@ class FunctionClass(SupportClass):
         error_count = 0
 
         while True:
+            browser.get(f"https://www.instagram.com/{username}/")
             if error_count >= error_max:
                 break
             try:
@@ -170,13 +171,10 @@ class FunctionClass(SupportClass):
                 print('Игнор лист дополнен.')
 
 
-my_bot = FunctionClass(username, password, proxy)
+my_bot = FunctionClass(username, password)
 try:
     my_bot.login()
-    # my_bot.select_commentators()
-    my_bot.subscribe()
-    # my_bot.unsubscribe_for_all_users()
-    # my_bot.select_subscribes()
-    # my_bot.select_commentators_many_posts()
+    # my_bot.subscribe()
+    my_bot.unsubscribe_for_all_users()
 finally:
     my_bot.close_browser()
