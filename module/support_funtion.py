@@ -1,12 +1,17 @@
 from selenium.webdriver.common.by import By
 from module.base_module import BaseClass
 from data import username, tag
+from settings import *
 import time
 
 
 class SupportClass(BaseClass):
     # собирает список тех, кто комменировал посты, для сбора ссылок на посты вызывает "select_url_posts_to_hashtag"
-    def select_commentators(self, hashtag=tag, number_scrolls=1, scrolls_timeout=1, delete_file='yes'):
+    def select_commentators(self, hashtag=tag,
+                            number_scrolls=1,
+                            scrolls_timeout=1,
+                            delete_file=SelectUser.delete_file
+                            ):
         """
         number_scrolls - колличество прокруток поля комметнариев у поста
         scrolls_timeout - задержка перед прокруткой (иначе может падать с ошибкой NoSuchElement)
@@ -43,7 +48,8 @@ class SupportClass(BaseClass):
                 print(f'Колличество собранных пользователей: {size}')
 
     # собирает список подписчиков "по конкуренту"
-    def select_subscribes(self, search_name=tag, delete_file='yes'):
+    def select_subscribes(self, search_name=tag,
+                          delete_file=SelectUser.delete_file):
         """
         search_name - имя, которое будет вводится в строку поиска по профилям
         delete_file - если "yes", то очистит файл со ссылками перед записью

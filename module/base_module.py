@@ -3,17 +3,28 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.common.keys import Keys
 from selenium import webdriver
 from data import username, password
+from settings import *
 import time
 
 
 class BaseClass:
-    def __init__(self, user_name, pass_word, proxy=None, link='https://www.instagram.com/', timeout=10):
-        if proxy is not None:
-            self.browser = self.proxy_browser(proxy)
+    def __init__(self, user_name, pass_word, proxy, headless,
+                 link='https://www.instagram.com/',
+                 implicitly_wait=StartSettings.implicitly_wait_timeout
+                 ):
+        """
+        headless - запуск в режиме "без головы"
+        timeout - таймаут implicitly_wait
+        """
+        chrome_options = webdriver.ChromeOptions()
+        if headless == 'yes':
+            chrome_options.add_argument("--headless")
+        if proxy == 'yes':
+            self.browser = self.proxy_browser(proxy, chrome_options)
             time.sleep(3)
         else:
-            self.browser = webdriver.Chrome()
-        self.browser.implicitly_wait(timeout)
+            self.browser = webdriver.Chrome(options=chrome_options)
+        self.browser.implicitly_wait(implicitly_wait)
         self.link = link
         self.username = user_name
         self.password = pass_word
@@ -21,6 +32,7 @@ class BaseClass:
     def login(self):
         browser = self.browser
         browser.get(self.link)
+        print(f'Логин с аккаунта --- {username}')
         time.sleep(3)
 
         username_input = browser.find_element(By.NAME, 'username')
@@ -33,12 +45,13 @@ class BaseClass:
 
         password_input.send_keys(Keys.ENTER)
         time.sleep(6)
+        assert self.should_be_login_button(), 'Не получилось залогиниться'
+        print('Залогинился.')
 
     def close_browser(self):
         self.browser.quit()
 
-    def proxy_browser(self, proxy):
-        chrome_options = webdriver.ChromeOptions()
+    def proxy_browser(self, proxy, chrome_options):
         chrome_options.add_argument('--proxy-server=%s' % proxy)
         self.browser = webdriver.Chrome(options=chrome_options)
         self.browser.get('https://2ip.ru/')
@@ -46,6 +59,17 @@ class BaseClass:
         assert ip in proxy
         print(f'Подключение через прокси: {proxy}')
         return self.browser
+
+    # проверяет, если ли кнопка логина, вернёт True, если кнопки НЕТ
+    def should_be_login_button(self):
+        browser = self.browser
+        self.browser.implicitly_wait(1)
+        try:
+            browser.find_element(By.CSS_SELECTOR, 'span a button')
+            exist = False
+        except NoSuchElementException:
+            exist = True
+        return exist
 
     # проверяет, стоит ли лайк
     def should_be_like(self):
@@ -137,9 +161,3 @@ class BaseClass:
                 if '/p/' in post_url:
                     list_urls.add(post_url)
         return list_urls
-
-    def test_method(self, link):
-        browser = self.browser
-        browser.get(link)
-        assert self.should_be_limit_subscribes(5000)
-        time.sleep(5)
