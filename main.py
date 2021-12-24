@@ -57,7 +57,7 @@ class FunctionClass(SupportClass):
 
                     user.find_element(By.TAG_NAME, "button").click()
                     time.sleep(random.randrange(min_sleep, max_sleep))
-                    browser.find_element(By.XPATH, "/html/body/div[7]/div/div/div/div[3]/button[1]").click()
+                    browser.find_element(By.CSS_SELECTOR, "button.-Cab_").click()
 
                     print(f"Итерация #{count} >>> Отписался от пользователя {user_name}")
                     count -= 1
@@ -113,12 +113,12 @@ class FunctionClass(SupportClass):
 
     # подписыватеся на юзеров из списка, если нет списка, то вызывает "select_commentators"
     def subscribe_to_user_list(self,
-                               user_list=Subscribe.user_list,
                                limit_subscribes=Subscribe.limit_subscribes,
                                timeout=Subscribe.timeout,
                                scatter_timeout=Subscribe.scatter_timeout,
                                subscribe_in_session=Subscribe.subscribe_in_session,
-                               sleep_between_iterations=Subscribe.sleep_between_iterations
+                               sleep_between_iterations=Subscribe.sleep_between_iterations,
+                               operating_mode=Subscribe.operating_mode
                                ):
         """
         user_list - список юзеров для подписки
@@ -128,11 +128,29 @@ class FunctionClass(SupportClass):
         limit_subscribes - максимальное число подписчиков у профиля (если больше, то пропустит этот профиль)
         """
         browser = self.browser
-        if user_list is None:
-            print('Списка нет, вызываю "select_commentators"')
-            user_list = self.select_commentators()
-            print('Список получен, перехожу к подписке.')
+        user_list, ignore_list = set(), set()
         subscribe_count = 1
+        path = ''
+
+        if operating_mode == 1:
+            print('Списка нет, вызываю "select_commentators"')
+            self.select_commentators()
+            path = 'data/User_urls_commentators.txt'
+            print('Список получен, перехожу к подписке.')
+        elif operating_mode == 2:
+            print('Списка нет, вызываю "select_subscribes"')
+            self.select_subscribes()
+            path = 'data/User_urls_subscribers.txt'
+            print('Список получен, перехожу к подписке.')
+
+        with open(path, 'r') as file:
+            for link in file:
+                user_list.add(link)
+        with open('data/ignore_list.txt', 'r') as file:
+            for link in file:
+                ignore_list.add(link)
+
+        user_list = user_list.difference(ignore_list)
 
         for user in user_list:
             try:
