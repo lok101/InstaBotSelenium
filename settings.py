@@ -1,3 +1,6 @@
+from selenium.webdriver.support import expected_conditions as ec
+
+
 class StartSettings:
     """
     Описывает основные настрйки запуска.
@@ -7,8 +10,9 @@ class StartSettings:
     """
     name_account = 'cotov'
     headless = 'no'
-    proxy = 'yes'
-    implicitly_wait_timeout = 10
+    proxy = 'no'
+    web_driver_wait = 10
+    web_driver_wait_type = ec.element_to_be_clickable
 
 
 class Unsubscribe:
