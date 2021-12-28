@@ -1,4 +1,4 @@
-from selenium.webdriver.support import expected_conditions as ec
+﻿from selenium.webdriver.support import expected_conditions as ec
 
 
 class StartSettings:
@@ -8,10 +8,9 @@ class StartSettings:
     proxy - использовать прокси или нет (сам прокси прописан в data.txt)
     implicitly_wait_timeout - сколько ждать появления элемента во всех этапах, кроме assert-функций
     """
-    name_account = 'cotov'
-    headless = 'no'
+    headless = 'yes'
     proxy = 'no'
-    web_driver_wait = 10
+    web_driver_wait = 30
     web_driver_wait_type = ec.element_to_be_clickable
 
 
@@ -37,8 +36,8 @@ class Subscribe:
 
     operating_mode - режим работы (меняет источник сбора аудитории)
     """
-    operating_mode = 1
-    timeout = 5
+    operating_mode = 3
+    timeout = 6
     scatter_timeout = 3
     subscribe_in_session = 40
     sleep_between_iterations = 50

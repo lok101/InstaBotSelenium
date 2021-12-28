@@ -1,4 +1,4 @@
-from selenium.common.exceptions import TimeoutException
+from selenium.common.exceptions import TimeoutException, StaleElementReferenceException
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.common.by import By
 from selenium.webdriver.common.keys import Keys
@@ -108,12 +108,17 @@ class BaseClass:
 
     # проверяет, являяется ли переданное число больше числа подписчиков на странице
     def should_be_limit_subscribes(self, limit_subscribes):
-        button_subscribes = self.search_element((By.XPATH, '//header/section/ul/li[2]/a/span'))
-        number_subscribes_str = button_subscribes.get_attribute('title')
-        number_subscribes_int = int(number_subscribes_str.replace(" ", ""))
-        if limit_subscribes > number_subscribes_int:
-            return True
-        return False
+        try:
+            button_subscribes = self.search_element((By.XPATH, '//header/section/ul/li[2]/a/span'),
+                                                    type_wait=ec.presence_of_element_located)
+            assert button_subscribes
+            number_subscribes_str = button_subscribes.get_attribute('title')
+            number_subscribes_int = int(number_subscribes_str.replace(" ", ""))
+            if limit_subscribes > number_subscribes_int:
+                return True
+            return False
+        except AssertionError:
+            return False
 
     # проверяет, не является ли профиль закрытым
     def should_be_privat_profile(self):
@@ -125,6 +130,9 @@ class BaseClass:
             exist = False
         except TimeoutException:
             exist = True
+        except StaleElementReferenceException:
+            print('Проблемы при поиске элемента, пропускаю профиль')
+            exist = False
         return exist
 
     # возвращает список по тегу

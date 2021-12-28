@@ -6,6 +6,7 @@ from data import *
 from settings import *
 import random
 import time
+import re
 
 
 class FunctionClass(SupportClass):
@@ -51,14 +52,16 @@ class FunctionClass(SupportClass):
                         time.sleep(sleep_between_iterations)
                         break
 
-                    user_url = self.search_element((By.TAG_NAME, "a")).get_attribute("href")
-                    user_name = user_url.split("/")[-2]
+                    # user_url = self.browser.find_element(By.TAG_NAME, "a").get_attribute("href")
+                    # user_name = user_url.split("/")[-2]
 
-                    user.search_element((By.TAG_NAME, "button")).click()
+                    unsubscribe_button = user.find_element(By.TAG_NAME, "button")
+                    # unsubscribe_button = user.search_element((By.TAG_NAME, "button"))
+                    unsubscribe_button.click()
                     time.sleep(random.randrange(min_sleep, max_sleep))
                     self.search_element((By.CSS_SELECTOR, "button.-Cab_")).click()
 
-                    print(f"Итерация #{count} >>> Отписался от пользователя {user_name}")
+                    print(f"Итерация #{count} >>> Отписался от пользователя  {datetime.now().strftime('%H:%M:%S')}")
                     count -= 1
             except NoSuchElementException:
                 error_count += 1
@@ -141,6 +144,9 @@ class FunctionClass(SupportClass):
             self.select_subscribes()
             path = 'data/User_urls_subscribers.txt'
             print('Список получен, перехожу к подписке.')
+        elif operating_mode == 3:
+            print('Открываю список "User_urls_subscribers"')
+            path = 'data/User_urls_subscribers.txt'
 
         with open(path, 'r') as file:
             for link in file:
@@ -148,22 +154,29 @@ class FunctionClass(SupportClass):
         with open('data/ignore_list.txt', 'r') as file:
             for link in file:
                 ignore_list.add(link)
+        print(f'Профилей в списке до взаимодействия с игнор-листом - {len(user_list)}', end=', ')
         user_list = user_list.difference(ignore_list)
+        print(f'после - {len(user_list)}')
         for user in user_list:
             try:
                 if subscribe_count % subscribe_in_session == 0:
-                    print(f'{datetime.now().strftime("%H:%M")} Подписался на очередные \
-{subscribe_in_session} пользователей. Таймаут {sleep_between_iterations} минут.')
+                    print(f'{datetime.now().strftime("%H:%M")} Подписался на очередные',
+                          f'{subscribe_in_session} пользователей. Таймаут {sleep_between_iterations} минут.')
+                    with open('data/ignore_list.txt', 'r') as file:
+                        for link in file:
+                            ignore_list.add(link)
+                    user_list = user_list.difference(ignore_list)
+                    print(f'============ Осталось профилей для подписки - {len(user_list)} ============')
                     time.sleep(sleep_between_iterations * 60)
 
                 browser.get(user)
                 user_name = user.split("/")[-2]
-                print(f'Перешёл в профиль: {user_name}', end=' --- ')
+                print(f'Перешёл в профиль: {user_name}')
 
                 assert self.should_be_privat_profile(), 'Профиль закрыт, переход к следующему пользователю'
                 assert self.should_be_subscribe(), 'Уже подписан, переход к следующему пользователю'
-                assert self.should_be_posts(), '===== В профиле нет публикаций, переход к следующему пользователю'
-                assert self.should_be_limit_subscribes(limit_subscribes),\
+                assert self.should_be_posts(), 'В профиле нет публикаций, переход к следующему пользователю'
+                assert self.should_be_limit_subscribes(limit_subscribes), \
                     f'Слишком много подписчиков. Усатновлен лимит: {limit_subscribes}'
 
                 time.sleep(random.randrange(timeout - scatter_timeout, timeout + scatter_timeout))
@@ -172,24 +185,32 @@ class FunctionClass(SupportClass):
                 with open('data/ignore_list.txt', 'a') as file:
                     file.write(user)
                 subscribe_count += 1
-                print(f'Подпислся на пользователя: {user_name}, всего подписок: {subscribe_count - 1}')
+                print(
+                    f'{datetime.now().strftime("%H:%M:%S")} подписок: {subscribe_count - 1} подписался--{user_name}',
+                    end='======>')
 
             except NoSuchElementException:
-                print('----------- Ошибка подписке, переход к следующему посту. -----------')
-                input('============= Жми Enter =============')
+                print('----------- Ошибка при подписке, переход к следующему посту. -----------')
                 continue
 
             except AssertionError as assertion:
-                print(assertion.args)
+                with open('data/ignore_list.txt', 'a') as file:
+                    file.write(user)
+                assertion = str(assertion.args)
+                text = re.sub("[)(']", '', assertion)
+                print(text[:-1], end='======>')
+                time.sleep(2)
                 continue
 
 
+operating_status = input('Укажите режим работы: ')
 my_bot = FunctionClass(username, password, proxy=StartSettings.proxy, headless=StartSettings.headless)
+
 try:
     my_bot.login()
-    # my_bot.select_commentators()
-    my_bot.subscribe_to_user_list()
-    # my_bot.unsubscribe_for_all_users()
-    # my_bot.select_commentators_many_posts()
+    if operating_status == 'sub':
+        my_bot.subscribe_to_user_list()
+    elif operating_status == 'uns':
+        my_bot.unsubscribe_for_all_users()
 finally:
     my_bot.close_browser()
