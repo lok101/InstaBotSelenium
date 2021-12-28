@@ -1,4 +1,4 @@
-from selenium.common.exceptions import NoSuchElementException
+from selenium.common.exceptions import NoSuchElementException, TimeoutException
 from selenium.webdriver.common.by import By
 from module.support_funtion import SupportClass
 from datetime import datetime
@@ -178,6 +178,7 @@ class FunctionClass(SupportClass):
                 assert self.should_be_posts(), 'В профиле нет публикаций, переход к следующему пользователю'
                 assert self.should_be_limit_subscribes(limit_subscribes), \
                     f'Слишком много подписчиков. Усатновлен лимит: {limit_subscribes}'
+                assert self.should_be_profile_avatar(), 'У профиля нет аватара, переход к следующему пользователю'
 
                 time.sleep(random.randrange(timeout - scatter_timeout, timeout + scatter_timeout))
                 subscribe_button = self.search_element((By.XPATH, '//div/div/div/span/span[1]/button'))
@@ -186,11 +187,15 @@ class FunctionClass(SupportClass):
                     file.write(user)
                 subscribe_count += 1
                 print(
-                    f'{datetime.now().strftime("%H:%M:%S")} подписок: {subscribe_count - 1} подписался--{user_name}',
-                    end='======>')
+                    f'{datetime.now().strftime("%H:%M:%S")} Подписок: {subscribe_count - 1} подписался на: {user_name}',
+                    end='  ======>')
+
+            except TimeoutException:
+                print('----TimeoutException---- переход к следующему посту.')
+                continue
 
             except NoSuchElementException:
-                print('----------- Ошибка при подписке, переход к следующему посту. -----------')
+                print('----NoSuchElementException---- переход к следующему посту.')
                 continue
 
             except AssertionError as assertion:
@@ -198,7 +203,7 @@ class FunctionClass(SupportClass):
                     file.write(user)
                 assertion = str(assertion.args)
                 text = re.sub("[)(']", '', assertion)
-                print(text[:-1], end='======>')
+                print(f'{datetime.now().strftime("%H:%M:%S")}', text[:-1], end='======>')
                 time.sleep(2)
                 continue
 

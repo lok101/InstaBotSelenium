@@ -6,6 +6,12 @@ from selenium import webdriver
 from data import username, password
 from settings import *
 import time
+import hashlib
+
+
+def download_for_link(link):
+    with open('data/profile_avatar.jpg', 'w') as img_file:
+        img_file.write(link.content)
 
 
 class BaseClass:
@@ -46,6 +52,11 @@ class BaseClass:
 
     def close_browser(self):
         self.browser.quit()
+
+    def get_link(self, locator):
+        item = self.search_element(locator)
+        url = item.get_atribute('src')
+        return url
 
     def proxy_browser(self, proxy, chrome_options):
         chrome_options.add_argument('--proxy-server=%s' % proxy)
@@ -133,6 +144,24 @@ class BaseClass:
         except StaleElementReferenceException:
             print('Проблемы при поиске элемента, пропускаю профиль')
             exist = False
+        return exist
+
+    # возвращает false, если в профиле нет аватара
+    def should_be_profile_avatar(self):
+        digests = []
+        url = self.get_link((By.CSS_SELECTOR, 'div.RR-M- span img._6q-tv'))
+        download_for_link(url)   # качает изображение и кладёт его в 'data/profile_avatar.jpg'
+        for filename in ['data/sample.jpg', 'data/profile_avatar.jpg']:
+            hasher = hashlib.md5()
+            with open(filename, 'rb') as f:
+                buf = f.read()
+                hasher.update(buf)
+                a = hasher.hexdigest()
+                digests.append(a)
+        if digests[0] == digests[1]:
+            exist = False
+        else:
+            exist = True
         return exist
 
     # возвращает список по тегу
