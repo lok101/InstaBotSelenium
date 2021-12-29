@@ -47,6 +47,24 @@ class SupportClass(BaseClass):
                 size = len(file.readlines())
                 print(f'Колличество собранных пользователей: {size}')
 
+    # комплексный фильтр для режима подписки
+    def assert_subscribe(self, limit_subscribes=Subscribe.limit_subscribes,
+                         max_coefficient=Subscribe.coefficient_subscribers,
+                         subscribe=Subscribe.min_subscribe,
+                         subscribers=Subscribe.min_subscribers
+                         ):
+        assert self.should_be_privat_profile(), 'Профиль закрыт, переход к следующему пользователю'
+        assert self.should_be_subscribe(), 'Уже подписан, переход к следующему пользователю'
+        assert self.should_be_posts(), 'В профиле нет публикаций, переход к следующему пользователю'
+        assert self.should_be_profile_avatar(), 'У профиля нет аватара, переход к следующему пользователю'
+        assert self.should_be_limit_subscribes(limit_subscribes), \
+            f'Слишком много подписчиков. Усатновлен лимит: {limit_subscribes}'
+        current_coefficient = self.calculate_subscribe_coefficient()
+        assert current_coefficient < max_coefficient, 'Профиль "помойка", переход к следующему пользователю.'
+        subscribe_and_subscribers = self.calculate_subscribe_coefficient(mode=2)
+        assert subscribe_and_subscribers[0] > subscribe and subscribe_and_subscribers[1] > subscribers, \
+            'Мало подписчиков/подписок, переход к следующему пользователю'
+
     # собирает список подписчиков "по конкуренту"
     def select_subscribes(self, search_name=tag,
                           delete_file=SelectUser.delete_file):
@@ -96,3 +114,15 @@ class SupportClass(BaseClass):
                 posts_url_list.append(post_url)
         print('Ссылки на посты собраны.')
         return posts_url_list
+
+    # возвращает подписки делённые на подписчиков или, в другом режиме, число подписчиков и число подписок
+    def calculate_subscribe_coefficient(self, mode=1):
+        subscribers_field = self.search_element((By.XPATH, '//li[2]/a/span'), type_wait=ec.presence_of_element_located)
+        subscribe_field = self.search_element((By.XPATH, '//li[3]/span'), type_wait=ec.presence_of_element_located)
+        subscribers = subscribers_field.get_attribute('title').replace(" ", "")
+        subscribe = subscribe_field.get_attribute('title').replace(" ", "")
+        coefficient = subscribe / subscribers
+        if mode == 1:
+            return coefficient
+        else:
+            return subscribe, subscribers

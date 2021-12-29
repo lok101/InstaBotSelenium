@@ -114,9 +114,7 @@ class FunctionClass(SupportClass):
                 continue
 
     # подписыватеся на юзеров из списка, если нет списка, то вызывает "select_commentators"
-    def subscribe_to_user_list(self,
-                               limit_subscribes=Subscribe.limit_subscribes,
-                               timeout=Subscribe.timeout,
+    def subscribe_to_user_list(self, timeout=Subscribe.timeout,
                                scatter_timeout=Subscribe.scatter_timeout,
                                subscribe_in_session=Subscribe.subscribe_in_session,
                                sleep_between_iterations=Subscribe.sleep_between_iterations,
@@ -162,6 +160,10 @@ class FunctionClass(SupportClass):
                 if subscribe_count % subscribe_in_session == 0:
                     print(f'{datetime.now().strftime("%H:%M")} Подписался на очередные',
                           f'{subscribe_in_session} пользователей. Таймаут {sleep_between_iterations} минут.')
+
+                    # исключает повторное срабатывание тайм-аута на первой итерации при срабатвании assert
+                    subscribe_count += 0.1
+
                     with open('data/ignore_list.txt', 'r') as file:
                         for link in file:
                             ignore_list.add(link)
@@ -173,19 +175,14 @@ class FunctionClass(SupportClass):
                 user_name = user.split("/")[-2]
                 print(f'Перешёл в профиль: {user_name}')
 
-                assert self.should_be_privat_profile(), 'Профиль закрыт, переход к следующему пользователю'
-                assert self.should_be_subscribe(), 'Уже подписан, переход к следующему пользователю'
-                assert self.should_be_posts(), 'В профиле нет публикаций, переход к следующему пользователю'
-                assert self.should_be_limit_subscribes(limit_subscribes), \
-                    f'Слишком много подписчиков. Усатновлен лимит: {limit_subscribes}'
-                assert self.should_be_profile_avatar(), 'У профиля нет аватара, переход к следующему пользователю'
+                self.assert_subscribe()
 
                 time.sleep(random.randrange(timeout - scatter_timeout, timeout + scatter_timeout))
                 subscribe_button = self.search_element((By.XPATH, '//div/div/div/span/span[1]/button'))
                 subscribe_button.click()
                 with open('data/ignore_list.txt', 'a') as file:
                     file.write(user)
-                subscribe_count += 1
+                subscribe_count = int(subscribe_count) + 1
                 print(
                     f'{datetime.now().strftime("%H:%M:%S")} Подписок: {subscribe_count - 1} подписался на: {user_name}',
                     end='  ======>')

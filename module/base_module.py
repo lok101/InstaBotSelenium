@@ -5,13 +5,15 @@ from selenium.webdriver.common.keys import Keys
 from selenium import webdriver
 from data import username, password
 from settings import *
+import requests
 import time
 import hashlib
 
 
 def download_for_link(link):
-    with open('data/profile_avatar.jpg', 'w') as img_file:
-        img_file.write(link.content)
+    get_img = requests.get(link)
+    with open('data/profile_avatar.jpg', 'wb') as img_file:
+        img_file.write(get_img.content)
 
 
 class BaseClass:
@@ -55,7 +57,7 @@ class BaseClass:
 
     def get_link(self, locator):
         item = self.search_element(locator)
-        url = item.get_atribute('src')
+        url = item.get_attribute('src')
         return url
 
     def proxy_browser(self, proxy, chrome_options):

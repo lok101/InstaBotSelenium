@@ -33,6 +33,7 @@ class Subscribe:
     scatter_timeout - разброс при вычислении таймаута
     sleep_between_iterations - дополнительный таймаут на каждые subscribe_in_session подписок
     limit_subscribes - максимальное число подписчиков у профиля (если больше, то пропустит этот профиль)
+    coefficient_subscribers - подписки делённые на подписчиков (если подписок много, а подписчиков мало - пропуск)
 
     operating_mode - режим работы (меняет источник сбора аудитории)
     """
@@ -42,6 +43,9 @@ class Subscribe:
     subscribe_in_session = 40
     sleep_between_iterations = 50
     limit_subscribes = 5000
+    coefficient_subscribers = 9
+    min_subscribe = 30
+    min_subscribers = 30
 
 
 class SelectUser:
