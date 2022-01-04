@@ -148,6 +148,15 @@ class BaseClass:
             exist = False
         return exist
 
+    # проверяет наличие "микробана"
+    def should_be_subscribe_blocking(self):
+        try:
+            self.search_element((By.CSS_SELECTOR, 'div._08v79 > h3'), timeout=2)
+            exist = False
+        except TimeoutException:
+            exist = True
+        return exist
+
     # возвращает false, если в профиле нет аватара
     def should_be_profile_avatar(self):
         digests = []

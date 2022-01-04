@@ -180,6 +180,9 @@ class FunctionClass(SupportClass):
                 time.sleep(random.randrange(timeout - scatter_timeout, timeout + scatter_timeout))
                 subscribe_button = self.search_element((By.XPATH, '//div/div/div/span/span[1]/button'))
                 subscribe_button.click()
+
+                assert self.should_be_subscribe_blocking(), 'Subscribe blocking'
+
                 with open('data/ignore_list.txt', 'a') as file:
                     file.write(user)
                 subscribe_count = int(subscribe_count) + 1
@@ -199,6 +202,9 @@ class FunctionClass(SupportClass):
                 with open('data/ignore_list.txt', 'a') as file:
                     file.write(user)
                 assertion = str(assertion.args)
+                if 'Subscribe blocking' in assertion:
+                    print('======================МИКРОБАН ПОДПИСКИ======================')
+                    break
                 text = re.sub("[)(']", '', assertion)
                 print(f'{datetime.now().strftime("%H:%M:%S")}', text[:-1], end='======>')
                 time.sleep(2)
