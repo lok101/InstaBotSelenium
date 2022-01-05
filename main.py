@@ -152,6 +152,8 @@ class FunctionClass(SupportClass):
         with open('data/ignore_list.txt', 'r') as file:
             for link in file:
                 ignore_list.add(link)
+        with open('data/assert_log.txt', 'a') as file:
+            file.write(f'{datetime.now().strftime("%H:%M:%S")} - лог файл запущен.')
         print(f'Профилей в списке до взаимодействия с игнор-листом - {len(user_list)}', end=', ')
         user_list = user_list.difference(ignore_list)
         print(f'после - {len(user_list)}')
@@ -206,6 +208,9 @@ class FunctionClass(SupportClass):
                     print('======================МИКРОБАН ПОДПИСКИ======================')
                     break
                 text = re.sub("[)(']", '', assertion)
+                assert_log = f'{str(text)} ===> {user.split("/")[-2]} \n'
+                with open('data/assert_log.txt', 'a') as file:
+                    file.write(assert_log)
                 print(f'{datetime.now().strftime("%H:%M:%S")}', text[:-1], end='======>')
                 time.sleep(2)
                 continue

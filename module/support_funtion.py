@@ -1,11 +1,11 @@
 from selenium.webdriver.common.by import By
-from module.base_module import BaseClass
+from module.base_module import AssertClass
 from data import username, tag
 from settings import *
 import time
 
 
-class SupportClass(BaseClass):
+class SupportClass(AssertClass):
     # собирает список тех, кто комменировал посты, для сбора ссылок на посты вызывает "select_url_posts_to_hashtag"
     def select_commentators(self, hashtag=tag,
                             number_scrolls=1,
@@ -59,11 +59,13 @@ class SupportClass(BaseClass):
         assert self.should_be_profile_avatar(), 'У профиля нет аватара, переход к следующему пользователю'
         assert self.should_be_limit_subscribes(limit_subscribes), \
             f'Слишком много подписчиков. Усатновлен лимит: {limit_subscribes}'
-        # current_coefficient = self.calculate_subscribe_coefficient()
-        # assert current_coefficient < max_coefficient, 'Профиль "помойка", переход к следующему пользователю.'
-        # subscribe_and_subscribers = self.calculate_subscribe_coefficient(mode=2)
-        # assert subscribe_and_subscribers[0] > subscribe and subscribe_and_subscribers[1] > subscribers, \
-        #     'Мало подписчиков/подписок, переход к следующему пользователю'
+        current_coefficient = self.calculate_subscribe_coefficient()
+        assert current_coefficient < max_coefficient, 'Профиль "помойка", переход к следующему пользователю'
+        subscribe_and_subscribers = self.calculate_subscribe_coefficient(mode=2)
+        assert subscribe_and_subscribers[0] > subscribe and subscribe_and_subscribers[1] > subscribers, \
+            'Мало подписчиков/подписок, переход к следующему пользователю'
+        assert self.should_be_stop_word_in_biography(stop_word_dict=Subscribe.stop_word_dict), \
+            'Встречено стоп-слово в биографии, переход к следующему пользователю'
 
     # собирает список подписчиков "по конкуренту"
     def select_subscribes(self, search_name=tag,
@@ -118,9 +120,9 @@ class SupportClass(BaseClass):
     # возвращает подписки делённые на подписчиков или, в другом режиме, число подписчиков и число подписок
     def calculate_subscribe_coefficient(self, mode=1):
         subscribers_field = self.search_element((By.XPATH, '//li[2]/a/span'), type_wait=ec.presence_of_element_located)
-        subscribe_field = self.search_element((By.XPATH, '//li[3]/span'), type_wait=ec.presence_of_element_located)
-        subscribers = subscribers_field.get_attribute('title').replace(" ", "")
-        subscribe = subscribe_field.get_attribute('title').replace(" ", "")
+        subscribe_field = self.search_element((By.XPATH, '//li[3]/a/span'), type_wait=ec.presence_of_element_located)
+        subscribers = int(subscribers_field.get_attribute('title').replace(" ", ""))
+        subscribe = int(subscribe_field.text.replace(" ", ""))
         if mode == 1:
             coefficient = subscribe / subscribers
             return coefficient

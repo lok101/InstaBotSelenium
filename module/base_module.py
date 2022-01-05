@@ -77,6 +77,33 @@ class BaseClass:
         element = WebDriverWait(self.browser, timeout).until(type_wait(locator))
         return element
 
+    # возвращает список по тегу
+    def tag_search(self, parameter=1, ignore=None):
+        """
+        parameter=1 - возвращает список ссылок на профили
+        parameter=2 - возвращает список ссылок на посты
+        ignore - ключевое слово для игнора (сверяется со ссылкой)
+        """
+        print(f'Вызван tag_search с параметром: {parameter}')
+        list_urls = set()
+        time.sleep(5)
+        if parameter == 1:
+            tags = self.browser.find_elements(By.TAG_NAME, 'a')
+            for public_block in tags:
+                profile_url = public_block.get_attribute('href')
+                len_user_url = len(profile_url.split('/'))  # у ссылки на профиль пользователя это параметр равен пяти.
+                if len_user_url == 5 and 'www.instagram.com' in profile_url and username not in profile_url\
+                        and 'explore' not in profile_url and ignore not in profile_url:
+                    list_urls.add(profile_url)
+
+        elif parameter == 2:
+            tags = self.search_element((By.TAG_NAME, 'a'))
+            for post in tags:
+                post_url = post.get_attribute('href')
+                if '/p/' in post_url:
+                    list_urls.add(post_url)
+        return list_urls
+
     # проверяет, если ли кнопка логина, вернёт True, если кнопки НЕТ
     def should_be_login_button(self):
         try:
@@ -86,6 +113,8 @@ class BaseClass:
             exist = True
         return exist
 
+
+class AssertClass(BaseClass):
     # проверяет, стоит ли лайк
     def should_be_like(self):
         try:
@@ -121,6 +150,7 @@ class BaseClass:
 
     # проверяет, являяется ли переданное число больше числа подписчиков на странице
     def should_be_limit_subscribes(self, limit_subscribes):
+        number_subscribes_str = '1'
         try:
             button_subscribes = self.search_element((By.XPATH, '//header/section/ul/li[2]/a/span'),
                                                     type_wait=ec.presence_of_element_located)
@@ -131,6 +161,9 @@ class BaseClass:
                 return True
             return False
         except AssertionError:
+            return False
+        except ValueError:
+            print(f'ValueError, интуемая переменная - "{number_subscribes_str}"')
             return False
 
     # проверяет, не является ли профиль закрытым
@@ -146,15 +179,6 @@ class BaseClass:
         except StaleElementReferenceException:
             print('Проблемы при поиске элемента, пропускаю профиль')
             exist = False
-        return exist
-
-    # проверяет наличие "микробана"
-    def should_be_subscribe_blocking(self):
-        try:
-            self.search_element((By.CSS_SELECTOR, 'div._08v79 > h3'), timeout=2)
-            exist = False
-        except TimeoutException:
-            exist = True
         return exist
 
     # возвращает false, если в профиле нет аватара
@@ -175,29 +199,24 @@ class BaseClass:
             exist = True
         return exist
 
-    # возвращает список по тегу
-    def tag_search(self, parameter=1, ignore=None):
-        """
-        parameter=1 - возвращает список ссылок на профили
-        parameter=2 - возвращает список ссылок на посты
-        ignore - ключевое слово для игнора (сверяется со ссылкой)
-        """
-        print(f'Вызван tag_search с параметром: {parameter}')
-        list_urls = set()
-        time.sleep(5)
-        if parameter == 1:
-            tags = self.browser.find_elements(By.TAG_NAME, 'a')
-            for public_block in tags:
-                profile_url = public_block.get_attribute('href')
-                len_user_url = len(profile_url.split('/'))  # у ссылки на профиль пользователя это параметр равен пяти.
-                if len_user_url == 5 and 'www.instagram.com' in profile_url and username not in profile_url\
-                        and 'explore' not in profile_url and ignore not in profile_url:
-                    list_urls.add(profile_url)
+    # проверяет наличие стоп-слов в биографии
+    def should_be_stop_word_in_biography(self, stop_word_dict):
+        try:
+            biography = self.search_element((By.CSS_SELECTOR, 'div.QGPIr > span'),
+                                            type_wait=ec.presence_of_element_located, timeout=1).text
+            for word in stop_word_dict:
+                assert word.lower() not in biography.lower()
+            return True
+        except TimeoutException:
+            return True
+        except AssertionError:
+            return False
 
-        elif parameter == 2:
-            tags = self.search_element((By.TAG_NAME, 'a'))
-            for post in tags:
-                post_url = post.get_attribute('href')
-                if '/p/' in post_url:
-                    list_urls.add(post_url)
-        return list_urls
+    # проверяет наличие "микробана"
+    def should_be_subscribe_blocking(self):
+        try:
+            self.search_element((By.CSS_SELECTOR, 'div._08v79 > h3'), timeout=2)
+            exist = False
+        except TimeoutException:
+            exist = True
+        return exist
