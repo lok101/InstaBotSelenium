@@ -64,7 +64,7 @@ class SupportClass(AssertClass):
         subscribe_and_subscribers = self.calculate_subscribe_coefficient(mode=2)
         assert subscribe_and_subscribers[0] > subscribe and subscribe_and_subscribers[1] > subscribers, \
             'Мало подписчиков/подписок, переход к следующему пользователю'
-        assert self.should_be_stop_word_in_biography(stop_word_dict=Subscribe.stop_word_dict), \
+        assert self.should_be_stop_word_in_biography(stop_words=Subscribe.stop_word_dict), \
             'Встречено стоп-слово в биографии, переход к следующему пользователю'
 
     # собирает список подписчиков "по конкуренту"

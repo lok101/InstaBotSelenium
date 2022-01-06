@@ -208,16 +208,17 @@ class FunctionClass(SupportClass):
                     print('======================МИКРОБАН ПОДПИСКИ======================')
                     break
                 text = re.sub("[)(']", '', assertion)
-                assert_log = f'{str(text)} ===> {user.split("/")[-2]} \n'
-                with open('data/assert_log.txt', 'a') as file:
-                    file.write(assert_log)
+                if 'стоп-слово' in text:
+                    with open('data/assert_log.txt', 'a') as file:
+                        assert_log = f'{str(text)} ===> {user.split("/")[-2]} \n'
+                        file.write(assert_log)
                 print(f'{datetime.now().strftime("%H:%M:%S")}', text[:-1], end='======>')
                 time.sleep(2)
                 continue
 
 
 operating_status = input('Укажите режим работы: ')
-my_bot = FunctionClass(username, password, proxy=StartSettings.proxy, headless=StartSettings.headless)
+my_bot = FunctionClass(username, password)
 
 try:
     my_bot.login()

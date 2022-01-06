@@ -3,7 +3,7 @@ from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.common.by import By
 from selenium.webdriver.common.keys import Keys
 from selenium import webdriver
-from data import username, password
+from data import username, password, proxy
 from settings import *
 import requests
 import time
@@ -17,8 +17,11 @@ def download_for_link(link):
 
 
 class BaseClass:
-    def __init__(self, user_name, pass_word, proxy, headless,
+    def __init__(self, user_name, pass_word,
+                 proxy_url=proxy,
                  link='https://www.instagram.com/',
+                 headless=StartSettings.headless,
+                 proxy_settings=StartSettings.proxy
                  ):
         """
         headless - запуск в режиме "без головы"
@@ -27,8 +30,8 @@ class BaseClass:
         chrome_options = webdriver.ChromeOptions()
         if headless == 'yes':
             chrome_options.add_argument("--headless")
-        if proxy == 'yes':
-            self.browser = self.proxy_browser(proxy, chrome_options)
+        if proxy_settings == 'yes':
+            self.browser = self.proxy_browser(proxy_url, chrome_options)
         else:
             self.browser = webdriver.Chrome(options=chrome_options)
         self.link = link
@@ -60,13 +63,13 @@ class BaseClass:
         url = item.get_attribute('src')
         return url
 
-    def proxy_browser(self, proxy, chrome_options):
-        chrome_options.add_argument('--proxy-server=%s' % proxy)
+    def proxy_browser(self, proxy_url, chrome_options):
+        chrome_options.add_argument(f'--proxy-server=%s' % proxy_url)
         self.browser = webdriver.Chrome(options=chrome_options)
         self.browser.get('https://2ip.ru/')
         ip = self.search_element((By.CSS_SELECTOR, 'div.ip span'), type_wait=ec.presence_of_element_located).text
-        assert ip in proxy
-        print(f'Подключение через прокси: {proxy}')
+        assert ip in proxy_url
+        print(f'Подключение через прокси: {proxy_url}')
         return self.browser
 
     # возвращает элемент с использованием явного ожидания
@@ -104,13 +107,14 @@ class BaseClass:
                     list_urls.add(post_url)
         return list_urls
 
-    # проверяет, если ли кнопка логина, вернёт True, если кнопки НЕТ
+    # проверяет, если ли мини-иконка профиля
     def should_be_login_button(self):
         try:
-            self.search_element((By.CSS_SELECTOR, 'span a button'))
-            exist = False
-        except TimeoutException:
+            self.search_element((By.CSS_SELECTOR, 'div:nth-child(6) > span > img'),
+                                type_wait=ec.presence_of_element_located)
             exist = True
+        except TimeoutException:
+            exist = False
         return exist
 
 
@@ -200,11 +204,11 @@ class AssertClass(BaseClass):
         return exist
 
     # проверяет наличие стоп-слов в биографии
-    def should_be_stop_word_in_biography(self, stop_word_dict):
+    def should_be_stop_word_in_biography(self, stop_words):
         try:
             biography = self.search_element((By.CSS_SELECTOR, 'div.QGPIr > span'),
                                             type_wait=ec.presence_of_element_located, timeout=1).text
-            for word in stop_word_dict:
+            for word in stop_words:
                 assert word.lower() not in biography.lower()
             return True
         except TimeoutException:
