@@ -9,7 +9,7 @@ class StartSettings:
     proxy - использовать прокси или нет (сам прокси прописан в data.txt)
     implicitly_wait_timeout - сколько ждать появления элемента во всех этапах, кроме assert-функций
     """
-    headless = 'no'
+    headless = 'yes'
     proxy = 'yes'
     web_driver_wait = 30
     web_driver_wait_type = ec.element_to_be_clickable
@@ -35,6 +35,7 @@ class Subscribe:
     sleep_between_iterations - дополнительный таймаут на каждые subscribe_in_session подписок
     limit_subscribes - максимальное число подписчиков у профиля (если больше, то пропустит этот профиль)
     coefficient_subscribers - подписки делённые на подписчиков (если подписок много, а подписчиков мало - пропуск)
+    subscribe_limit - колличество подписок в задаче
 
     operating_mode - режим работы (меняет источник сбора аудитории)
     """
@@ -43,7 +44,8 @@ class Subscribe:
     timeout = 2
     scatter_timeout = 1
     subscribe_in_session = 40
-    sleep_between_iterations = 30
+    sleep_between_iterations = 20
+    subscribe_limit_stop = 400
     """FILTER"""
     limit_subscribes = 5000
     coefficient_subscribers = 6
@@ -53,7 +55,7 @@ class Subscribe:
 
 
 class SelectUser:
-    delete_file = 'yes'
+    delete_file = 'no'
 
 
 class Like:

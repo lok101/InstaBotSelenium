@@ -118,7 +118,8 @@ class FunctionClass(SupportClass):
                                scatter_timeout=Subscribe.scatter_timeout,
                                subscribe_in_session=Subscribe.subscribe_in_session,
                                sleep_between_iterations=Subscribe.sleep_between_iterations,
-                               operating_mode=Subscribe.operating_mode
+                               operating_mode=Subscribe.operating_mode,
+                               subscribe_limit=Subscribe.subscribe_limit_stop
                                ):
         """
         user_list - список юзеров для подписки
@@ -126,9 +127,11 @@ class FunctionClass(SupportClass):
         scatter_timeout - разброс при вычислении таймаута
         sleep_between_iterations - дополнительный таймаут на каждые subscribe_in_session подписок
         limit_subscribes - максимальное число подписчиков у профиля (если больше, то пропустит этот профиль)
+        subscribe_limit - колличество подписок в задаче
         """
         browser = self.browser
         user_list, ignore_list = set(), set()
+        stop_word = 'ПРОФИЛЬ "ПОМОЙКА.'
         subscribe_count = 1
         path = ''
 
@@ -153,12 +156,15 @@ class FunctionClass(SupportClass):
             for link in file:
                 ignore_list.add(link)
         with open('data/assert_log.txt', 'a') as file:
-            file.write(f'{datetime.now().strftime("%H:%M:%S")} - лог файл запущен.')
+            file.write(f'{datetime.now().strftime("%H:%M:%S")} - лог файл запущен. \n')
         print(f'Профилей в списке до взаимодействия с игнор-листом - {len(user_list)}', end=', ')
         user_list = user_list.difference(ignore_list)
         print(f'после - {len(user_list)}')
         for user in user_list:
             try:
+                if subscribe_count == subscribe_limit:
+                    print('======================ПОДПИСКА ЗАВЕРШЕНА======================')
+                    break
                 if subscribe_count % subscribe_in_session == 0:
                     print(f'{datetime.now().strftime("%H:%M")} Подписался на очередные',
                           f'{subscribe_in_session} пользователей. Таймаут {sleep_between_iterations} минут.')
@@ -178,9 +184,13 @@ class FunctionClass(SupportClass):
                 print(f'Перешёл в профиль: {user_name}')
 
                 self.assert_subscribe()
+                # поиск стоп-слов в биографии, если нашёл, то вернёт слово и уронит assert
+                flag_and_stop_word = self.should_be_stop_word_in_biography(stop_words=Subscribe.stop_word_dict)
+                flag, stop_word = flag_and_stop_word[0], flag_and_stop_word[1]
+                assert flag, 'СТОП-СЛОВО'   # assert-функции, вывод которых прописан КАПСОМ - пишутся в лог файл
 
                 time.sleep(random.randrange(timeout - scatter_timeout, timeout + scatter_timeout))
-                subscribe_button = self.search_element((By.XPATH, '//div/div/div/span/span[1]/button'))
+                subscribe_button = self.search_element((By.CSS_SELECTOR, 'span.vBF20._1OSdk > button'))
                 subscribe_button.click()
 
                 assert self.should_be_subscribe_blocking(), 'Subscribe blocking'
@@ -188,31 +198,37 @@ class FunctionClass(SupportClass):
                 with open('data/ignore_list.txt', 'a') as file:
                     file.write(user)
                 subscribe_count = int(subscribe_count) + 1
-                print(
-                    f'{datetime.now().strftime("%H:%M:%S")} Подписок: {subscribe_count - 1} подписался на: {user_name}',
-                    end='  ======>')
+                print(f'{datetime.now().strftime("%H:%M:%S")} == +  {user_name} == подписок: {subscribe_count - 1}',
+                      end='  ======> ')
 
             except TimeoutException:
-                print('----TimeoutException---- переход к следующему посту.')
+                print('----TimeoutException---- переход к следующему посту.', end=' ======> ')
                 continue
 
             except NoSuchElementException:
-                print('----NoSuchElementException---- переход к следующему посту.')
+                print('----NoSuchElementException---- переход к следующему посту.', end=' ======> ')
                 continue
 
             except AssertionError as assertion:
                 with open('data/ignore_list.txt', 'a') as file:
                     file.write(user)
+
                 assertion = str(assertion.args)
+                text = re.sub("[)(']", '', assertion)
                 if 'Subscribe blocking' in assertion:
                     print('======================МИКРОБАН ПОДПИСКИ======================')
                     break
-                text = re.sub("[)(']", '', assertion)
-                if 'стоп-слово' in text:
+                # ловит стоп-слово, с которым упал assert и подставляет его в лог
+                elif 'СТОП-СЛОВО' in text:
                     with open('data/assert_log.txt', 'a') as file:
-                        assert_log = f'{str(text)} ===> {user.split("/")[-2]} \n'
+                        assert_log = f'{str(stop_word)} ===> {user.split("/")[-2]} \n'
                         file.write(assert_log)
-                print(f'{datetime.now().strftime("%H:%M:%S")}', text[:-1], end='======>')
+                elif 'ПРОФИЛЬ "ПОМОЙКА".' in text:
+                    with open('data/assert_log.txt', 'a') as file:
+                        assert_log = f'ПРОФИЛЬ "ПОМОЙКА" ===> {user.split("/")[-2]} \n'
+                        file.write(assert_log)
+
+                print(f'{datetime.now().strftime("%H:%M:%S")} == - ', text[:-1], end=' ======> ')
                 time.sleep(2)
                 continue
 

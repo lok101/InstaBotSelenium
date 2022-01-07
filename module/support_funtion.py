@@ -53,19 +53,18 @@ class SupportClass(AssertClass):
                          subscribe=Subscribe.min_subscribe,
                          subscribers=Subscribe.min_subscribers
                          ):
-        assert self.should_be_privat_profile(), 'Профиль закрыт, переход к следующему пользователю'
-        assert self.should_be_subscribe(), 'Уже подписан, переход к следующему пользователю'
-        assert self.should_be_posts(), 'В профиле нет публикаций, переход к следующему пользователю'
-        assert self.should_be_profile_avatar(), 'У профиля нет аватара, переход к следующему пользователю'
+        # assert-функции, вывод которых прописан КАПСОМ - пишутся в лог файл
+        assert self.should_be_privat_profile(), 'Профиль закрыт.'
+        assert self.should_be_subscribe(), 'Уже подписан.'
+        assert self.should_be_posts(), 'В профиле нет публикаций.'
+        assert self.should_be_profile_avatar(), 'Нет аватара.'
         assert self.should_be_limit_subscribes(limit_subscribes), \
-            f'Слишком много подписчиков. Усатновлен лимит: {limit_subscribes}'
+            f'Много подписчиков, лимит: {limit_subscribes}'
         current_coefficient = self.calculate_subscribe_coefficient()
-        assert current_coefficient < max_coefficient, 'Профиль "помойка", переход к следующему пользователю'
+        assert current_coefficient < max_coefficient, 'ПРОФИЛЬ "ПОМОЙКА".'
         subscribe_and_subscribers = self.calculate_subscribe_coefficient(mode=2)
         assert subscribe_and_subscribers[0] > subscribe and subscribe_and_subscribers[1] > subscribers, \
-            'Мало подписчиков/подписок, переход к следующему пользователю'
-        assert self.should_be_stop_word_in_biography(stop_words=Subscribe.stop_word_dict), \
-            'Встречено стоп-слово в биографии, переход к следующему пользователю'
+            'Мало подписчиков/подписок.'
 
     # собирает список подписчиков "по конкуренту"
     def select_subscribes(self, search_name=tag,

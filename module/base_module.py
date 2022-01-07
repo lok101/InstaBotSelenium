@@ -134,7 +134,7 @@ class AssertClass(BaseClass):
         вернёт False если если подписка уже есть
         """
         try:
-            self.search_element((By.XPATH, '//section/div[1]/div[1]/div/div[1]/button'), timeout=1)
+            self.search_element((By.CSS_SELECTOR, 'span.vBF20._1OSdk > button > div > span'), timeout=1)
             exist = False
         except TimeoutException:
             exist = True
@@ -205,16 +205,18 @@ class AssertClass(BaseClass):
 
     # проверяет наличие стоп-слов в биографии
     def should_be_stop_word_in_biography(self, stop_words):
+        word = 'Стоп-слово не присвоено на этапе функции.'
         try:
             biography = self.search_element((By.CSS_SELECTOR, 'div.QGPIr > span'),
                                             type_wait=ec.presence_of_element_located, timeout=1).text
             for word in stop_words:
                 assert word.lower() not in biography.lower()
-            return True
+            flag = True
         except TimeoutException:
-            return True
+            flag = True
         except AssertionError:
-            return False
+            flag = False
+        return [flag, word]
 
     # проверяет наличие "микробана"
     def should_be_subscribe_blocking(self):
