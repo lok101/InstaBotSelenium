@@ -1,11 +1,11 @@
 from selenium.webdriver.common.by import By
-from module.base_module import AssertClass
+from module.filter_module import FilterClass
 from data import username, tag
 from settings import *
 import time
 
 
-class SupportClass(AssertClass):
+class SupportClass(FilterClass):
     # собирает список тех, кто комменировал посты, для сбора ссылок на посты вызывает "select_url_posts_to_hashtag"
     def select_commentators(self, hashtag=tag,
                             number_scrolls=1,
@@ -48,23 +48,14 @@ class SupportClass(AssertClass):
                 print(f'Колличество собранных пользователей: {size}')
 
     # комплексный фильтр для режима подписки
-    def assert_subscribe(self, limit_subscribes=Subscribe.limit_subscribes,
-                         max_coefficient=Subscribe.coefficient_subscribers,
-                         subscribe=Subscribe.min_subscribe,
-                         subscribers=Subscribe.min_subscribers
-                         ):
+    def assert_subscribe(self):
         # assert-функции, вывод которых прописан КАПСОМ - пишутся в лог файл
+        assert self.should_be_activity_blocking(), 'Subscribe blocking'
         assert self.should_be_privat_profile(), 'Профиль закрыт.'
         assert self.should_be_subscribe(), 'Уже подписан.'
         assert self.should_be_posts(), 'В профиле нет публикаций.'
         assert self.should_be_profile_avatar(), 'Нет аватара.'
-        assert self.should_be_limit_subscribes(limit_subscribes), \
-            f'Много подписчиков, лимит: {limit_subscribes}'
-        current_coefficient = self.calculate_subscribe_coefficient()
-        assert current_coefficient < max_coefficient, 'ПРОФИЛЬ "ПОМОЙКА".'
-        subscribe_and_subscribers = self.calculate_subscribe_coefficient(mode=2)
-        assert subscribe_and_subscribers[0] > subscribe and subscribe_and_subscribers[1] > subscribers, \
-            'Мало подписчиков/подписок.'
+        self.should_be_compliance_with_limits()
 
     # собирает список подписчиков "по конкуренту"
     def select_subscribes(self, search_name=tag,
@@ -116,14 +107,3 @@ class SupportClass(AssertClass):
         print('Ссылки на посты собраны.')
         return posts_url_list
 
-    # возвращает подписки делённые на подписчиков или, в другом режиме, число подписчиков и число подписок
-    def calculate_subscribe_coefficient(self, mode=1):
-        subscribers_field = self.search_element((By.XPATH, '//li[2]/a/span'), type_wait=ec.presence_of_element_located)
-        subscribe_field = self.search_element((By.XPATH, '//li[3]/a/span'), type_wait=ec.presence_of_element_located)
-        subscribers = int(subscribers_field.get_attribute('title').replace(" ", ""))
-        subscribe = int(subscribe_field.text.replace(" ", ""))
-        if mode == 1:
-            coefficient = subscribe / subscribers
-            return coefficient
-        else:
-            return subscribe, subscribers

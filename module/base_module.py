@@ -1,4 +1,4 @@
-from selenium.common.exceptions import TimeoutException, StaleElementReferenceException
+from selenium.common.exceptions import TimeoutException
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.common.by import By
 from selenium.webdriver.common.keys import Keys
@@ -7,7 +7,6 @@ from data import username, password, proxy
 from settings import *
 import requests
 import time
-import hashlib
 
 
 def download_for_link(link):
@@ -107,7 +106,7 @@ class BaseClass:
                     list_urls.add(post_url)
         return list_urls
 
-    # проверяет, если ли мини-иконка профиля
+    # проверяет, если ли мини-иконка профиля (используется для проверки логина)
     def should_be_login_button(self):
         try:
             self.search_element((By.CSS_SELECTOR, 'div:nth-child(6) > span > img'),
@@ -117,111 +116,21 @@ class BaseClass:
             exist = False
         return exist
 
-
-class AssertClass(BaseClass):
-    # проверяет, стоит ли лайк
-    def should_be_like(self):
-        try:
-            self.search_element((By.CSS_SELECTOR, 'span.fr66n > button > div.QBdPU.B58H7 > svg'), timeout=1)
-            exist = True
-        except TimeoutException:
-            exist = False
-        return exist
-
-    # проверяет, подписан ли на пользователя
-    def should_be_subscribe(self):
-        """
-        вернёт False если если подписка уже есть
-        """
-        try:
-            self.search_element((By.CSS_SELECTOR, 'span.vBF20._1OSdk > button > div > span'), timeout=1)
-            exist = False
-        except TimeoutException:
-            exist = True
-        return exist
-
-    # проверяет, есть ли публикации в профиле
-    def should_be_posts(self):
-        """
-        вернёт False если найдёт надпись "Публикаций пока нет"
-        """
-        try:
-            self.search_element((By.XPATH, '//article/div[1]/div/div[2]/h1'), timeout=1)
-            exist = False
-        except TimeoutException:
-            exist = True
-        return exist
-
-    # проверяет, являяется ли переданное число больше числа подписчиков на странице
-    def should_be_limit_subscribes(self, limit_subscribes):
-        number_subscribes_str = '1'
-        try:
-            button_subscribes = self.search_element((By.XPATH, '//header/section/ul/li[2]/a/span'),
-                                                    type_wait=ec.presence_of_element_located)
-            assert button_subscribes
-            number_subscribes_str = button_subscribes.get_attribute('title')
-            number_subscribes_int = int(number_subscribes_str.replace(" ", ""))
-            if limit_subscribes > number_subscribes_int:
-                return True
-            return False
-        except AssertionError:
-            return False
-        except ValueError:
-            print(f'ValueError, интуемая переменная - "{number_subscribes_str}"')
-            return False
-
-    # проверяет, не является ли профиль закрытым
-    def should_be_privat_profile(self):
-        """
-        вернёт False если профиль закрыт
-        """
-        try:
-            self.search_element((By.XPATH, '//article/div[1]/div/h2'), timeout=1)
-            exist = False
-        except TimeoutException:
-            exist = True
-        except StaleElementReferenceException:
-            print('Проблемы при поиске элемента, пропускаю профиль')
-            exist = False
-        return exist
-
-    # возвращает false, если в профиле нет аватара
-    def should_be_profile_avatar(self):
-        digests = []
-        url = self.get_link((By.CSS_SELECTOR, 'div.RR-M- span img._6q-tv'))
-        download_for_link(url)   # качает изображение и кладёт его в 'data/profile_avatar.jpg'
-        for filename in ['data/sample.jpg', 'data/profile_avatar.jpg']:
-            hasher = hashlib.md5()
-            with open(filename, 'rb') as f:
-                buf = f.read()
-                hasher.update(buf)
-                a = hasher.hexdigest()
-                digests.append(a)
-        if digests[0] == digests[1]:
-            exist = False
-        else:
-            exist = True
-        return exist
-
-    # проверяет наличие стоп-слов в биографии
-    def should_be_stop_word_in_biography(self, stop_words):
-        word = 'Стоп-слово не присвоено на этапе функции.'
-        try:
-            biography = self.search_element((By.CSS_SELECTOR, 'div.QGPIr > span'),
-                                            type_wait=ec.presence_of_element_located, timeout=1).text
-            for word in stop_words:
-                assert word.lower() not in biography.lower()
-            flag = True
-        except TimeoutException:
-            flag = True
-        except AssertionError:
-            flag = False
-        return [flag, word]
-
-    # проверяет наличие "микробана"
+    # проверяет наличие "микробана" на подписку
     def should_be_subscribe_blocking(self):
         try:
-            self.search_element((By.CSS_SELECTOR, 'div._08v79 > h3'), timeout=2)
+            self.search_element((By.CSS_SELECTOR, 'div._08v79 > h3'), timeout=2,
+                                type_wait=ec.presence_of_element_located)
+            exist = False
+        except TimeoutException:
+            exist = True
+        return exist
+
+    # проверяет наличие "микробана" на активность
+    def should_be_activity_blocking(self):
+        try:
+            self.search_element((By.CSS_SELECTOR, 'div > div.error-container > p'), timeout=2,
+                                type_wait=ec.presence_of_element_located)
             exist = False
         except TimeoutException:
             exist = True

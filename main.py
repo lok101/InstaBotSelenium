@@ -131,7 +131,7 @@ class FunctionClass(SupportClass):
         """
         browser = self.browser
         user_list, ignore_list = set(), set()
-        stop_word = 'ПРОФИЛЬ "ПОМОЙКА.'
+        stop_word = 'Стоп-слово не присвоено на этапе модуля.'
         subscribe_count = 1
         path = ''
 
@@ -156,7 +156,7 @@ class FunctionClass(SupportClass):
             for link in file:
                 ignore_list.add(link)
         with open('data/assert_log.txt', 'a') as file:
-            file.write(f'{datetime.now().strftime("%H:%M:%S")} - лог файл запущен. \n')
+            file.write(f'\n{datetime.now().strftime("%H:%M:%S")} - лог файл запущен. \n')
         print(f'Профилей в списке до взаимодействия с игнор-листом - {len(user_list)}', end=', ')
         user_list = user_list.difference(ignore_list)
         print(f'после - {len(user_list)}')
