@@ -1,5 +1,4 @@
-﻿from selenium.webdriver.support import expected_conditions as ec
-from data import stop_word_dict
+﻿from data import stop_word_dict
 
 
 class StartSettings:
@@ -12,7 +11,6 @@ class StartSettings:
     headless = 'no'
     proxy = 'yes'
     web_driver_wait = 30
-    web_driver_wait_type = ec.element_to_be_clickable
 
 
 class Unsubscribe:
@@ -43,7 +41,7 @@ class Subscribe:
     subscribe_limit - колличество подписок в задаче
 
     """
-    operating_mode = 3
+    operating_mode = 2
 
     timeout = 2
     scatter_timeout = 1
@@ -60,14 +58,22 @@ class Subscribe:
     stop_word_dict = stop_word_dict
 
 
-class SelectUser:
-    delete_file = 'no'
+class SearchUser:
+    """
+    search_depth - колличество профилей из поиска, попадающих в выборку, при сборе аудитории
+
+    limit_subscribes_min, limit_subscribes_max - максимальное и минимальное число подписчиков для профиля
+    limit_posts_min, limit_posts_max - максимальное и минимальное число постов для профиля
+    coefficient_subscribers - подписки делённые на подписчиков (если подписок много, а подписчиков мало - пропуск)
+    subscribe_limit - колличество подписок в задаче
+    """
+    coefficient_subscribers = 1
+    posts_max, posts_min = 100000, 3
+    subscribers_max, subscribers_min = 100000, 1000
+    subscriptions_max, subscriptions_min = 500, 0
+    search_depth = 15
 
 
 class Like:
     min_sleep = 10
     max_sleep = 30
-
-
-class ErrorLimit:
-    error_limit_unsubscribe = 5

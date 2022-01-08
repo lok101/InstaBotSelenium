@@ -1,4 +1,5 @@
-from selenium.common.exceptions import TimeoutException
+from selenium.common.exceptions import TimeoutException, StaleElementReferenceException
+from selenium.webdriver.support import expected_conditions as ec
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.common.by import By
 from selenium.webdriver.common.keys import Keys
@@ -18,7 +19,7 @@ def download_for_link(link):
 def file_read(file_name, value, operating_mode='r'):
     with open(f'data/{file_name}.txt', operating_mode) as file:
         for link in file:
-            value.add(link)
+            value.add(link + '\n')
 
 
 def file_write(file_name, value, value2=None, operating_mode='a'):
@@ -26,7 +27,7 @@ def file_write(file_name, value, value2=None, operating_mode='a'):
         if value2 is not None:
             file.write(str(value) + '\n')
             file.write(str(value2) + '\n \n')
-        elif isinstance(value, list):
+        elif isinstance(value, list) or isinstance(value, set):
             for item in value:
                 file.write(item + '\n')
         else:
@@ -92,7 +93,7 @@ class BaseClass:
     # возвращает элемент с использованием явного ожидания
     def search_element(self, locator,
                        timeout=StartSettings.web_driver_wait,
-                       type_wait=StartSettings.web_driver_wait_type
+                       type_wait=ec.element_to_be_clickable
                        ):
         element = WebDriverWait(self.browser, timeout).until(type_wait(locator))
         return element
@@ -104,25 +105,32 @@ class BaseClass:
         parameter=2 - возвращает список ссылок на посты
         ignore - ключевое слово для игнора (сверяется со ссылкой)
         """
-        print(f'Вызван tag_search с параметром: {parameter}')
+        # print(f'Вызван tag_search с параметром: {parameter}')
         list_urls = set()
-        time.sleep(5)
-        if parameter == 1:
-            tags = self.browser.find_elements(By.TAG_NAME, 'a')
-            for public_block in tags:
-                profile_url = public_block.get_attribute('href')
-                len_user_url = len(profile_url.split('/'))  # у ссылки на профиль пользователя это параметр равен пяти.
-                if len_user_url == 5 and 'www.instagram.com' in profile_url and username not in profile_url \
-                        and 'explore' not in profile_url and ignore not in profile_url:
-                    list_urls.add(profile_url)
+        time.sleep(3)
+        while True:
+            try:
+                if parameter == 1:
+                    tags = self.browser.find_elements(By.TAG_NAME, 'a')
+                    for public_block in tags:
+                        profile_url = public_block.get_attribute('href')
+                        len_user_url = len(profile_url.split('/'))  # у ссылки на профиль равен пяти.
+                        if len_user_url == 5 and 'www.instagram.com' in profile_url and username not in profile_url \
+                                and 'explore' not in profile_url and ignore not in profile_url:
+                            list_urls.add(profile_url)
+                    return list_urls
 
-        elif parameter == 2:
-            tags = self.search_element((By.TAG_NAME, 'a'))
-            for post in tags:
-                post_url = post.get_attribute('href')
-                if '/p/' in post_url:
-                    list_urls.add(post_url)
-        return list_urls
+                elif parameter == 2:
+                    tags = self.browser.find_elements(By.TAG_NAME, 'a')
+                    for post in tags:
+                        post_url = post.get_attribute('href')
+                        if '/p/' in post_url:
+                            list_urls.add(post_url)
+                    return list_urls
+
+            except StaleElementReferenceException:
+                print(StaleElementReferenceException)
+                continue
 
     # проверяет, если ли мини-иконка профиля (используется для проверки логина)
     def should_be_login_button(self):

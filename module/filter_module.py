@@ -1,7 +1,7 @@
 from selenium.common.exceptions import TimeoutException, StaleElementReferenceException
+from selenium.webdriver.support import expected_conditions as ec
 from module.base_module import BaseClass, download_for_link
 from selenium.webdriver.common.by import By
-from settings import *
 import hashlib
 
 
@@ -40,13 +40,8 @@ class FilterClass(BaseClass):
         return exist
 
     # комплексный фильтр подписки/подписчики/посты
-    def should_be_compliance_with_limits(self, max_coefficient=Subscribe.coefficient_subscribers,
-                                         posts_max=Subscribe.posts_max, posts_min=Subscribe.posts_min,
-                                         subscribers_max=Subscribe.subscribers_max,
-                                         subscribers_min=Subscribe.subscribers_min,
-                                         subscriptions_max=Subscribe.subscriptions_max,
-                                         subscriptions_min=Subscribe.subscriptions_min,
-                                         ):
+    def should_be_compliance_with_limits(self, max_coefficient, posts_max, posts_min, subscribers_max, subscribers_min,
+                                         subscriptions_max, subscriptions_min):
         # assert-функции, вывод которых прописан КАПСОМ - пишутся в лог файл
         number_posts_subscribe_and_subscribers = self.return_number_posts_subscribe_and_subscribers()
         posts_number = number_posts_subscribe_and_subscribers[1]
@@ -95,8 +90,8 @@ class FilterClass(BaseClass):
     def should_be_stop_word_in_biography(self, stop_words):
         word = 'Стоп-слово не присвоено на этапе функции.'
         try:
-            biography = self.search_element((By.CSS_SELECTOR, 'div.QGPIr > span'),
-                                            type_wait=ec.presence_of_element_located, timeout=1).text
+            biography = self.search_element((By.CSS_SELECTOR, 'div.QGPIr > span'), timeout=1,
+                                            type_wait=ec.presence_of_element_located).text
             for word in stop_words:
                 assert word.lower() not in biography.lower()
             flag = True
@@ -108,15 +103,23 @@ class FilterClass(BaseClass):
 
     # возвращает колличество постов, подписчиков, подписок и коэффицент подписки/подписчики
     def return_number_posts_subscribe_and_subscribers(self):
-        subscribers_field = self.search_element((By.CSS_SELECTOR, 'li:nth-child(3) > a > span'),
-                                                type_wait=ec.presence_of_element_located)
-        subscriptions = int(
-            subscribers_field.text.replace(" ", "").replace(',', '').replace('тыс.', '000').replace('млн', '000000'))
+        try:
+            subscribers_field = self.search_element((By.CSS_SELECTOR, 'li:nth-child(3) > a > span'),
+                                                    type_wait=ec.presence_of_element_located, timeout=3)
+
+            subscriptions = int(
+                subscribers_field.text.replace(" ", "").replace(',', ''))
+        except TimeoutException:
+            subscriptions = 0
 
         subscribe_field = self.search_element((By.CSS_SELECTOR, 'li:nth-child(2) > a > span'),
                                               type_wait=ec.presence_of_element_located)
-        subscribers = int(
-            subscribe_field.text.replace(" ", "").replace(',', '').replace('тыс.', '000').replace('млн', '000000'))
+        if ',' in subscribe_field.text:
+            subscribers = int(
+                subscribe_field.text.replace(" ", "").replace(',', '').replace('тыс.', '00').replace('млн', '00000'))
+        else:
+            subscribers = int(
+                subscribe_field.text.replace(" ", "").replace('тыс.', '000').replace('млн', '000000'))
 
         post_number_field = self.search_element((By.CSS_SELECTOR, 'li:nth-child(1) > span > span'),
                                                 type_wait=ec.presence_of_element_located)

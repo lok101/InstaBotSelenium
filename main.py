@@ -1,4 +1,5 @@
 from selenium.common.exceptions import NoSuchElementException, TimeoutException
+from selenium.webdriver.support import expected_conditions as ec
 from selenium.webdriver.common.by import By
 from module.support_funtion import SupportClass
 from module.base_module import file_write, file_read
@@ -17,7 +18,6 @@ class FunctionClass(SupportClass):
                                   min_sleep=Unsubscribe.min_sleep,
                                   max_sleep=Unsubscribe.max_sleep,
                                   sleep_between_iterations=Unsubscribe.sleep_between_iterations,
-                                  error_max=ErrorLimit.error_limit_unsubscribe
                                   ):
         """
         min_sleep - минимальная задежка между отписками
@@ -27,12 +27,8 @@ class FunctionClass(SupportClass):
         """
         browser = self.browser
         browser.get(f"https://www.instagram.com/{username}/")
-        # счётчик перезапусков
-        error_count = 0
 
         while True:
-            if error_count >= error_max:
-                break
             try:
                 following_count = self.search_element((
                     By.XPATH, '//main/div/header/section/ul/li[3]/a/span'),
@@ -60,22 +56,6 @@ class FunctionClass(SupportClass):
 
                     print(f"Итерация #{count} >>> Отписался от пользователя  {datetime.now().strftime('%H:%M:%S')}")
                     count -= 1
-            except NoSuchElementException:
-                error_count += 1
-                if error_count == error_max:
-                    print(f'''
-                    -----------------------------------------------------------------------------------
-                    ----------- Элемент не найден, лимит перезапусков превышен, завершение. -----------
-                    -----------------------------------------------------------------------------------
-                           ''')
-                else:
-                    print(f'''
-                    -----------------------------------------------------------------------------------
-                    ----------- Элемент не найден, перезапуск # {error_count}. ------------------------
-                    -----------------------------------------------------------------------------------
-                           ''')
-                time.sleep(30)
-                continue
             except TimeoutException as error:
                 print(error)
                 continue
@@ -106,9 +86,6 @@ class FunctionClass(SupportClass):
                 button_like.click()
                 print(f'Лайк на пост по ссылке: {url} --- поставлен!')
                 time.sleep(random.randrange(min_sleep, max_sleep))
-            except NoSuchElementException:
-                print('----------- Ошибка при постановке лайка, переход к следующему посту. -----------')
-                continue
             except AssertionError:
                 print('----------- Лайк уже есть, переход к следующему посту. -----------')
                 continue
@@ -133,23 +110,23 @@ class FunctionClass(SupportClass):
         user_list, ignore_list = set(), set()
         stop_word = 'Стоп-слово не присвоено на этапе модуля.'
         subscribe_count = 1
-        path = ''
+        name_file = ''
 
         if operating_mode == 1:
             print('Списка нет, вызываю "select_commentators"')
             self.select_commentators()
-            path = 'data/User_urls_commentators.txt'
+            name_file = 'User_urls_commentators'
             print('Список получен, перехожу к подписке.')
         elif operating_mode == 2:
             print('Списка нет, вызываю "select_subscribes"')
             self.select_subscribes()
-            path = 'data/User_urls_subscribers.txt'
+            name_file = 'User_urls_subscribers'
             print('Список получен, перехожу к подписке.')
         elif operating_mode == 3:
             print('Открываю список "User_urls_subscribers"')
-            path = 'data/User_urls_subscribers.txt'
+            name_file = 'User_urls_subscribers'
 
-        file_read(path, user_list)
+        file_read(name_file, user_list)
         # with open(path, 'r') as file:
         #     for link in file:
         #         user_list.add(link)
