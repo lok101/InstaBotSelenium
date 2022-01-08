@@ -1,6 +1,7 @@
 from selenium.webdriver.common.by import By
 from module.filter_module import FilterClass
 from data import username, tag
+from module.base_module import file_write
 from settings import *
 import time
 
@@ -40,9 +41,10 @@ class SupportClass(FilterClass):
             name_profile = block_profile.get_attribute('href')
 
             user_urls = self.tag_search(ignore=name_profile)
-            with open('data/User_urls_commentators.txt', 'a') as file:
-                for user_url in user_urls:
-                    file.write(user_url + '\n')
+            file_write('User_urls_commentators', user_urls)
+            # with open('data/User_urls_commentators.txt', 'a') as file:
+            #     for user_url in user_urls:
+            #         file.write(user_url + '\n')
             with open('data/User_urls_commentators.txt', 'r') as file:
                 size = len(file.readlines())
                 print(f'Колличество собранных пользователей: {size}')
@@ -50,12 +52,12 @@ class SupportClass(FilterClass):
     # комплексный фильтр для режима подписки
     def assert_subscribe(self):
         # assert-функции, вывод которых прописан КАПСОМ - пишутся в лог файл
-        assert self.should_be_activity_blocking(), 'Subscribe blocking'
+        assert self.should_be_activity_blocking(), 'Subscribe blocking'   # проверяет наличие "микробана" активности
         assert self.should_be_privat_profile(), 'Профиль закрыт.'
         assert self.should_be_subscribe(), 'Уже подписан.'
         assert self.should_be_posts(), 'В профиле нет публикаций.'
         assert self.should_be_profile_avatar(), 'Нет аватара.'
-        self.should_be_compliance_with_limits()
+        self.should_be_compliance_with_limits()   # блок фильтов (колличество постов, подписчиков, подписок)
 
     # собирает список подписчиков "по конкуренту"
     def select_subscribes(self, search_name=tag,
@@ -85,9 +87,10 @@ class SupportClass(FilterClass):
             browser.execute_script("arguments[0].scrollTop = arguments[0].scrollHeight", subscribes_ul)
 
             user_urls = self.tag_search(ignore=username)
-            with open('data/User_urls_subscribers.txt', 'a') as file:
-                for user_url in user_urls:
-                    file.write(user_url + '\n')
+            file_write('User_urls_subscribers', user_urls)
+            # with open('data/User_urls_subscribers.txt', 'a') as file:
+            #     for user_url in user_urls:
+            #         file.write(user_url + '\n')
             with open('data/User_urls_subscribers.txt', 'r') as file:
                 size = len(file.readlines())
                 print(f'Колличество собранных пользователей: {size}')
@@ -106,4 +109,3 @@ class SupportClass(FilterClass):
                 posts_url_list.append(post_url)
         print('Ссылки на посты собраны.')
         return posts_url_list
-

@@ -9,7 +9,7 @@ class StartSettings:
     proxy - использовать прокси или нет (сам прокси прописан в data.txt)
     implicitly_wait_timeout - сколько ждать появления элемента во всех этапах, кроме assert-функций
     """
-    headless = 'yes'
+    headless = 'no'
     proxy = 'yes'
     web_driver_wait = 30
     web_driver_wait_type = ec.element_to_be_clickable

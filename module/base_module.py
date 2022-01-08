@@ -15,6 +15,24 @@ def download_for_link(link):
         img_file.write(get_img.content)
 
 
+def file_read(file_name, value, operating_mode='r'):
+    with open(f'data/{file_name}.txt', operating_mode) as file:
+        for link in file:
+            value.add(link)
+
+
+def file_write(file_name, value, value2=None, operating_mode='a'):
+    with open(f'data/{file_name}.txt', operating_mode) as file:
+        if value2 is not None:
+            file.write(str(value) + '\n')
+            file.write(str(value2) + '\n \n')
+        elif isinstance(value, list):
+            for item in value:
+                file.write(item + '\n')
+        else:
+            file.write(str(value))
+
+
 class BaseClass:
     def __init__(self, user_name, pass_word,
                  proxy_url=proxy,
@@ -94,7 +112,7 @@ class BaseClass:
             for public_block in tags:
                 profile_url = public_block.get_attribute('href')
                 len_user_url = len(profile_url.split('/'))  # у ссылки на профиль пользователя это параметр равен пяти.
-                if len_user_url == 5 and 'www.instagram.com' in profile_url and username not in profile_url\
+                if len_user_url == 5 and 'www.instagram.com' in profile_url and username not in profile_url \
                         and 'explore' not in profile_url and ignore not in profile_url:
                     list_urls.add(profile_url)
 
@@ -128,10 +146,12 @@ class BaseClass:
 
     # проверяет наличие "микробана" на активность
     def should_be_activity_blocking(self):
+        exist = None
         try:
-            self.search_element((By.CSS_SELECTOR, 'div > div.error-container > p'), timeout=2,
-                                type_wait=ec.presence_of_element_located)
-            exist = False
+            error_message = self.search_element((By.CSS_SELECTOR, 'div > div.error-container > p'), timeout=2,
+                                                type_wait=ec.presence_of_element_located)
+            if 'Подождите несколько минут, прежде чем пытаться снова' in error_message.text:
+                exist = False
         except TimeoutException:
             exist = True
         return exist

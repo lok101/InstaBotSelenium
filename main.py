@@ -1,6 +1,7 @@
 from selenium.common.exceptions import NoSuchElementException, TimeoutException
 from selenium.webdriver.common.by import By
 from module.support_funtion import SupportClass
+from module.base_module import file_write, file_read
 from datetime import datetime
 from data import *
 from settings import *
@@ -43,7 +44,6 @@ class FunctionClass(SupportClass):
                 following_button = self.search_element((By.XPATH, "//li[3]/a"))
                 following_button.click()
 
-                # забираем все li из ul, в них хранится кнопка отписки и ссылки на подписки
                 following_div_block = self.search_element((By.XPATH, "/html/body/div[6]/div/div/div[3]/ul/div"))
                 time.sleep(2)
                 following_users = following_div_block.find_elements(By.TAG_NAME, "li")
@@ -53,11 +53,7 @@ class FunctionClass(SupportClass):
                         time.sleep(sleep_between_iterations)
                         break
 
-                    # user_url = self.browser.find_element(By.TAG_NAME, "a").get_attribute("href")
-                    # user_name = user_url.split("/")[-2]
-
                     unsubscribe_button = user.find_element(By.TAG_NAME, "button")
-                    # unsubscribe_button = user.search_element((By.TAG_NAME, "button"))
                     unsubscribe_button.click()
                     time.sleep(random.randrange(min_sleep, max_sleep))
                     self.search_element((By.CSS_SELECTOR, "button.-Cab_")).click()
@@ -153,14 +149,15 @@ class FunctionClass(SupportClass):
             print('Открываю список "User_urls_subscribers"')
             path = 'data/User_urls_subscribers.txt'
 
-        with open(path, 'r') as file:
-            for link in file:
-                user_list.add(link)
-        with open('data/ignore_list.txt', 'r') as file:
-            for link in file:
-                ignore_list.add(link)
-        with open('data/assert_log.txt', 'a') as file:
-            file.write(f'\n{datetime.now().strftime("%H:%M:%S")} - лог файл запущен. \n')
+        file_read(path, user_list)
+        # with open(path, 'r') as file:
+        #     for link in file:
+        #         user_list.add(link)
+        file_read('ignore_list', ignore_list)
+        # with open('data/ignore_list.txt', 'r') as file:
+        #     for link in file:
+        #         ignore_list.add(link)
+        file_write('assert_log', f'\n{datetime.now().strftime("%H:%M:%S")} - лог файл запущен. \n')
         print(f'Профилей в списке до взаимодействия с игнор-листом - {len(user_list)}', end=', ')
         user_list = user_list.difference(ignore_list)
         print(f'после - {len(user_list)}')
@@ -199,8 +196,8 @@ class FunctionClass(SupportClass):
 
                 assert self.should_be_subscribe_blocking(), 'Subscribe blocking'
 
-                with open('data/ignore_list.txt', 'a') as file:
-                    file.write(user)
+                file_write('ignore_list', user)
+
                 subscribe_count = int(subscribe_count) + 1
                 print(f'{datetime.now().strftime("%H:%M:%S")} == +  {user_name} == подписок: {subscribe_count - 1}',
                       end='  ======> ')
@@ -208,39 +205,31 @@ class FunctionClass(SupportClass):
             except TimeoutException:
                 traceback_text = traceback.format_exc()
                 date = datetime.now().strftime("%d-%m %H:%M:%S")
-                with open('data/traceback_subscribe.txt', 'a') as file:
-                    file.write(date)
-                    file.write(traceback_text + '\n \n')
+                file_write('traceback_subscribe', date, traceback_text)
                 print('----TimeoutException---- переход к следующему посту.', end=' ======> ')
                 continue
 
             except NoSuchElementException:
                 traceback_text = traceback.format_exc()
                 date = datetime.now().strftime("%d-%m %H:%M:%S")
-                with open('data/traceback_subscribe.txt', 'a') as file:
-                    file.write(date)
-                    file.write(traceback_text + '\n \n')
+                file_write('traceback_subscribe', date, traceback_text)
                 print('----NoSuchElementException---- переход к следующему посту.', end=' ======> ')
                 continue
 
             except AssertionError as assertion:
-                with open('data/ignore_list.txt', 'a') as file:
-                    file.write(user)
-
+                file_write('ignore_list', user)
                 assertion = str(assertion.args)
                 text = re.sub("[)(']", '', assertion)
                 if 'Subscribe blocking' in assertion:
                     print('======================МИКРОБАН ПОДПИСКИ======================')
                     break
                 # ловит стоп-слово, с которым упал assert и подставляет его в лог
-                elif 'СТОП-СЛОВО' in text:
-                    with open('data/assert_log.txt', 'a') as file:
-                        assert_log = f'{str(stop_word)} ===> {user.split("/")[-2]} \n'
-                        file.write(assert_log)
+                if 'СТОП-СЛОВО' in text:
+                    assert_log = f'{str(stop_word)} ===> {user.split("/")[-2]} \n'
+                    file_write('assert_log', assert_log)
                 elif 'ПРОФИЛЬ "ПОМОЙКА".' in text:
-                    with open('data/assert_log.txt', 'a') as file:
-                        assert_log = f'ПРОФИЛЬ "ПОМОЙКА" ===> {user.split("/")[-2]} \n'
-                        file.write(assert_log)
+                    assert_log = f'ПРОФИЛЬ "ПОМОЙКА" ===> {user.split("/")[-2]} \n'
+                    file_write('assert_log', assert_log)
 
                 print(f'{datetime.now().strftime("%H:%M:%S")} ==   ', text[:-1], end=' ======> ')
                 time.sleep(2)
