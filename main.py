@@ -4,6 +4,7 @@ from module.support_funtion import SupportClass
 from datetime import datetime
 from data import *
 from settings import *
+import traceback
 import random
 import time
 import re
@@ -78,6 +79,9 @@ class FunctionClass(SupportClass):
                     -----------------------------------------------------------------------------------
                            ''')
                 time.sleep(30)
+                continue
+            except TimeoutException as error:
+                print(error)
                 continue
 
     # ставит лайки по хэштегу
@@ -202,10 +206,20 @@ class FunctionClass(SupportClass):
                       end='  ======> ')
 
             except TimeoutException:
+                traceback_text = traceback.format_exc()
+                date = datetime.now().strftime("%d-%m %H:%M:%S")
+                with open('data/traceback_subscribe.txt', 'a') as file:
+                    file.write(date)
+                    file.write(traceback_text + '\n \n')
                 print('----TimeoutException---- переход к следующему посту.', end=' ======> ')
                 continue
 
             except NoSuchElementException:
+                traceback_text = traceback.format_exc()
+                date = datetime.now().strftime("%d-%m %H:%M:%S")
+                with open('data/traceback_subscribe.txt', 'a') as file:
+                    file.write(date)
+                    file.write(traceback_text + '\n \n')
                 print('----NoSuchElementException---- переход к следующему посту.', end=' ======> ')
                 continue
 
@@ -228,7 +242,7 @@ class FunctionClass(SupportClass):
                         assert_log = f'ПРОФИЛЬ "ПОМОЙКА" ===> {user.split("/")[-2]} \n'
                         file.write(assert_log)
 
-                print(f'{datetime.now().strftime("%H:%M:%S")} == - ', text[:-1], end=' ======> ')
+                print(f'{datetime.now().strftime("%H:%M:%S")} ==   ', text[:-1], end=' ======> ')
                 time.sleep(2)
                 continue
 

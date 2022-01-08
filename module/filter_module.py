@@ -53,10 +53,10 @@ class FilterClass(BaseClass):
         subscribers_count = number_posts_subscribe_and_subscribers[2]
         subscriptions_count = number_posts_subscribe_and_subscribers[3]
         coefficient = number_posts_subscribe_and_subscribers[0]
-        assert posts_max > posts_number > posts_min, 'Не прошёл по постам.'
-        assert subscribers_max > subscribers_count > subscribers_min, 'Не прошёл по подписчикам.'
-        assert subscriptions_max > subscriptions_count > subscriptions_min, 'Не прошёл по подпискам.'
-        assert coefficient < max_coefficient, 'ПРОФИЛЬ "ПОМОЙКА".'
+        assert posts_max >= posts_number >= posts_min, 'Не прошёл по постам.'
+        assert subscribers_max >= subscribers_count >= subscribers_min, 'Не прошёл по подписчикам.'
+        assert subscriptions_max >= subscriptions_count >= subscriptions_min, 'Не прошёл по подпискам.'
+        assert coefficient <= max_coefficient, 'ПРОФИЛЬ "ПОМОЙКА".'
 
     # проверяет, не является ли профиль закрытым
     def should_be_privat_profile(self):
@@ -77,7 +77,7 @@ class FilterClass(BaseClass):
     def should_be_profile_avatar(self):
         digests = []
         url = self.get_link((By.CSS_SELECTOR, 'div.RR-M- span img._6q-tv'))
-        download_for_link(url)   # качает изображение и кладёт его в 'data/profile_avatar.jpg'
+        download_for_link(url)  # качает изображение и кладёт его в 'data/profile_avatar.jpg'
         for filename in ['data/sample.jpg', 'data/profile_avatar.jpg']:
             hasher = hashlib.md5()
             with open(filename, 'rb') as f:
@@ -110,14 +110,17 @@ class FilterClass(BaseClass):
     def return_number_posts_subscribe_and_subscribers(self):
         subscribers_field = self.search_element((By.CSS_SELECTOR, 'li:nth-child(3) > a > span'),
                                                 type_wait=ec.presence_of_element_located)
-        subscriptions = int(subscribers_field.text.replace(" ", ""))
+        subscriptions = int(
+            subscribers_field.text.replace(" ", "").replace(',', '').replace('тыс.', '000').replace('млн', '000000'))
 
         subscribe_field = self.search_element((By.CSS_SELECTOR, 'li:nth-child(2) > a > span'),
                                               type_wait=ec.presence_of_element_located)
-        subscribers = int(subscribe_field.text.replace(" ", ""))
+        subscribers = int(
+            subscribe_field.text.replace(" ", "").replace(',', '').replace('тыс.', '000').replace('млн', '000000'))
 
         post_number_field = self.search_element((By.CSS_SELECTOR, 'li:nth-child(1) > span > span'),
                                                 type_wait=ec.presence_of_element_located)
-        posts_number = int(post_number_field.text.replace(" ", ""))
+        posts_number = int(
+            post_number_field.text.replace(" ", "").replace(',', '').replace('тыс.', '000').replace('млн', '000000'))
 
         return [subscriptions / subscribers, posts_number, subscribers, subscriptions]
