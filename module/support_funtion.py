@@ -45,22 +45,22 @@ class SupportClass(FilterClass):
                 size = len(file.readlines())
                 print(f'Колличество собранных пользователей: {size}')
 
-    # комплексный фильтр для режима подписки
-    def assert_subscribe(self, max_coefficient=Subscribe.coefficient_subscribers,
-                         posts_max=Subscribe.posts_max, posts_min=Subscribe.posts_min,
-                         subscribers_max=Subscribe.subscribers_max,
-                         subscribers_min=Subscribe.subscribers_min,
-                         subscriptions_max=Subscribe.subscriptions_max,
-                         subscriptions_min=Subscribe.subscriptions_min):
-        # assert-функции, вывод которых прописан КАПСОМ - пишутся в лог файл
-        assert self.should_be_activity_blocking(), 'Subscribe blocking'  # проверяет наличие "микробана" активности
-        assert self.should_be_privat_profile(), 'Профиль закрыт.'
-        assert self.should_be_subscribe(), 'Уже подписан.'
-        assert self.should_be_posts(), 'В профиле нет публикаций.'
-        assert self.should_be_profile_avatar(), 'Нет аватара.'
-        # блок фильтов (колличество постов, подписчиков, подписок)
-        self.should_be_compliance_with_limits(max_coefficient, posts_max, posts_min, subscribers_max,
-                                              subscribers_min, subscriptions_max, subscriptions_min)
+    # # комплексный фильтр для режима подписки
+    # def assert_subscribe(self, max_coefficient=Subscribe.coefficient_subscribers,
+    #                      posts_max=Subscribe.posts_max, posts_min=Subscribe.posts_min,
+    #                      subscribers_max=Subscribe.subscribers_max,
+    #                      subscribers_min=Subscribe.subscribers_min,
+    #                      subscriptions_max=Subscribe.subscriptions_max,
+    #                      subscriptions_min=Subscribe.subscriptions_min):
+    #     # assert-функции, вывод которых прописан КАПСОМ - пишутся в лог файл
+    #     assert self.should_be_activity_blocking(), 'Subscribe blocking'  # проверяет наличие "микробана" активности
+    #     assert self.should_be_privat_profile(), 'Профиль закрыт.'
+    #     assert self.should_be_subscribe(), 'Уже подписан.'
+    #     assert self.should_be_posts(), 'В профиле нет публикаций.'
+    #     assert self.should_be_profile_avatar(), 'Нет аватара.'
+    #     # блок фильтов (колличество постов, подписчиков, подписок)
+    #     self.should_be_compliance_with_limits(max_coefficient, posts_max, posts_min, subscribers_max,
+    #                                           subscribers_min, subscriptions_max, subscriptions_min)
 
     # собирает список подписчиков "по конкуренту"
     def select_subscribes(self, search_name_list=data.tag_list, search_depth=SearchUser.search_depth,

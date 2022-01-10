@@ -132,12 +132,12 @@ class FunctionClass(SupportClass):
                 user_name = user.split("/")[-2]
                 print(f'{datetime.now().strftime("%H:%M:%S")} -- перешёл в профиль: {user_name}', end=' =====> ')
 
-                time.sleep(random.randrange(min_timeout, max_timeout))
-
                 subscribe_button = self.search_element((By.CSS_SELECTOR, 'span.vBF20._1OSdk > button'))
                 subscribe_button.click()
 
-                assert self.should_be_subscribe_blocking()    # проверка на микробан
+                time.sleep(random.randrange(min_timeout, max_timeout))
+
+                assert self.should_be_subscribe_blocking()  # проверка на микробан
 
                 self.file_write('ignore_list', user)
                 subscribe_count += 1
@@ -260,6 +260,7 @@ class FunctionClass(SupportClass):
     #             time.sleep(2)
     #             continue
 
+    # фильтрует список профилей
     def filter_user_list(self, timeout=StartSettings.filtered_user_list_timeout):
         browser = self.browser
         user_urls, ignore_list, filtered_user = set(), set(), set()
@@ -284,7 +285,13 @@ class FunctionClass(SupportClass):
                 user_name = user.split("/")[-2]
                 print(f'{datetime.now().strftime("%H:%M:%S")} -- Перешёл в профиль: {user_name}', end=' ======> ')
 
-                self.assert_subscribe()
+                self.should_be_compliance_with_limits(max_coefficient=Subscribe.coefficient_subscribers,
+                                                      posts_max=Subscribe.posts_max, posts_min=Subscribe.posts_min,
+                                                      subscribers_max=Subscribe.subscribers_max,
+                                                      subscribers_min=Subscribe.subscribers_min,
+                                                      subscriptions_max=Subscribe.subscriptions_max,
+                                                      subscriptions_min=Subscribe.subscriptions_min)
+
                 # поиск стоп-слов в биографии, если нашёл, то вернёт слово и уронит assert
                 flag_and_stop_word = self.should_be_stop_word_in_biography(stop_words=Subscribe.stop_word_dict)
                 flag, stop_word = flag_and_stop_word[0], flag_and_stop_word[1]

@@ -6,6 +6,25 @@ import hashlib
 
 
 class FilterClass(BaseClass):
+    # комплексный фильтр
+    def should_be_compliance_with_limits(self, max_coefficient, posts_max, posts_min, subscribers_max, subscribers_min,
+                                         subscriptions_max, subscriptions_min):
+        # assert-функции, вывод которых прописан КАПСОМ - пишутся в лог файл
+        assert self.should_be_activity_blocking(), 'Subscribe blocking'  # проверяет наличие "микробана" активности
+        assert self.should_be_privat_profile(), 'Профиль закрыт.'
+        assert self.should_be_subscribe(), 'Уже подписан.'
+        assert self.should_be_posts(), 'В профиле нет публикаций.'
+        assert self.should_be_profile_avatar(), 'Нет аватара.'
+        number_posts_subscribe_and_subscribers = self.return_number_posts_subscribe_and_subscribers()
+        posts_number = number_posts_subscribe_and_subscribers[1]
+        subscribers_count = number_posts_subscribe_and_subscribers[2]
+        subscriptions_count = number_posts_subscribe_and_subscribers[3]
+        coefficient = number_posts_subscribe_and_subscribers[0]
+        assert posts_max >= posts_number >= posts_min, 'Не прошёл по постам.'
+        assert subscribers_max >= subscribers_count >= subscribers_min, 'Не прошёл по подписчикам.'
+        assert subscriptions_max >= subscriptions_count >= subscriptions_min, 'Не прошёл по подпискам.'
+        assert coefficient <= max_coefficient, 'ПРОФИЛЬ "ПОМОЙКА".'
+
     # проверяет, стоит ли лайк
     def should_be_like(self):
         try:
@@ -38,20 +57,6 @@ class FilterClass(BaseClass):
         except TimeoutException:
             exist = True
         return exist
-
-    # комплексный фильтр подписки/подписчики/посты
-    def should_be_compliance_with_limits(self, max_coefficient, posts_max, posts_min, subscribers_max, subscribers_min,
-                                         subscriptions_max, subscriptions_min):
-        # assert-функции, вывод которых прописан КАПСОМ - пишутся в лог файл
-        number_posts_subscribe_and_subscribers = self.return_number_posts_subscribe_and_subscribers()
-        posts_number = number_posts_subscribe_and_subscribers[1]
-        subscribers_count = number_posts_subscribe_and_subscribers[2]
-        subscriptions_count = number_posts_subscribe_and_subscribers[3]
-        coefficient = number_posts_subscribe_and_subscribers[0]
-        assert posts_max >= posts_number >= posts_min, 'Не прошёл по постам.'
-        assert subscribers_max >= subscribers_count >= subscribers_min, 'Не прошёл по подписчикам.'
-        assert subscriptions_max >= subscriptions_count >= subscriptions_min, 'Не прошёл по подпискам.'
-        assert coefficient <= max_coefficient, 'ПРОФИЛЬ "ПОМОЙКА".'
 
     # проверяет, не является ли профиль закрытым
     def should_be_privat_profile(self):
