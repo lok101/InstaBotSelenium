@@ -40,7 +40,7 @@ class SupportClass(FilterClass):
             name_profile = block_profile.get_attribute('href')
 
             user_urls = self.tag_search(ignore=name_profile)
-            self.file_write('User_urls_commentators', user_urls)
+            self.file_write('non_filtered/user_urls_commentators', user_urls)
             with open('data/User_urls_commentators.txt', 'r') as file:
                 size = len(file.readlines())
                 print(f'Колличество собранных пользователей: {size}')
@@ -121,8 +121,8 @@ class SupportClass(FilterClass):
                                 break
 
                     user_urls = self.tag_search(ignore=username)
-                    self.file_write('User_urls_subscribers', user_urls)
-                    with open('data/User_urls_subscribers.txt', 'r') as file:
+                    self.file_write('non_filtered/user_urls_subscribers', user_urls)
+                    with open('data/non_filtered/user_urls_subscribers.txt', 'r') as file:
                         size = len(file.readlines())
                         print(f'Успешно. Колличество собранных пользователей: {size}')
                 except AssertionError as assertion:

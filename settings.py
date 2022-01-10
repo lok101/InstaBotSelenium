@@ -3,10 +3,10 @@
 
 class StartSettings:
     """
-    Описывает основные настрйки запуска.
-    implicitly_wait_timeout - сколько ждать появления элемента во всех этапах, кроме assert-функций
+    web_driver_wait - сколько ждать появления элемента
     """
     web_driver_wait = 30
+    filtered_user_list_timeout = 1
 
 
 class Unsubscribe:
@@ -24,8 +24,7 @@ class Unsubscribe:
 class Subscribe:
     """
     Описывает настройки, связанные с подпиской.
-    timeout - среднее время на одну подписку
-    scatter_timeout - разброс при вычислении таймаута
+    min_timeout, max_timeout - окно таймаутов между подписками
     subscribe_in_session - колличество подписок в одном заходе
     sleep_between_iterations - таймаут на каждые subscribe_in_session подписок
 
@@ -36,10 +35,10 @@ class Subscribe:
     subscribe_limit - колличество подписок в задаче
 
     """
-    timeout = 2
-    scatter_timeout = 1
+    min_timeout = 3
+    max_timeout = 10
     subscribe_in_session = 40
-    sleep_between_iterations = 20
+    sleep_between_iterations = 40
     subscribe_limit_stop = 400
     """FILTER"""
     subscribers_min, subscribers_max = 50, 5000
