@@ -2,7 +2,6 @@ from selenium.common.exceptions import NoSuchElementException, TimeoutException
 from selenium.webdriver.support import expected_conditions as ec
 from selenium.webdriver.common.by import By
 from module.support_funtion import SupportClass
-from module.base_module import file_write, file_read
 from datetime import datetime
 from data import *
 from settings import *
@@ -26,9 +25,10 @@ class FunctionClass(SupportClass):
         error_max - колличество ошибок, которые пропуустит цикл. После превышения - остановка.
         """
         browser = self.browser
+        count_restart = 0
         browser.get(f"https://www.instagram.com/{username}/")
 
-        while True:
+        while count_restart < 10:
             try:
                 following_count = self.search_element((
                     By.XPATH, '//main/div/header/section/ul/li[3]/a/span'),
@@ -56,8 +56,9 @@ class FunctionClass(SupportClass):
 
                     print(f"Итерация #{count} >>> Отписался от пользователя  {datetime.now().strftime('%H:%M:%S')}")
                     count -= 1
-            except TimeoutException as error:
-                print(error)
+            except TimeoutException:
+                print('----TimeoutException----')
+                count_restart += 1
                 continue
 
     # ставит лайки по хэштегу
@@ -95,7 +96,6 @@ class FunctionClass(SupportClass):
                                scatter_timeout=Subscribe.scatter_timeout,
                                subscribe_in_session=Subscribe.subscribe_in_session,
                                sleep_between_iterations=Subscribe.sleep_between_iterations,
-                               operating_mode=Subscribe.operating_mode,
                                subscribe_limit=Subscribe.subscribe_limit_stop
                                ):
         """
@@ -110,31 +110,9 @@ class FunctionClass(SupportClass):
         user_list, ignore_list = set(), set()
         stop_word = 'Стоп-слово не присвоено на этапе модуля.'
         subscribe_count = 1
-        name_file = ''
-
-        if operating_mode == 1:
-            print('Списка нет, вызываю "select_commentators"')
-            self.select_commentators()
-            name_file = 'User_urls_commentators'
-            print('Список получен, перехожу к подписке.')
-        elif operating_mode == 2:
-            print('Списка нет, вызываю "select_subscribes"')
-            self.select_subscribes()
-            name_file = 'User_urls_subscribers'
-            print('Список получен, перехожу к подписке.')
-        elif operating_mode == 3:
-            print('Открываю список "User_urls_subscribers"')
-            name_file = 'User_urls_subscribers'
-
-        file_read(name_file, user_list)
-        # with open(path, 'r') as file:
-        #     for link in file:
-        #         user_list.add(link)
-        file_read('ignore_list', ignore_list)
-        # with open('data/ignore_list.txt', 'r') as file:
-        #     for link in file:
-        #         ignore_list.add(link)
-        file_write('assert_log', f'\n{datetime.now().strftime("%H:%M:%S")} - лог файл запущен. \n')
+        self.file_read('User_urls_subscribers', user_list)
+        self.file_read('ignore_list', ignore_list)
+        self.file_write('assert_log', f'\n{datetime.now().strftime("%H:%M:%S")} - лог файл запущен. \n')
         print(f'Профилей в списке до взаимодействия с игнор-листом - {len(user_list)}', end=', ')
         user_list = user_list.difference(ignore_list)
         print(f'после - {len(user_list)}')
@@ -173,7 +151,7 @@ class FunctionClass(SupportClass):
 
                 assert self.should_be_subscribe_blocking(), 'Subscribe blocking'
 
-                file_write('ignore_list', user)
+                self.file_write('ignore_list', user)
 
                 subscribe_count = int(subscribe_count) + 1
                 print(f'{datetime.now().strftime("%H:%M:%S")} == +  {user_name} == подписок: {subscribe_count - 1}',
@@ -182,19 +160,19 @@ class FunctionClass(SupportClass):
             except TimeoutException:
                 traceback_text = traceback.format_exc()
                 date = datetime.now().strftime("%d-%m %H:%M:%S")
-                file_write('traceback_subscribe', date, traceback_text)
+                self.file_write('traceback_subscribe', date, traceback_text)
                 print('----TimeoutException---- переход к следующему посту.', end=' ======> ')
                 continue
 
             except NoSuchElementException:
                 traceback_text = traceback.format_exc()
                 date = datetime.now().strftime("%d-%m %H:%M:%S")
-                file_write('traceback_subscribe', date, traceback_text)
+                self.file_write('traceback_subscribe', date, traceback_text)
                 print('----NoSuchElementException---- переход к следующему посту.', end=' ======> ')
                 continue
 
             except AssertionError as assertion:
-                file_write('ignore_list', user)
+                self.file_write('ignore_list', user)
                 assertion = str(assertion.args)
                 text = re.sub("[)(']", '', assertion)
                 if 'Subscribe blocking' in assertion:
@@ -203,10 +181,10 @@ class FunctionClass(SupportClass):
                 # ловит стоп-слово, с которым упал assert и подставляет его в лог
                 if 'СТОП-СЛОВО' in text:
                     assert_log = f'{str(stop_word)} ===> {user.split("/")[-2]} \n'
-                    file_write('assert_log', assert_log)
+                    self.file_write('assert_log', assert_log)
                 elif 'ПРОФИЛЬ "ПОМОЙКА".' in text:
                     assert_log = f'ПРОФИЛЬ "ПОМОЙКА" ===> {user.split("/")[-2]} \n'
-                    file_write('assert_log', assert_log)
+                    self.file_write('assert_log', assert_log)
 
                 print(f'{datetime.now().strftime("%H:%M:%S")} ==   ', text[:-1], end=' ======> ')
                 time.sleep(2)
@@ -214,7 +192,8 @@ class FunctionClass(SupportClass):
 
 
 operating_status = input('Укажите режим работы: ')
-my_bot = FunctionClass(username, password)
+headless_and_proxy = input('Headless(y/n) Proxy(y/n): ')
+my_bot = FunctionClass(username, password, headless_and_proxy)
 
 try:
     my_bot.login()
@@ -222,5 +201,7 @@ try:
         my_bot.subscribe_to_user_list()
     elif operating_status == 'uns':
         my_bot.unsubscribe_for_all_users()
+    elif operating_status == 'sel':
+        my_bot.select_subscribes()
 finally:
     my_bot.close_browser()

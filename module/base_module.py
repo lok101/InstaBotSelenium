@@ -10,45 +10,19 @@ import requests
 import time
 
 
-def download_for_link(link):
-    get_img = requests.get(link)
-    with open('data/profile_avatar.jpg', 'wb') as img_file:
-        img_file.write(get_img.content)
-
-
-def file_read(file_name, value, operating_mode='r'):
-    with open(f'data/{file_name}.txt', operating_mode) as file:
-        for link in file:
-            value.add(link + '\n')
-
-
-def file_write(file_name, value, value2=None, operating_mode='a'):
-    with open(f'data/{file_name}.txt', operating_mode) as file:
-        if value2 is not None:
-            file.write(str(value) + '\n')
-            file.write(str(value2) + '\n \n')
-        elif isinstance(value, list) or isinstance(value, set):
-            for item in value:
-                file.write(item + '\n')
-        else:
-            file.write(str(value))
-
-
 class BaseClass:
-    def __init__(self, user_name, pass_word,
+    def __init__(self, user_name, pass_word, headless_and_proxy,
                  proxy_url=proxy,
                  link='https://www.instagram.com/',
-                 headless=StartSettings.headless,
-                 proxy_settings=StartSettings.proxy
                  ):
         """
         headless - запуск в режиме "без головы"
         timeout - таймаут implicitly_wait
         """
         chrome_options = webdriver.ChromeOptions()
-        if headless == 'yes':
+        if headless_and_proxy.split(' ')[0].lower() == 'y':
             chrome_options.add_argument("--headless")
-        if proxy_settings == 'yes':
+        if headless_and_proxy.split(' ')[1].lower() == 'y':
             self.browser = self.proxy_browser(proxy_url, chrome_options)
         else:
             self.browser = webdriver.Chrome(options=chrome_options)
@@ -90,6 +64,30 @@ class BaseClass:
         print(f'Подключение через прокси: {proxy_url}')
         return self.browser
 
+    @staticmethod
+    def download_for_link(link):
+        get_img = requests.get(link)
+        with open('data/profile_avatar.jpg', 'wb') as img_file:
+            img_file.write(get_img.content)
+
+    @staticmethod
+    def file_read(file_name, value, operating_mode='r'):
+        with open(f'data/{file_name}.txt', operating_mode) as file:
+            for link in file:
+                value.add(link)
+
+    @staticmethod
+    def file_write(file_name, value, value2=None, operating_mode='a'):
+        with open(f'data/{file_name}.txt', operating_mode) as file:
+            if value2 is not None:
+                file.write(str(value) + '\n')
+                file.write(str(value2) + '\n \n')
+            elif isinstance(value, list) or isinstance(value, set):
+                for item in value:
+                    file.write(item + '\n')
+            else:
+                file.write(str(value))
+
     # возвращает элемент с использованием явного ожидания
     def search_element(self, locator,
                        timeout=StartSettings.web_driver_wait,
@@ -102,15 +100,16 @@ class BaseClass:
     def tag_search(self, parameter=1, ignore=None):
         """
         parameter=1 - возвращает список ссылок на профили
+        parameter == 1.5 - возвращает список ссылок на профили в выпадающем меню поиска
         parameter=2 - возвращает список ссылок на посты
         ignore - ключевое слово для игнора (сверяется со ссылкой)
         """
         # print(f'Вызван tag_search с параметром: {parameter}')
         list_urls = set()
-        time.sleep(3)
         while True:
             try:
                 if parameter == 1:
+                    self.search_element((By.CSS_SELECTOR, 'div.Pkbci > button'))
                     tags = self.browser.find_elements(By.TAG_NAME, 'a')
                     for public_block in tags:
                         profile_url = public_block.get_attribute('href')
@@ -120,7 +119,20 @@ class BaseClass:
                             list_urls.add(profile_url)
                     return list_urls
 
+                elif parameter == 1.5:
+                    list_urls = []
+                    self.search_element((By.CSS_SELECTOR, 'div > a.-qQT3'))
+                    tags = self.browser.find_elements(By.TAG_NAME, 'a')
+                    for public_block in tags:
+                        profile_url = public_block.get_attribute('href')
+                        len_user_url = len(profile_url.split('/'))  # у ссылки на профиль равен пяти.
+                        if len_user_url == 5 and 'www.instagram.com' in profile_url and username not in profile_url \
+                                and 'explore' not in profile_url and ignore not in profile_url:
+                            list_urls.append(profile_url)
+                    return list_urls
+
                 elif parameter == 2:
+                    time.sleep(5)
                     tags = self.browser.find_elements(By.TAG_NAME, 'a')
                     for post in tags:
                         post_url = post.get_attribute('href')

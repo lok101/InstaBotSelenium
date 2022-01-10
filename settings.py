@@ -4,12 +4,8 @@
 class StartSettings:
     """
     Описывает основные настрйки запуска.
-    headless - режим "без головы" (окно браузера не запускается)
-    proxy - использовать прокси или нет (сам прокси прописан в data.txt)
     implicitly_wait_timeout - сколько ждать появления элемента во всех этапах, кроме assert-функций
     """
-    headless = 'no'
-    proxy = 'yes'
     web_driver_wait = 30
 
 
@@ -32,7 +28,6 @@ class Subscribe:
     scatter_timeout - разброс при вычислении таймаута
     subscribe_in_session - колличество подписок в одном заходе
     sleep_between_iterations - таймаут на каждые subscribe_in_session подписок
-    operating_mode - режим работы (меняет источник сбора аудитории)
 
     FILTER
     limit_subscribes_min, limit_subscribes_max - максимальное и минимальное число подписчиков для профиля
@@ -41,8 +36,6 @@ class Subscribe:
     subscribe_limit - колличество подписок в задаче
 
     """
-    operating_mode = 2
-
     timeout = 2
     scatter_timeout = 1
     subscribe_in_session = 40
@@ -60,18 +53,21 @@ class Subscribe:
 
 class SearchUser:
     """
-    search_depth - колличество профилей из поиска, попадающих в выборку, при сборе аудитории
+    search_depth - колличество профилей из меню поиска, попадающих в выборку, при сборе аудитории
+    scroll_number_subscribers_list - число прокруток, при открытии списка подписчиков (больше прокруток - больше юзеров)
 
     limit_subscribes_min, limit_subscribes_max - максимальное и минимальное число подписчиков для профиля
     limit_posts_min, limit_posts_max - максимальное и минимальное число постов для профиля
     coefficient_subscribers - подписки делённые на подписчиков (если подписок много, а подписчиков мало - пропуск)
     subscribe_limit - колличество подписок в задаче
     """
+    scroll_number_subscribers_list = 5
+    """FILTER"""
     coefficient_subscribers = 1
-    posts_max, posts_min = 100000, 3
+    posts_max, posts_min = 1000000, 3
     subscribers_max, subscribers_min = 100000, 1000
-    subscriptions_max, subscriptions_min = 500, 0
-    search_depth = 15
+    subscriptions_max, subscriptions_min = 1200, 0
+    search_depth = 10
 
 
 class Like:

@@ -1,6 +1,6 @@
 from selenium.common.exceptions import TimeoutException, StaleElementReferenceException
 from selenium.webdriver.support import expected_conditions as ec
-from module.base_module import BaseClass, download_for_link
+from module.base_module import BaseClass
 from selenium.webdriver.common.by import By
 import hashlib
 
@@ -72,7 +72,7 @@ class FilterClass(BaseClass):
     def should_be_profile_avatar(self):
         digests = []
         url = self.get_link((By.CSS_SELECTOR, 'div.RR-M- span img._6q-tv'))
-        download_for_link(url)  # качает изображение и кладёт его в 'data/profile_avatar.jpg'
+        self.download_for_link(url)  # качает изображение и кладёт его в 'data/profile_avatar.jpg'
         for filename in ['data/sample.jpg', 'data/profile_avatar.jpg']:
             hasher = hashlib.md5()
             with open(filename, 'rb') as f:
@@ -99,7 +99,7 @@ class FilterClass(BaseClass):
             flag = True
         except AssertionError:
             flag = False
-        return [flag, word]
+        return [flag, word.lower()]
 
     # возвращает колличество постов, подписчиков, подписок и коэффицент подписки/подписчики
     def return_number_posts_subscribe_and_subscribers(self):
