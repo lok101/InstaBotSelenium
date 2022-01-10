@@ -1,9 +1,10 @@
 from selenium.webdriver.support import expected_conditions as ec
 from selenium.common.exceptions import TimeoutException
 from selenium.webdriver.common.by import By
+from module.base_module import username
 import data
 from module.filter_module import FilterClass
-from data import username, tag
+from data import tag
 from settings import *
 import time
 import re

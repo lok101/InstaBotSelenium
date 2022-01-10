@@ -4,25 +4,31 @@ from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.common.by import By
 from selenium.webdriver.common.keys import Keys
 from selenium import webdriver
-from data import username, password, proxy
+from data import proxy_list
 from settings import *
+import random
 import requests
 import time
+
+username, password = '', ''
 
 
 class BaseClass:
     def __init__(self, user_name, pass_word, headless_and_proxy,
-                 proxy_url=proxy,
+                 proxy_url=(random.choice(proxy_list)),
                  link='https://www.instagram.com/',
                  ):
         """
         headless - запуск в режиме "без головы"
         timeout - таймаут implicitly_wait
         """
+        global username, password
+        username, password = user_name, pass_word
+
         chrome_options = webdriver.ChromeOptions()
-        if headless_and_proxy.split(' ')[0].lower() == 'y':
+        if headless_and_proxy[0].lower() == 'y':
             chrome_options.add_argument("--headless")
-        if headless_and_proxy.split(' ')[1].lower() == 'y':
+        if headless_and_proxy[1].lower() == 'y':
             self.browser = self.proxy_browser(proxy_url, chrome_options)
         else:
             self.browser = webdriver.Chrome(options=chrome_options)
