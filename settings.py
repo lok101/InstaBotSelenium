@@ -7,6 +7,7 @@ class StartSettings:
     """
     web_driver_wait = 30
     filtered_user_list_timeout = 1
+    number_filter_iteration = 6
 
 
 class Unsubscribe:
@@ -43,7 +44,7 @@ class Subscribe:
     """FILTER"""
     subscribers_min, subscribers_max = 50, 5000
     subscriptions_min, subscriptions_max = 50, 6000
-    posts_min, posts_max = 3, 800
+    posts_min, posts_max = 6, 800
     coefficient_subscribers = 6
     min_subscribers = 60
     min_subscriptions = 60

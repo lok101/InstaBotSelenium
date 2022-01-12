@@ -15,7 +15,7 @@ username, password = '', ''
 
 class BaseClass:
     def __init__(self, user_name, pass_word, headless_and_proxy,
-                 proxy_url=(random.choice(proxy_list)),
+                 proxy_url=random.choice(proxy_list),
                  link='https://www.instagram.com/',
                  ):
         """
@@ -62,7 +62,7 @@ class BaseClass:
         return url
 
     def proxy_browser(self, proxy_url, chrome_options):
-        chrome_options.add_argument(f'--proxy-server=%s' % proxy_url)
+        chrome_options.add_argument(f'--proxy-server=socks5://{proxy_url}')
         self.browser = webdriver.Chrome(options=chrome_options)
         self.browser.get('https://2ip.ru/')
         ip = self.search_element((By.CSS_SELECTOR, 'div.ip span'), type_wait=ec.presence_of_element_located).text
@@ -95,10 +95,7 @@ class BaseClass:
                 file.write(str(value))
 
     # возвращает элемент с использованием явного ожидания
-    def search_element(self, locator,
-                       timeout=StartSettings.web_driver_wait,
-                       type_wait=ec.element_to_be_clickable
-                       ):
+    def search_element(self, locator, timeout=StartSettings.web_driver_wait, type_wait=ec.element_to_be_clickable):
         element = WebDriverWait(self.browser, timeout).until(type_wait(locator))
         return element
 
@@ -150,7 +147,22 @@ class BaseClass:
                 print(StaleElementReferenceException)
                 continue
 
-    # проверяет, если ли мини-иконка профиля (используется для проверки логина)
+    # возвращает список из 9 постов по хештегу
+    def select_url_posts_to_hashtag(self, hashtag):
+        browser = self.browser
+        browser.get(f'https://www.instagram.com/explore/tags/{hashtag}/')
+        posts_block = self.search_element((By.XPATH, '//main/article/div[1]/div/div'))
+        posts = posts_block.find_elements_by_tag_name('a')
+        posts_url_list = []
+
+        for post in posts:
+            post_url = post.get_attribute('href')
+            if '/p/' in post_url:
+                posts_url_list.append(post_url)
+        print('Ссылки на посты собраны.')
+        return posts_url_list
+
+    # проверяет, если ли мини-иконка профиля (используется для проверки входа в аккаунт)
     def should_be_login_button(self):
         try:
             self.search_element((By.CSS_SELECTOR, 'div:nth-child(6) > span > img'),

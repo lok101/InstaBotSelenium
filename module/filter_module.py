@@ -25,15 +25,6 @@ class FilterClass(BaseClass):
         assert subscriptions_max >= subscriptions_count >= subscriptions_min, 'Не прошёл по подпискам.'
         assert coefficient <= max_coefficient, 'ПРОФИЛЬ "ПОМОЙКА".'
 
-    # проверяет, стоит ли лайк
-    def should_be_like(self):
-        try:
-            self.search_element((By.CSS_SELECTOR, 'span.fr66n > button > div.QBdPU.B58H7 > svg'), timeout=1)
-            exist = True
-        except TimeoutException:
-            exist = False
-        return exist
-
     # проверяет, подписан ли на пользователя
     def should_be_subscribe(self):
         """
@@ -117,14 +108,17 @@ class FilterClass(BaseClass):
         except TimeoutException:
             subscriptions = 0
 
-        subscribe_field = self.search_element((By.CSS_SELECTOR, 'li:nth-child(2) > a > span'),
-                                              type_wait=ec.presence_of_element_located)
-        if ',' in subscribe_field.text:
-            subscribers = int(
-                subscribe_field.text.replace(" ", "").replace(',', '').replace('тыс.', '00').replace('млн', '00000'))
-        else:
-            subscribers = int(
-                subscribe_field.text.replace(" ", "").replace('тыс.', '000').replace('млн', '000000'))
+        try:
+            subscribe_field = self.search_element((By.CSS_SELECTOR, 'li:nth-child(2) > a > span'),
+                                                  type_wait=ec.presence_of_element_located, timeout=3)
+            if ',' in subscribe_field.text:
+                subscribers = int(
+                    subscribe_field.text.replace(" ", "").replace(',', '').replace('тыс.', '00').replace('млн', '00000'))
+            else:
+                subscribers = int(
+                    subscribe_field.text.replace(" ", "").replace('тыс.', '000').replace('млн', '000000'))
+        except TimeoutException:
+            subscribers = 1
 
         post_number_field = self.search_element((By.CSS_SELECTOR, 'li:nth-child(1) > span > span'),
                                                 type_wait=ec.presence_of_element_located)
