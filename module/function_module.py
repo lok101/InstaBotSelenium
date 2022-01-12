@@ -1,4 +1,4 @@
-from selenium.common.exceptions import NoSuchElementException, TimeoutException
+from selenium.common.exceptions import NoSuchElementException, TimeoutException, StaleElementReferenceException
 from selenium.webdriver.support import expected_conditions as ec
 from selenium.webdriver.common.by import By
 from module.filter_module import FilterClass
@@ -83,19 +83,18 @@ class FunctionClass(FilterClass):
         self.file_read('filtered/user_urls_subscribers', user_list)
         self.file_read('ignore_list', ignore_list)
         user_list = user_list.difference(ignore_list)
-        print(f'Профилей в списке - {len(user_list)}')
+        browser.get(f"https://www.instagram.com/{username}/")
+        subscribe = self.return_number_posts_subscribe_and_subscribers()[3]
+        print(f'Профилей в списке - {len(user_list)}, подписок у аккаунта - {subscribe}')
 
         for user_subscribe in user_list:
             try:
+                if subscribe + subscribe_count >= subscribe_limit:
+                    print('======================ПОДПИСКА ЗАВЕРШЕНА======================')
+                    break
                 if subscribe_count + 1 % subscribe_in_session == 0:
-                    browser.get(f"https://www.instagram.com/{username}/")
-                    subscribe = self.return_number_posts_subscribe_and_subscribers()[3]
-                    if subscribe >= subscribe_limit:
-                        print('======================ПОДПИСКА ЗАВЕРШЕНА======================')
-                        break
-                    else:
-                        print(f'{datetime.now().strftime("%H:%M:%S")} Подписался на очередные',
-                              f'{subscribe_in_session} пользователей. Таймаут {sleep_between_iterations} минут.')
+                    print(f'{datetime.now().strftime("%H:%M:%S")} Подписался на очередные',
+                          f'{subscribe_in_session} пользователей. Таймаут {sleep_between_iterations} минут.')
 
                     self.file_read('ignore_list', ignore_list)
                     user_list = user_list.difference(ignore_list)
@@ -129,6 +128,13 @@ class FunctionClass(FilterClass):
                 date = datetime.now().strftime("%d-%m %H:%M:%S")
                 self.file_write('logs/traceback_subscribe', date, traceback_text)
                 print('>> TimeoutException <<')
+                continue
+
+            except StaleElementReferenceException:
+                traceback_text = traceback.format_exc()
+                date = datetime.now().strftime("%d-%m %H:%M:%S")
+                self.file_write('logs/traceback_subscribe', date, traceback_text)
+                print('>> StaleElementReferenceException <<')
                 continue
 
             except AssertionError:
