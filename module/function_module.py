@@ -61,7 +61,7 @@ class FunctionClass(FilterClass):
                 count_restart += 1
                 continue
 
-    # подписыватеся на юзеров из файла
+    # подписывается на юзеров из файла
     def subscribe_to_user_list(self, username, min_timeout=Subscribe.min_timeout,
                                max_timeout=Subscribe.max_timeout,
                                subscribe_in_session=Subscribe.subscribe_in_session,
@@ -223,7 +223,7 @@ class FunctionClass(FilterClass):
                 print('>> TimeoutException <<')
                 continue
 
-    # собирает список тех, кто комменировал посты, для сбора ссылок на посты вызывает "select_url_posts_to_hashtag"
+    # собирает список тех, кто комментировал посты, для сбора ссылок на посты вызывает "select_url_posts_to_hashtag"
     def select_commentators(self, hashtag=tag_list[0],
                             number_scrolls=1,
                             scrolls_timeout=1,
@@ -259,7 +259,7 @@ class FunctionClass(FilterClass):
                 print(f'Колличество собранных пользователей: {size}')
 
     # собирает список подписчиков "по конкуренту"
-    def select_subscribes(self, username, search_name_list=tag_list, search_depth=SearchUser.search_depth,
+    def select_subscribes(self, username, tag_search, search_depth=SearchUser.search_depth,
                           max_coefficient=SearchUser.coefficient_subscribers,
                           posts_max=SearchUser.posts_max, posts_min=SearchUser.posts_min,
                           subscribers_max=SearchUser.subscribers_max,
@@ -272,60 +272,123 @@ class FunctionClass(FilterClass):
         search_name - имя, которое будет вводится в строку поиска по профилям
         delete_file - если "yes", то очистит файл со ссылками перед записью
         """
-        ignore_public_url = set()
         browser = self.browser
-        count_repeat_public = 0
 
-        for search_name in search_name_list:
-            print(f'--- Сбор ссылок по запросу: {search_name} ---')
-            browser.get(f"https://www.instagram.com/{username}/")
-            used_by_url = []
+        print(f'--- Сбор ссылок по запросу: {tag_search} ---')
+        browser.get(f"https://www.instagram.com/{username}/")
+        used_by_url = []
 
-            search_input = self.search_element((By.XPATH, '//div/div/div[2]/input'))
-            search_input.send_keys(search_name)
+        search_input = self.search_element((By.XPATH, '//div/div/div[2]/input'))
+        search_input.send_keys(tag_search)
 
-            public_urls = self.tag_search(ignore=username, parameter=1.5)
-            for i in range(search_depth):
-                used_by_url.append(public_urls[i - 1])
+        public_urls = self.tag_search(ignore=username, parameter=1.5)
+        for i in range(search_depth):
+            used_by_url.append(public_urls[i - 1])
 
-            for url in used_by_url:
-                try:
-                    browser.get(url)
-                    user_name = url.split("/")[-2]
-                    print(f'Перешёл в профиль: {user_name}', end=' ======> ')
-                    if url in ignore_public_url:
-                        count_repeat_public += 1
-                        print(f'Дублирование профиля номер : {count_repeat_public}')
-                        continue
-                    ignore_public_url.add(url)
-                    self.should_be_compliance_with_limits(max_coefficient, posts_max, posts_min, subscribers_max,
-                                                          subscribers_min, subscriptions_max, subscriptions_min)
-                    subscribes_button = self.search_element((By.XPATH, '//header/section/ul/li[2]/a'))
-                    subscribes_button.click()
+        for url in used_by_url:
+            try:
+                browser.get(url)
+                user_name = url.split("/")[-2]
+                print(f'Перешёл в профиль: {user_name}', end=' ======> ')
+                self.should_be_compliance_with_limits(max_coefficient, posts_max, posts_min, subscribers_max,
+                                                      subscribers_min, subscriptions_max, subscriptions_min)
+                subscribes_button = self.search_element((By.XPATH, '//header/section/ul/li[2]/a'))
+                subscribes_button.click()
 
-                    subscribes_ul = self.search_element((By.XPATH, '/html/body/div[6]/div/div/div[2]'),
-                                                        type_wait=ec.presence_of_element_located)
-                    for i in range(scroll_number_subscribers_list):
-                        browser.execute_script("arguments[0].scrollTop = arguments[0].scrollHeight", subscribes_ul)
-                        # выходит из цикла, когда исчезнет значок загрузки
-                        while True:
-                            try:
-                                self.search_element((By.CSS_SELECTOR, 'li div svg.By4nA'), timeout=1,
+                subscribes_ul = self.search_element((By.XPATH, '/html/body/div[6]/div/div/div[2]'),
                                                     type_wait=ec.presence_of_element_located)
-                            except TimeoutException:
-                                time.sleep(0.5)
-                                break
+                for i in range(scroll_number_subscribers_list):
+                    browser.execute_script("arguments[0].scrollTop = arguments[0].scrollHeight", subscribes_ul)
+                    # выходит из цикла, когда исчезнет значок загрузки
+                    while True:
+                        try:
+                            self.search_element((By.CSS_SELECTOR, 'li div svg.By4nA'), timeout=1,
+                                                type_wait=ec.presence_of_element_located)
+                        except TimeoutException:
+                            time.sleep(0.5)
+                            break
 
-                    user_urls = self.tag_search(ignore=username)
-                    self.file_write('non_filtered/user_urls_subscribers', user_urls)
-                    with open('data/non_filtered/user_urls_subscribers.txt', 'r') as file:
-                        size = len(file.readlines())
-                        print(f'Успешно. Колличество собранных пользователей: {size}')
-                except AssertionError as assertion:
-                    assertion = str(assertion.args)
-                    text = re.sub("[)(',]", '', assertion)
-                    print(text)
-                    continue
-                except TimeoutException:
-                    print('  TimeoutException ---')
-                    continue
+                user_urls = self.tag_search(ignore=username)
+                self.file_write('non_filtered/user_urls_subscribers', user_urls)
+                with open('data/non_filtered/user_urls_subscribers.txt', 'r') as file:
+                    size = len(file.readlines())
+                    print(f'Успешно. Количество собранных пользователей: {size}')
+            except AssertionError as assertion:
+                assertion = str(assertion.args)
+                text = re.sub("[)(',]", '', assertion)
+                print(text)
+                continue
+            except TimeoutException:
+                print('  TimeoutException ---')
+                continue
+
+    # def select_subscribes(self, username, search_name_list=tag_list, search_depth=SearchUser.search_depth,
+    #                       max_coefficient=SearchUser.coefficient_subscribers,
+    #                       posts_max=SearchUser.posts_max, posts_min=SearchUser.posts_min,
+    #                       subscribers_max=SearchUser.subscribers_max,
+    #                       subscribers_min=SearchUser.subscribers_min,
+    #                       subscriptions_max=SearchUser.subscriptions_max,
+    #                       subscriptions_min=SearchUser.subscriptions_min,
+    #                       scroll_number_subscribers_list=SearchUser.scroll_number_subscribers_list
+    #                       ):
+    #     """
+    #     search_name - имя, которое будет вводится в строку поиска по профилям
+    #     delete_file - если "yes", то очистит файл со ссылками перед записью
+    #     """
+    #     ignore_public_url = set()
+    #     browser = self.browser
+    #     count_repeat_public = 0
+    #
+    #     for search_name in search_name_list:
+    #         print(f'--- Сбор ссылок по запросу: {search_name} ---')
+    #         browser.get(f"https://www.instagram.com/{username}/")
+    #         used_by_url = []
+    #
+    #         search_input = self.search_element((By.XPATH, '//div/div/div[2]/input'))
+    #         search_input.send_keys(search_name)
+    #
+    #         public_urls = self.tag_search(ignore=username, parameter=1.5)
+    #         for i in range(search_depth):
+    #             used_by_url.append(public_urls[i - 1])
+    #
+    #         for url in used_by_url:
+    #             try:
+    #                 browser.get(url)
+    #                 user_name = url.split("/")[-2]
+    #                 print(f'Перешёл в профиль: {user_name}', end=' ======> ')
+    #                 if url in ignore_public_url:
+    #                     count_repeat_public += 1
+    #                     print(f'Дублирование профиля номер : {count_repeat_public}')
+    #                     continue
+    #                 ignore_public_url.add(url)
+    #                 self.should_be_compliance_with_limits(max_coefficient, posts_max, posts_min, subscribers_max,
+    #                                                       subscribers_min, subscriptions_max, subscriptions_min)
+    #                 subscribes_button = self.search_element((By.XPATH, '//header/section/ul/li[2]/a'))
+    #                 subscribes_button.click()
+    #
+    #                 subscribes_ul = self.search_element((By.XPATH, '/html/body/div[6]/div/div/div[2]'),
+    #                                                     type_wait=ec.presence_of_element_located)
+    #                 for i in range(scroll_number_subscribers_list):
+    #                     browser.execute_script("arguments[0].scrollTop = arguments[0].scrollHeight", subscribes_ul)
+    #                     # выходит из цикла, когда исчезнет значок загрузки
+    #                     while True:
+    #                         try:
+    #                             self.search_element((By.CSS_SELECTOR, 'li div svg.By4nA'), timeout=1,
+    #                                                 type_wait=ec.presence_of_element_located)
+    #                         except TimeoutException:
+    #                             time.sleep(0.5)
+    #                             break
+    #
+    #                 user_urls = self.tag_search(ignore=username)
+    #                 self.file_write('non_filtered/user_urls_subscribers', user_urls)
+    #                 with open('data/non_filtered/user_urls_subscribers.txt', 'r') as file:
+    #                     size = len(file.readlines())
+    #                     print(f'Успешно. Колличество собранных пользователей: {size}')
+    #             except AssertionError as assertion:
+    #                 assertion = str(assertion.args)
+    #                 text = re.sub("[)(',]", '', assertion)
+    #                 print(text)
+    #                 continue
+    #             except TimeoutException:
+    #                 print('  TimeoutException ---')
+    #                 continue
