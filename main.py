@@ -1,22 +1,25 @@
 from data import user_dict, tag_list, bot_dict
 from module.function_module import FunctionClass
-from settings import StartSettings
+from settings import SearchUser
 import random
+import time
 
 
 def filter_user_list():
     try:
         headless_and_proxy = input('Headless(y/n) Proxy(y/n): ')
-        for i in range(StartSettings.number_filter_iteration):
+        for i in range(SearchUser.number_restart_filtered):
             try:
-                user = f'bot{random.randrange(1, len(bot_dict) + 1)}'
+                user = f'bot{random.randrange(1, len(bot_dict))}'
                 print(f'Бот аккаунт - {user}', end=' =====> ')
                 username = bot_dict[user]['login']
                 password = bot_dict[user]['password']
+                # input('====ПАУЗА====')
                 my_bot = FunctionClass(username, password, headless_and_proxy)
                 my_bot.login()
-                my_bot.filter_user_list(user)
+                my_bot.filter_user_list(user, i)
                 my_bot.close_browser()
+                time.sleep(SearchUser.timeout_between_restarts * 60)
             except AssertionError:
                 continue
     finally:
@@ -50,6 +53,7 @@ def subscribe_to_user_list():
         password = user_dict[user_input]['password']
         headless_and_proxy = input('Headless(y/n) Proxy(y/n): ')
         my_bot = FunctionClass(username, password, headless_and_proxy)
+        my_bot.login()
         my_bot.subscribe_to_user_list(username)
         my_bot.close_browser()
     finally:
@@ -63,6 +67,7 @@ def unsubscribe_for_all_users():
         password = user_dict[user_input]['password']
         headless_and_proxy = input('Headless(y/n) Proxy(y/n): ')
         my_bot = FunctionClass(username, password, headless_and_proxy)
+        my_bot.login()
         my_bot.unsubscribe_for_all_users(username)
         my_bot.close_browser()
     finally:

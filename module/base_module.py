@@ -6,7 +6,6 @@ from selenium.webdriver.common.keys import Keys
 from selenium import webdriver
 from data import proxy_list
 from settings import *
-import random
 import requests
 import time
 
@@ -15,7 +14,6 @@ username, password = '', ''
 
 class BaseClass:
     def __init__(self, user_name, pass_word, headless_and_proxy,
-                 proxy_url=random.choice(proxy_list),
                  link='https://www.instagram.com/',
                  ):
         """
@@ -29,7 +27,7 @@ class BaseClass:
         if headless_and_proxy[0].lower() == 'y':
             chrome_options.add_argument("--headless")
         if headless_and_proxy[1].lower() == 'y':
-            self.browser = self.proxy_browser(proxy_url, chrome_options)
+            self.browser = self.proxy_browser(chrome_options)
         else:
             self.browser = webdriver.Chrome(options=chrome_options)
         self.link = link
@@ -61,13 +59,14 @@ class BaseClass:
         url = item.get_attribute('src')
         return url
 
-    def proxy_browser(self, proxy_url, chrome_options):
-        chrome_options.add_argument(f'--proxy-server=socks5://{proxy_url}')
+    def proxy_browser(self, chrome_options, proxy=proxy_list):
+        chrome_options.add_argument('--proxy-server=%s' % proxy)
         self.browser = webdriver.Chrome(options=chrome_options)
         self.browser.get('https://2ip.ru/')
+        # noinspection PyTypeChecker
         ip = self.search_element((By.CSS_SELECTOR, 'div.ip span'), type_wait=ec.presence_of_element_located).text
-        assert ip in proxy_url
-        print(f'Подключение через прокси: {proxy_url}')
+        assert ip not in '78.139.68.238'
+        print(f'Подключение через прокси: {ip}')
         return self.browser
 
     @staticmethod
@@ -165,6 +164,7 @@ class BaseClass:
     # проверяет, если ли мини-иконка профиля (используется для проверки входа в аккаунт)
     def should_be_login_button(self):
         try:
+            # noinspection PyTypeChecker
             self.search_element((By.CSS_SELECTOR, 'div:nth-child(6) > span > img'),
                                 type_wait=ec.presence_of_element_located)
             exist = True
@@ -175,6 +175,7 @@ class BaseClass:
     # проверяет наличие "микробана" на подписку
     def should_be_subscribe_blocking(self):
         try:
+            # noinspection PyTypeChecker
             self.search_element((By.CSS_SELECTOR, 'div._08v79 > h3'), timeout=2,
                                 type_wait=ec.presence_of_element_located)
             exist = False
@@ -186,6 +187,7 @@ class BaseClass:
     def should_be_activity_blocking(self):
         exist = None
         try:
+            # noinspection PyTypeChecker
             error_message = self.search_element((By.CSS_SELECTOR, 'div > div.error-container > p'), timeout=2,
                                                 type_wait=ec.presence_of_element_located)
             if 'Подождите несколько минут, прежде чем пытаться снова' in error_message.text:
@@ -193,3 +195,17 @@ class BaseClass:
         except TimeoutException:
             exist = True
         return exist
+
+    # проверяет, существует ли данная страница
+    def should_be_user_page(self):
+        exist = None
+        try:
+            # noinspection PyTypeChecker
+            error_message = self.search_element((By.CSS_SELECTOR, 'main > div > div > h2'), timeout=1,
+                                                type_wait=ec.presence_of_element_located)
+            if 'К сожалению, эта страница недоступна' in error_message.text:
+                exist = False
+        except TimeoutException:
+            exist = True
+        return exist
+

@@ -78,8 +78,7 @@ class FunctionClass(FilterClass):
         """
         browser = self.browser
         user_list, ignore_list = set(), set()
-        subscribe_count = 1
-
+        subscribe_count = 0.1
         self.file_read('filtered/user_urls_subscribers', user_list)
         self.file_read('ignore_list', ignore_list)
         user_list = user_list.difference(ignore_list)
@@ -92,9 +91,13 @@ class FunctionClass(FilterClass):
                 if subscribe + subscribe_count >= subscribe_limit:
                     print('======================ПОДПИСКА ЗАВЕРШЕНА======================')
                     break
-                if subscribe_count + 1 % subscribe_in_session == 0:
+                if subscribe_count % subscribe_in_session == 0:
                     print(f'{datetime.now().strftime("%H:%M:%S")} Подписался на очередные',
                           f'{subscribe_in_session} пользователей. Таймаут {sleep_between_iterations} минут.')
+
+                    browser.get(f"https://www.instagram.com/{username}/")
+                    subscribe = self.return_number_posts_subscribe_and_subscribers()[3]
+                    subscribe_count = 0
 
                     self.file_read('ignore_list', ignore_list)
                     user_list = user_list.difference(ignore_list)
@@ -113,8 +116,8 @@ class FunctionClass(FilterClass):
                 assert self.should_be_subscribe_blocking()  # проверка на микробан
 
                 self.file_write('ignore_list', user_subscribe)
-                subscribe_count += 1
-                print(f'Успешно. Подписок: {subscribe_count - 1}')
+                subscribe_count = int(subscribe_count) + 1
+                print(f'Успешно. Подписок: {subscribe_count}')
 
             except TimeoutException:
                 traceback_text = traceback.format_exc()
@@ -142,7 +145,7 @@ class FunctionClass(FilterClass):
                 break
 
     # фильтрует список профилей
-    def filter_user_list(self, account_id, timeout=StartSettings.filtered_user_list_timeout):
+    def filter_user_list(self, account_id, iteration_number, timeout=StartSettings.filtered_user_list_timeout):
         browser = self.browser
         user_urls, ignore_list, filtered_user = set(), set(), set()
         stop_word = 'Стоп-слово не присвоено на этапе модуля.'
@@ -164,15 +167,18 @@ class FunctionClass(FilterClass):
             try:
                 browser.get(user_filtered)
                 user_name = user_filtered.split("/")[-2]
-                print(f'{datetime.now().strftime("%H:%M:%S")} - {account_id} -- Перешёл в профиль: {user_name}',
+                print(f'{datetime.now().strftime("%H:%M:%S")} - {account_id} -- <Цикл - {iteration_number + 1}> \
+                -- Перешёл в профиль: {user_name}',
                       end=' ======> ')
 
+                assert self.should_be_user_page(), 'Страница не существует'
                 self.should_be_compliance_with_limits(max_coefficient=Subscribe.coefficient_subscribers,
                                                       posts_max=Subscribe.posts_max, posts_min=Subscribe.posts_min,
                                                       subscribers_max=Subscribe.subscribers_max,
                                                       subscribers_min=Subscribe.subscribers_min,
                                                       subscriptions_max=Subscribe.subscriptions_max,
-                                                      subscriptions_min=Subscribe.subscriptions_min)
+                                                      subscriptions_min=Subscribe.subscriptions_min,
+                                                      break_limit=Subscribe.break_limit)
 
                 # поиск стоп-слов в биографии, если нашёл, то вернёт слово и уронит assert
                 flag_and_stop_word = self.should_be_stop_word_in_biography(stop_words=Subscribe.stop_word_dict)
@@ -182,7 +188,7 @@ class FunctionClass(FilterClass):
                 self.file_write('filtered/user_urls_subscribers', user_filtered)
                 self.file_read('filtered/user_urls_subscribers', urls_list)
                 count_user_in_session += 1
-                user_list_count = len(urls_list)
+                user_list_count = len(urls_list.difference(ignore_list))
 
                 print(f'Подходит.')
                 print(f'Профилей в списке - {user_list_count}. \
@@ -195,6 +201,10 @@ class FunctionClass(FilterClass):
                 if 'Subscribe blocking' in assertion:
                     print('======== МИКРОБАН АКТИВНОСТИ ========')
                     break
+                elif 'Страница не существует' in assertion:
+                    print('Страница не существует')
+                    self.file_write('ignore_list', user_filtered)
+                    continue
 
                 self.file_write('ignore_list', user_filtered)
                 # ловит стоп-слово, с которым упал assert и подставляет его в лог
@@ -222,6 +232,12 @@ class FunctionClass(FilterClass):
                 self.file_write('logs/traceback_filtered', date, traceback_text)
                 print('>> TimeoutException <<')
                 continue
+
+            except Exception as error:
+                print(error)
+                traceback_text = traceback.format_exc()
+                date = datetime.now().strftime("%d-%m %H:%M:%S")
+                self.file_write('logs/select', date, traceback_text)
 
     # собирает список тех, кто комментировал посты, для сбора ссылок на посты вызывает "select_url_posts_to_hashtag"
     def select_commentators(self, hashtag=tag_list[0],
@@ -266,7 +282,8 @@ class FunctionClass(FilterClass):
                           subscribers_min=SearchUser.subscribers_min,
                           subscriptions_max=SearchUser.subscriptions_max,
                           subscriptions_min=SearchUser.subscriptions_min,
-                          scroll_number_subscribers_list=SearchUser.scroll_number_subscribers_list
+                          scroll_number_subscribers_list=SearchUser.scroll_number_subscribers_list,
+                          break_limit=SearchUser.break_limit
                           ):
         """
         search_name - имя, которое будет вводится в строку поиска по профилям
@@ -289,24 +306,23 @@ class FunctionClass(FilterClass):
             try:
                 browser.get(url)
                 user_name = url.split("/")[-2]
-                print(f'Перешёл в профиль: {user_name}', end=' ======> ')
+                print(f'{datetime.now().strftime("%H:%M:%S")} Перешёл в профиль: {user_name}', end=' ======> ')
                 self.should_be_compliance_with_limits(max_coefficient, posts_max, posts_min, subscribers_max,
-                                                      subscribers_min, subscriptions_max, subscriptions_min)
-                subscribes_button = self.search_element((By.XPATH, '//header/section/ul/li[2]/a'))
+                                                      subscribers_min, subscriptions_max, subscriptions_min,
+                                                      break_limit)
+                subscribes_button = self.search_element((By.CSS_SELECTOR, 'li:nth-child(2) > a'))
                 subscribes_button.click()
 
                 subscribes_ul = self.search_element((By.XPATH, '/html/body/div[6]/div/div/div[2]'),
                                                     type_wait=ec.presence_of_element_located)
-                for i in range(scroll_number_subscribers_list):
+                for i in range(scroll_number_subscribers_list + 1):
                     browser.execute_script("arguments[0].scrollTop = arguments[0].scrollHeight", subscribes_ul)
-                    # выходит из цикла, когда исчезнет значок загрузки
-                    while True:
-                        try:
-                            self.search_element((By.CSS_SELECTOR, 'li div svg.By4nA'), timeout=1,
-                                                type_wait=ec.presence_of_element_located)
-                        except TimeoutException:
-                            time.sleep(0.5)
-                            break
+                    self.search_element((By.CSS_SELECTOR, 'li div svg.By4nA'), timeout=10,
+                                        type_wait=ec.invisibility_of_element_located)
+                    time.sleep(0.5)
+                    self.search_element((By.CSS_SELECTOR, 'li div svg.By4nA'), timeout=10,
+                                        type_wait=ec.invisibility_of_element_located)
+                    time.sleep(0.5)
 
                 user_urls = self.tag_search(ignore=username)
                 self.file_write('non_filtered/user_urls_subscribers', user_urls)
@@ -322,73 +338,8 @@ class FunctionClass(FilterClass):
                 print('  TimeoutException ---')
                 continue
 
-    # def select_subscribes(self, username, search_name_list=tag_list, search_depth=SearchUser.search_depth,
-    #                       max_coefficient=SearchUser.coefficient_subscribers,
-    #                       posts_max=SearchUser.posts_max, posts_min=SearchUser.posts_min,
-    #                       subscribers_max=SearchUser.subscribers_max,
-    #                       subscribers_min=SearchUser.subscribers_min,
-    #                       subscriptions_max=SearchUser.subscriptions_max,
-    #                       subscriptions_min=SearchUser.subscriptions_min,
-    #                       scroll_number_subscribers_list=SearchUser.scroll_number_subscribers_list
-    #                       ):
-    #     """
-    #     search_name - имя, которое будет вводится в строку поиска по профилям
-    #     delete_file - если "yes", то очистит файл со ссылками перед записью
-    #     """
-    #     ignore_public_url = set()
-    #     browser = self.browser
-    #     count_repeat_public = 0
-    #
-    #     for search_name in search_name_list:
-    #         print(f'--- Сбор ссылок по запросу: {search_name} ---')
-    #         browser.get(f"https://www.instagram.com/{username}/")
-    #         used_by_url = []
-    #
-    #         search_input = self.search_element((By.XPATH, '//div/div/div[2]/input'))
-    #         search_input.send_keys(search_name)
-    #
-    #         public_urls = self.tag_search(ignore=username, parameter=1.5)
-    #         for i in range(search_depth):
-    #             used_by_url.append(public_urls[i - 1])
-    #
-    #         for url in used_by_url:
-    #             try:
-    #                 browser.get(url)
-    #                 user_name = url.split("/")[-2]
-    #                 print(f'Перешёл в профиль: {user_name}', end=' ======> ')
-    #                 if url in ignore_public_url:
-    #                     count_repeat_public += 1
-    #                     print(f'Дублирование профиля номер : {count_repeat_public}')
-    #                     continue
-    #                 ignore_public_url.add(url)
-    #                 self.should_be_compliance_with_limits(max_coefficient, posts_max, posts_min, subscribers_max,
-    #                                                       subscribers_min, subscriptions_max, subscriptions_min)
-    #                 subscribes_button = self.search_element((By.XPATH, '//header/section/ul/li[2]/a'))
-    #                 subscribes_button.click()
-    #
-    #                 subscribes_ul = self.search_element((By.XPATH, '/html/body/div[6]/div/div/div[2]'),
-    #                                                     type_wait=ec.presence_of_element_located)
-    #                 for i in range(scroll_number_subscribers_list):
-    #                     browser.execute_script("arguments[0].scrollTop = arguments[0].scrollHeight", subscribes_ul)
-    #                     # выходит из цикла, когда исчезнет значок загрузки
-    #                     while True:
-    #                         try:
-    #                             self.search_element((By.CSS_SELECTOR, 'li div svg.By4nA'), timeout=1,
-    #                                                 type_wait=ec.presence_of_element_located)
-    #                         except TimeoutException:
-    #                             time.sleep(0.5)
-    #                             break
-    #
-    #                 user_urls = self.tag_search(ignore=username)
-    #                 self.file_write('non_filtered/user_urls_subscribers', user_urls)
-    #                 with open('data/non_filtered/user_urls_subscribers.txt', 'r') as file:
-    #                     size = len(file.readlines())
-    #                     print(f'Успешно. Колличество собранных пользователей: {size}')
-    #             except AssertionError as assertion:
-    #                 assertion = str(assertion.args)
-    #                 text = re.sub("[)(',]", '', assertion)
-    #                 print(text)
-    #                 continue
-    #             except TimeoutException:
-    #                 print('  TimeoutException ---')
-    #                 continue
+            except Exception as error:
+                print(error)
+                traceback_text = traceback.format_exc()
+                date = datetime.now().strftime("%d-%m %H:%M:%S")
+                self.file_write('logs/select', date, traceback_text)

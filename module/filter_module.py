@@ -8,10 +8,10 @@ import hashlib
 class FilterClass(BaseClass):
     # комплексный фильтр
     def should_be_compliance_with_limits(self, max_coefficient, posts_max, posts_min, subscribers_max, subscribers_min,
-                                         subscriptions_max, subscriptions_min):
+                                         subscriptions_max, subscriptions_min, break_limit):
         # assert-функции, вывод которых прописан КАПСОМ - пишутся в лог файл
         assert self.should_be_activity_blocking(), 'Subscribe blocking'  # проверяет наличие "микробана" активности
-        assert self.should_be_privat_profile(), 'Профиль закрыт.'
+        assert self.should_be_private_profile(), 'Профиль закрыт.'
         assert self.should_be_subscribe(), 'Уже подписан.'
         assert self.should_be_posts(), 'В профиле нет публикаций.'
         assert self.should_be_profile_avatar(), 'Нет аватара.'
@@ -23,7 +23,7 @@ class FilterClass(BaseClass):
         assert posts_max >= posts_number >= posts_min, 'Не прошёл по постам.'
         assert subscribers_max >= subscribers_count >= subscribers_min, 'Не прошёл по подписчикам.'
         assert subscriptions_max >= subscriptions_count >= subscriptions_min, 'Не прошёл по подпискам.'
-        assert coefficient <= max_coefficient, 'ПРОФИЛЬ "ПОМОЙКА".'
+        assert coefficient <= max_coefficient and subscribers_count > break_limit, 'ПРОФИЛЬ "ПОМОЙКА".'
 
     # проверяет, подписан ли на пользователя
     def should_be_subscribe(self):
@@ -50,7 +50,7 @@ class FilterClass(BaseClass):
         return exist
 
     # проверяет, не является ли профиль закрытым
-    def should_be_privat_profile(self):
+    def should_be_private_profile(self):
         """
         вернёт False если профиль закрыт
         """
@@ -97,14 +97,14 @@ class FilterClass(BaseClass):
             flag = False
         return [flag, word.lower()]
 
-    # возвращает колличество постов, подписчиков, подписок и коэффицент подписки/подписчики
+    # возвращает количество постов, подписчиков, подписок и коэффициент подписки/подписчики
     def return_number_posts_subscribe_and_subscribers(self):
         try:
-            subscribers_field = self.search_element((By.CSS_SELECTOR, 'li:nth-child(3) > a > span'),
-                                                    type_wait=ec.presence_of_element_located, timeout=3)
+            subscriptions_field = self.search_element((By.CSS_SELECTOR, 'li:nth-child(3) > a > span'),
+                                                      type_wait=ec.presence_of_element_located, timeout=3)
 
             subscriptions = int(
-                subscribers_field.text.replace(" ", "").replace(',', ''))
+                subscriptions_field.text.replace(" ", "").replace(',', ''))
         except TimeoutException:
             subscriptions = 0
 
@@ -113,7 +113,8 @@ class FilterClass(BaseClass):
                                                   type_wait=ec.presence_of_element_located, timeout=3)
             if ',' in subscribe_field.text:
                 subscribers = int(
-                    subscribe_field.text.replace(" ", "").replace(',', '').replace('тыс.', '00').replace('млн', '00000'))
+                    subscribe_field.text.replace(" ", "").replace(',', '').replace('тыс.', '00').replace('млн',
+                                                                                                         '00000'))
             else:
                 subscribers = int(
                     subscribe_field.text.replace(" ", "").replace('тыс.', '000').replace('млн', '000000'))
