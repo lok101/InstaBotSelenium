@@ -11,6 +11,7 @@ class FilterClass(BaseClass):
                                          subscriptions_max, subscriptions_min, break_limit):
         # assert-функции, вывод которых прописан КАПСОМ - пишутся в лог файл
         assert self.should_be_activity_blocking(), 'Subscribe blocking'  # проверяет наличие "микробана" активности
+        assert self.should_be_error_connection_page(), 'Страница не загрузилась'
         assert self.should_be_private_profile(), 'Профиль закрыт.'
         assert self.should_be_subscribe(), 'Уже подписан.'
         assert self.should_be_posts(), 'В профиле нет публикаций.'
@@ -23,7 +24,8 @@ class FilterClass(BaseClass):
         assert posts_max >= posts_number >= posts_min, 'Не прошёл по постам.'
         assert subscribers_max >= subscribers_count >= subscribers_min, 'Не прошёл по подписчикам.'
         assert subscriptions_max >= subscriptions_count >= subscriptions_min, 'Не прошёл по подпискам.'
-        assert coefficient <= max_coefficient and subscribers_count > break_limit, 'ПРОФИЛЬ "ПОМОЙКА".'
+        if subscribers_count < break_limit:
+            assert coefficient <= max_coefficient, 'ПРОФИЛЬ "ПОМОЙКА".'
 
     # проверяет, подписан ли на пользователя
     def should_be_subscribe(self):
@@ -39,9 +41,6 @@ class FilterClass(BaseClass):
 
     # проверяет, есть ли публикации в профиле
     def should_be_posts(self):
-        """
-        вернёт False если найдёт надпись "Публикаций пока нет"
-        """
         try:
             self.search_element((By.XPATH, '//article/div[1]/div/div[2]/h1'), timeout=1)
             exist = False
@@ -51,9 +50,6 @@ class FilterClass(BaseClass):
 
     # проверяет, не является ли профиль закрытым
     def should_be_private_profile(self):
-        """
-        вернёт False если профиль закрыт
-        """
         try:
             self.search_element((By.XPATH, '//article/div[1]/div/h2'), timeout=1)
             exist = False

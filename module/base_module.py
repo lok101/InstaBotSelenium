@@ -48,7 +48,9 @@ class BaseClass:
         password_input.send_keys(password)
 
         password_input.send_keys(Keys.ENTER)
+        assert self.should_be_phone_number_input(), 'Требуется ввод номера телефона'
         assert self.should_be_login_button(), 'Не получилось залогиниться'
+
         print('Залогинился.')
 
     def close_browser(self):
@@ -78,8 +80,12 @@ class BaseClass:
     @staticmethod
     def file_read(file_name, value, operating_mode='r'):
         with open(f'data/{file_name}.txt', operating_mode) as file:
-            for link in file:
-                value.add(link)
+            if isinstance(value, set):
+                for link in file:
+                    value.add(link)
+            elif isinstance(value, list):
+                for link in file:
+                    value.append(link)
 
     @staticmethod
     def file_write(file_name, value, value2=None, operating_mode='a'):
@@ -87,9 +93,13 @@ class BaseClass:
             if value2 is not None:
                 file.write(str(value) + '\n')
                 file.write(str(value2) + '\n \n')
-            elif isinstance(value, list) or isinstance(value, set):
-                for item in value:
-                    file.write(item + '\n')
+            elif isinstance(value, (list, set)):
+                if '\n' in value.pop():
+                    for item in value:
+                        file.write(item)
+                else:
+                    for item in value:
+                        file.write(item + '\n')
             else:
                 file.write(str(value))
 
@@ -209,3 +219,27 @@ class BaseClass:
             exist = True
         return exist
 
+    # проверяет наличие окна ошибки подключения
+    def should_be_error_connection_page(self):
+        try:
+            # noinspection PyTypeChecker
+            self.search_element((By.ID, '#t'), timeout=1,
+                                type_wait=ec.presence_of_element_located)
+            exist = False
+        except TimeoutException:
+            exist = True
+        return exist
+
+    # проверяет наличие окна "добавьте номер телефона"
+    def should_be_phone_number_input(self):
+        try:
+            # noinspection PyTypeChecker
+            item = self.search_element((By.CSS_SELECTOR, 'div.qF0y9.Igw0E.IwRSH.eGOV_._4EzTm.dQ9Hi > h3'), timeout=1,
+                                       type_wait=ec.presence_of_element_located)
+            if 'Добавьте номер телефона, чтобы вернуться в Instagram' in item.text:
+                exist = False
+            else:
+                assert False, 'Неизвестное сообщение при проверке наличия окна "добавьте номер телефона"'
+        except TimeoutException:
+            exist = True
+        return exist

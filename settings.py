@@ -41,7 +41,7 @@ class Subscribe:
     max_timeout = 10
     subscribe_in_session = 40
     sleep_between_iterations = 20
-    subscribe_limit_stop = 400
+    subscribe_limit_stop = 490
     """FILTER"""
     subscribers_min, subscribers_max = 50, 7000
     subscriptions_min, subscriptions_max = 50, 7000
@@ -49,7 +49,7 @@ class Subscribe:
     coefficient_subscribers = 6
     min_subscribers = 60
     min_subscriptions = 60
-    break_limit = 600
+    break_limit = 350
     stop_word_dict = stop_word_dict
 
 
@@ -64,7 +64,7 @@ class SearchUser:
     subscribe_limit - количество подписок в задаче
     break_limit - минимальный порог подписчиков, при превышении которого не проверяется coefficient_subscribers
     """
-    scroll_number_subscribers_list = 5
+    scroll_number_subscribers_list = 3
     """FILTER"""
     coefficient_subscribers = 1
     posts_max, posts_min = 1000000, 3

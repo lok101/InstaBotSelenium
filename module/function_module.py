@@ -1,6 +1,9 @@
-from selenium.common.exceptions import NoSuchElementException, TimeoutException, StaleElementReferenceException
+from selenium.common.exceptions import NoSuchElementException, TimeoutException, StaleElementReferenceException, \
+    WebDriverException
 from selenium.webdriver.support import expected_conditions as ec
 from selenium.webdriver.common.by import By
+
+import data
 from module.filter_module import FilterClass
 from datetime import datetime
 from settings import *
@@ -19,23 +22,25 @@ class FunctionClass(FilterClass):
                                   sleep_between_iterations=Unsubscribe.sleep_between_iterations,
                                   ):
         """
-        min_sleep - минимальная задежка между отписками
+        min_sleep - минимальная задержка между отписками
         max_sleep - максимальная задержка между отписками
         sleep_between_iterations - таймаут между итерациями (по 10 отписок за итерацию)
-        error_max - колличество ошибок, которые пропуустит цикл. После превышения - остановка.
+        error_max - количество ошибок, которые пропустит цикл. После превышения - остановка.
         """
         browser = self.browser
         count_restart = 0
         browser.get(f"https://www.instagram.com/{username}/")
 
-        while count_restart < 10:
+        while count_restart < 20:
             try:
+                browser.get(f"https://www.instagram.com/{username}/")
                 following_count = self.search_element((
                     By.XPATH, '//main/div/header/section/ul/li[3]/a/span'),
                     type_wait=ec.presence_of_element_located).text
                 print(f"Количество подписок: {following_count}")
                 count = 10
-                browser.get(f"https://www.instagram.com/{username}/")
+
+                assert self.should_be_error_connection_page(), 'Ошибка загрузки страницы'
 
                 following_button = self.search_element((By.XPATH, "//li[3]/a"))
                 following_button.click()
@@ -61,6 +66,14 @@ class FunctionClass(FilterClass):
                 count_restart += 1
                 continue
 
+            except WebDriverException:
+                print('>> WebDriverException <<')
+                continue
+
+            except AssertionError:
+                print('Ошибка загрузки страницы')
+                continue
+
     # подписывается на юзеров из файла
     def subscribe_to_user_list(self, username, min_timeout=Subscribe.min_timeout,
                                max_timeout=Subscribe.max_timeout,
@@ -74,7 +87,7 @@ class FunctionClass(FilterClass):
         scatter_timeout - разброс при вычислении таймаута
         sleep_between_iterations - дополнительный таймаут на каждые subscribe_in_session подписок
         limit_subscribes - максимальное число подписчиков у профиля (если больше, то пропустит этот профиль)
-        subscribe_limit - колличество подписок в задаче
+        subscribe_limit - количество подписок в задаче
         """
         browser = self.browser
         user_list, ignore_list = set(), set()
@@ -92,11 +105,12 @@ class FunctionClass(FilterClass):
                     print('======================ПОДПИСКА ЗАВЕРШЕНА======================')
                     break
                 if subscribe_count % subscribe_in_session == 0:
-                    print(f'{datetime.now().strftime("%H:%M:%S")} Подписался на очередные',
-                          f'{subscribe_in_session} пользователей. Таймаут {sleep_between_iterations} минут.')
-
                     browser.get(f"https://www.instagram.com/{username}/")
                     subscribe = self.return_number_posts_subscribe_and_subscribers()[3]
+                    print(f'{datetime.now().strftime("%H:%M:%S")} Подписался на очередные',
+                          f'{subscribe_in_session} пользователей. Всего подписок - {subscribe}.',
+                          f'Таймаут {sleep_between_iterations} минут.')
+
                     subscribe_count = 0
 
                     self.file_read('ignore_list', ignore_list)
@@ -143,6 +157,10 @@ class FunctionClass(FilterClass):
             except AssertionError:
                 print('======================МИКРОБАН ПОДПИСКИ======================')
                 break
+
+            except WebDriverException:
+                print('>> WebDriverException <<')
+                continue
 
     # фильтрует список профилей
     def filter_user_list(self, account_id, iteration_number, timeout=StartSettings.filtered_user_list_timeout):
@@ -205,6 +223,8 @@ class FunctionClass(FilterClass):
                     print('Страница не существует')
                     self.file_write('ignore_list', user_filtered)
                     continue
+                elif 'Страница не загрузилась' in assertion:
+                    print('Страница не загрузилась')
 
                 self.file_write('ignore_list', user_filtered)
                 # ловит стоп-слово, с которым упал assert и подставляет его в лог
@@ -233,8 +253,7 @@ class FunctionClass(FilterClass):
                 print('>> TimeoutException <<')
                 continue
 
-            except Exception as error:
-                print(error)
+            except Exception:
                 traceback_text = traceback.format_exc()
                 date = datetime.now().strftime("%d-%m %H:%M:%S")
                 self.file_write('logs/select', date, traceback_text)
@@ -245,7 +264,7 @@ class FunctionClass(FilterClass):
                             scrolls_timeout=1,
                             ):
         """
-        number_scrolls - колличество прокруток поля комметнариев у поста
+        number_scrolls - количество прокруток поля комментариев у поста
         scrolls_timeout - задержка перед прокруткой (иначе может падать с ошибкой NoSuchElement)
         delete_file - если "yes", то очистит файл со ссылками перед записью
         """
@@ -272,21 +291,12 @@ class FunctionClass(FilterClass):
             self.file_write('non_filtered/user_urls_commentators', user_urls)
             with open('data/User_urls_commentators.txt', 'r') as file:
                 size = len(file.readlines())
-                print(f'Колличество собранных пользователей: {size}')
+                print(f'Количество собранных пользователей: {size}')
 
-    # собирает список подписчиков "по конкуренту"
-    def select_subscribes(self, username, tag_search, search_depth=SearchUser.search_depth,
-                          max_coefficient=SearchUser.coefficient_subscribers,
-                          posts_max=SearchUser.posts_max, posts_min=SearchUser.posts_min,
-                          subscribers_max=SearchUser.subscribers_max,
-                          subscribers_min=SearchUser.subscribers_min,
-                          subscriptions_max=SearchUser.subscriptions_max,
-                          subscriptions_min=SearchUser.subscriptions_min,
-                          scroll_number_subscribers_list=SearchUser.scroll_number_subscribers_list,
-                          break_limit=SearchUser.break_limit
-                          ):
+    # собирает список пабликов по тегу
+    def hashtag_public_search(self, username, tag_search, search_depth=SearchUser.search_depth, ):
         """
-        search_name - имя, которое будет вводится в строку поиска по профилям
+        search_name - имя, которое будет вводиться в строку поиска по профилям
         delete_file - если "yes", то очистит файл со ссылками перед записью
         """
         browser = self.browser
@@ -295,21 +305,41 @@ class FunctionClass(FilterClass):
         browser.get(f"https://www.instagram.com/{username}/")
         used_by_url = []
 
-        search_input = self.search_element((By.XPATH, '//div/div/div[2]/input'))
+        search_input = self.search_element((By.CSS_SELECTOR, 'div.QY4Ed.P0xOK > input'))
         search_input.send_keys(tag_search)
 
         public_urls = self.tag_search(ignore=username, parameter=1.5)
         for i in range(search_depth):
             used_by_url.append(public_urls[i - 1])
+        self.select_subscribers(username, used_by_url, filter_mode='on')
 
-        for url in used_by_url:
+    # собирает пользователей "по конкуренту" со списка ссылок
+    def select_subscribers(self, username, iter_count, url_public_list=None, filter_mode="off",
+                           scroll_number_subscribers_list=SearchUser.scroll_number_subscribers_list,
+                           ):
+        browser = self.browser
+        iteration_count = 0
+        if url_public_list is None:
+            all_user_url = []
+            self.file_read('url_lists/public_url_for_subscribe', all_user_url)
+        user_url = all_user_url[int(str(iter_count) + '0'):int(str(iter_count + 1) + '0')]
+        for url in user_url:
             try:
                 browser.get(url)
                 user_name = url.split("/")[-2]
                 print(f'{datetime.now().strftime("%H:%M:%S")} Перешёл в профиль: {user_name}', end=' ======> ')
-                self.should_be_compliance_with_limits(max_coefficient, posts_max, posts_min, subscribers_max,
-                                                      subscribers_min, subscriptions_max, subscriptions_min,
-                                                      break_limit)
+
+                if filter_mode == 'on':
+                    self.should_be_compliance_with_limits(max_coefficient=SearchUser.coefficient_subscribers,
+                                                          posts_max=SearchUser.posts_max,
+                                                          posts_min=SearchUser.posts_min,
+                                                          subscribers_max=SearchUser.subscribers_max,
+                                                          subscribers_min=SearchUser.subscribers_min,
+                                                          subscriptions_max=SearchUser.subscriptions_max,
+                                                          subscriptions_min=SearchUser.subscriptions_min,
+                                                          break_limit=SearchUser.break_limit)
+                    self.should_be_stop_word_in_biography(data.stop_word_public_dict)
+
                 subscribes_button = self.search_element((By.CSS_SELECTOR, 'li:nth-child(2) > a'))
                 subscribes_button.click()
 
@@ -326,9 +356,10 @@ class FunctionClass(FilterClass):
 
                 user_urls = self.tag_search(ignore=username)
                 self.file_write('non_filtered/user_urls_subscribers', user_urls)
+                iteration_count += 1
                 with open('data/non_filtered/user_urls_subscribers.txt', 'r') as file:
                     size = len(file.readlines())
-                    print(f'Успешно. Количество собранных пользователей: {size}')
+                    print(f'Успешно. Количество собранных пользователей: {size}. Перебрал аккаунтов: {iteration_count}')
             except AssertionError as assertion:
                 assertion = str(assertion.args)
                 text = re.sub("[)(',]", '', assertion)
@@ -338,8 +369,7 @@ class FunctionClass(FilterClass):
                 print('  TimeoutException ---')
                 continue
 
-            except Exception as error:
-                print(error)
+            except Exception:
                 traceback_text = traceback.format_exc()
                 date = datetime.now().strftime("%d-%m %H:%M:%S")
                 self.file_write('logs/select', date, traceback_text)

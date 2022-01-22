@@ -26,7 +26,7 @@ def filter_user_list():
         my_bot.close_browser()
 
 
-def select_subscribers():
+def hashtag_public_search():
     try:
         headless_and_proxy = input('Headless(y/n) Proxy(y/n): ')
         for i in range(len(tag_list)):
@@ -38,9 +38,34 @@ def select_subscribers():
                 tag_search = tag_list[i]
                 my_bot = FunctionClass(username, password, headless_and_proxy)
                 my_bot.login()
-                my_bot.select_subscribes(username, tag_search)
+                my_bot.hashtag_public_search(username, tag_search)
                 my_bot.close_browser()
-            except AssertionError:
+            except Exception as error:
+                print(error)
+            finally:
+                continue
+    finally:
+        my_bot.close_browser()
+
+
+def select_subscribers():
+    try:
+        headless_and_proxy = input('Headless(y/n) Proxy(y/n): ')
+        with open('data/url_lists/public_url_for_subscribe.txt', 'r') as file:
+            iteration_number = len(file.readlines())//10
+        for iter_count in range(iteration_number):
+            try:
+                user = f'bot{random.randrange(1, len(bot_dict) + 1)}'
+                print(f'Бот аккаунт - {user}', end=' =====> ')
+                username = bot_dict[user]['login']
+                password = bot_dict[user]['password']
+                my_bot = FunctionClass(username, password, headless_and_proxy)
+                my_bot.login()
+                my_bot.select_subscribers(username, iter_count)
+                my_bot.close_browser()
+            except Exception as error:
+                print(error)
+            finally:
                 continue
     finally:
         my_bot.close_browser()
@@ -80,7 +105,7 @@ while True:
         if operating_status == 'fil':
             filter_user_list()
 
-        elif operating_status == 'sel':
+        elif operating_status == 'hash':
             select_subscribers()
 
         elif operating_status == 'sub':
@@ -88,6 +113,9 @@ while True:
 
         elif operating_status == 'uns':
             unsubscribe_for_all_users()
+
+        elif operating_status == 'sel':
+            select_subscribers()
 
         else:
             raise NameError('Неверный режим работы.')
