@@ -141,6 +141,7 @@ class FunctionClass(FilterClass):
                 continue
 
             except NoSuchElementException:
+                subscribe_count += 0.1
                 traceback_text = traceback.format_exc()
                 date = datetime.now().strftime("%d-%m %H:%M:%S")
                 self.file_write('logs/traceback_subscribe', date, traceback_text)
@@ -148,6 +149,7 @@ class FunctionClass(FilterClass):
                 continue
 
             except StaleElementReferenceException:
+                subscribe_count += 0.1
                 traceback_text = traceback.format_exc()
                 date = datetime.now().strftime("%d-%m %H:%M:%S")
                 self.file_write('logs/traceback_subscribe', date, traceback_text)
@@ -159,6 +161,7 @@ class FunctionClass(FilterClass):
                 break
 
             except WebDriverException:
+                subscribe_count += 0.1
                 print('>> WebDriverException <<')
                 continue
 
@@ -318,12 +321,13 @@ class FunctionClass(FilterClass):
                            scroll_number_subscribers_list=SearchUser.scroll_number_subscribers_list,
                            ):
         browser = self.browser
-        iteration_count = 0
+        timeout_exception_count = 0
         if url_public_list is None:
-            all_user_url = []
-            self.file_read('url_lists/public_url_for_subscribe', all_user_url)
-        user_url = all_user_url[int(str(iter_count) + '0'):int(str(iter_count + 1) + '0')]
-        for url in user_url:
+            url_public_list = []
+            self.file_read('url_lists/public_url_for_subscribe', url_public_list)
+            print(f'===> Итерация сбора {iter_count+ 1} из {len(url_public_list)//10 + 1}. <===')
+            url_public_list = url_public_list[int(str(iter_count) + '0'):int(str(iter_count + 1) + '0')]
+        for url in url_public_list:
             try:
                 browser.get(url)
                 user_name = url.split("/")[-2]
@@ -356,16 +360,18 @@ class FunctionClass(FilterClass):
 
                 user_urls = self.tag_search(ignore=username)
                 self.file_write('non_filtered/user_urls_subscribers', user_urls)
-                iteration_count += 1
                 with open('data/non_filtered/user_urls_subscribers.txt', 'r') as file:
                     size = len(file.readlines())
-                    print(f'Успешно. Количество собранных пользователей: {size}. Перебрал аккаунтов: {iteration_count}')
+                    print(f'Успешно. Количество собранных пользователей: {size}.')
             except AssertionError as assertion:
                 assertion = str(assertion.args)
                 text = re.sub("[)(',]", '', assertion)
                 print(text)
                 continue
             except TimeoutException:
+                timeout_exception_count += 1
+                if timeout_exception_count == 3:
+                    break
                 print('  TimeoutException ---')
                 continue
 

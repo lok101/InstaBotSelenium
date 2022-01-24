@@ -48,8 +48,9 @@ class BaseClass:
         password_input.send_keys(password)
 
         password_input.send_keys(Keys.ENTER)
-        assert self.should_be_phone_number_input(), 'Требуется ввод номера телефона'
-        assert self.should_be_login_button(), 'Не получилось залогиниться'
+        assert self.should_be_phone_number_input(), 'Требуется ввод номера телефона.'
+        assert self.should_be_verification_phone_number(), 'Требуется код из СМС.'
+        assert self.should_be_login_button(), '= = = = = = = = Не получилось залогиниться. = = = = = = = ='
 
         print('Залогинился.')
 
@@ -234,12 +235,23 @@ class BaseClass:
     def should_be_phone_number_input(self):
         try:
             # noinspection PyTypeChecker
-            item = self.search_element((By.CSS_SELECTOR, 'div.qF0y9.Igw0E.IwRSH.eGOV_._4EzTm.dQ9Hi > h3'), timeout=1,
-                                       type_wait=ec.presence_of_element_located)
-            if 'Добавьте номер телефона, чтобы вернуться в Instagram' in item.text:
-                exist = False
-            else:
-                assert False, 'Неизвестное сообщение при проверке наличия окна "добавьте номер телефона"'
+            self.search_element((By.CSS_SELECTOR, 'div.qF0y9.Igw0E.IwRSH.eGOV_._4EzTm.dQ9Hi > h3'), timeout=1,
+                                type_wait=ec.presence_of_element_located)
+            exist = False
         except TimeoutException:
             exist = True
         return exist
+
+    # проверяет наличие окна "подтвердите номер телефона"
+    def should_be_verification_phone_number(self):
+        try:
+            # noinspection PyTypeChecker
+            self.search_element((By.XPATH, '/html/body/div[1]/section/main/div[2]/div/div/div/div[1]/div[1]/span'),
+                                timeout=1, type_wait=ec.presence_of_element_located)
+            exist = False
+        except TimeoutException:
+            exist = True
+        return exist
+
+
+'/html/body/div[1]/section/main/div[2]/div/div/div/div[1]/div[1]/span'

@@ -73,14 +73,19 @@ def select_subscribers():
 
 def subscribe_to_user_list():
     try:
+        account_list = []
         user_input = input('Введите имя аккаунта: ')
-        username = user_dict[user_input]['login']
-        password = user_dict[user_input]['password']
-        headless_and_proxy = input('Headless(y/n) Proxy(y/n): ')
-        my_bot = FunctionClass(username, password, headless_and_proxy)
-        my_bot.login()
-        my_bot.subscribe_to_user_list(username)
-        my_bot.close_browser()
+        account_list.append(user_input.split(' ')[0])
+        if ' ' in user_input:
+            account_list.append(user_input.split(' '[1]))
+        for user in account_list:
+            username = user_dict[user]['login']
+            password = user_dict[user]['password']
+            headless_and_proxy = input('Headless(y/n) Proxy(y/n): ')
+            my_bot = FunctionClass(username, password, headless_and_proxy)
+            my_bot.login()
+            my_bot.subscribe_to_user_list(username)
+            my_bot.close_browser()
     finally:
         my_bot.close_browser()
 
