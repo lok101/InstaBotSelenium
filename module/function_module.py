@@ -1,8 +1,8 @@
 from selenium.common.exceptions import NoSuchElementException, TimeoutException, StaleElementReferenceException, \
     WebDriverException
+from module.base_module import LoginError
 from selenium.webdriver.support import expected_conditions as ec
 from selenium.webdriver.common.by import By
-
 import data
 from module.filter_module import FilterClass
 from datetime import datetime
@@ -34,18 +34,18 @@ class FunctionClass(FilterClass):
         while count_restart < 20:
             try:
                 browser.get(f"https://www.instagram.com/{username}/")
+                assert self.should_be_error_connection_page(), 'Ошибка загрузки страницы.'
+                assert self.should_be_activity_blocking(), 'Микробан активности.'
                 following_count = self.search_element((
                     By.XPATH, '//main/div/header/section/ul/li[3]/a/span'),
                     type_wait=ec.presence_of_element_located).text
                 print(f"Количество подписок: {following_count}")
                 count = 10
 
-                assert self.should_be_error_connection_page(), 'Ошибка загрузки страницы'
-
                 following_button = self.search_element((By.XPATH, "//li[3]/a"))
                 following_button.click()
 
-                following_div_block = self.search_element((By.XPATH, "/html/body/div[6]/div/div/div[3]/ul/div"))
+                following_div_block = self.search_element((By.CSS_SELECTOR, "div > div > div.isgrP > ul > div"))
                 time.sleep(2)
                 following_users = following_div_block.find_elements(By.TAG_NAME, "li")
 
@@ -70,8 +70,14 @@ class FunctionClass(FilterClass):
                 print('>> WebDriverException <<')
                 continue
 
-            except AssertionError:
-                print('Ошибка загрузки страницы')
+            except AssertionError as assertion:
+                if 'Ошибка загрузки страницы.' in assertion:
+                    print('Ошибка загрузки страницы.')
+                elif 'Микробан активности.' in assertion:
+                    print('Микробан активности.')
+                    break
+                else:
+                    print('!!! Неизвестный Assert !!!')
                 continue
 
     # подписывается на юзеров из файла
@@ -96,6 +102,7 @@ class FunctionClass(FilterClass):
         self.file_read('ignore_list', ignore_list)
         user_list = user_list.difference(ignore_list)
         browser.get(f"https://www.instagram.com/{username}/")
+        assert self.should_be_activity_blocking(), 'Микробан активности.'
         subscribe = self.return_number_posts_subscribe_and_subscribers()[3]
         print(f'Профилей в списке - {len(user_list)}, подписок у аккаунта - {subscribe}')
 
@@ -111,7 +118,7 @@ class FunctionClass(FilterClass):
                           f'{subscribe_in_session} пользователей. Всего подписок - {subscribe}.',
                           f'Таймаут {sleep_between_iterations} минут.')
 
-                    subscribe_count = 0
+                    subscribe_count = 0.1
 
                     self.file_read('ignore_list', ignore_list)
                     user_list = user_list.difference(ignore_list)
@@ -120,14 +127,18 @@ class FunctionClass(FilterClass):
 
                 browser.get(user_subscribe)
                 user_name = user_subscribe.split("/")[-2]
-                print(f'{datetime.now().strftime("%H:%M:%S")} -- перешёл в профиль: {user_name}', end=' =====> ')
+                print(f'{datetime.now().strftime("%H:%M:%S")}-- <{username}> -- перешёл в профиль: {user_name}', end=' =====> ')
 
-                subscribe_button = self.search_element((By.CSS_SELECTOR, 'span.vBF20._1OSdk > button'))
+                try:
+                    subscribe_button = self.search_element((By.CSS_SELECTOR, 'span.vBF20._1OSdk > button'), timeout=3)
+                except TimeoutException:
+                    subscribe_button = self.search_element((By.CSS_SELECTOR, 'header > section > div > div > div > button'),
+                                                           timeout=3)
                 subscribe_button.click()
 
                 time.sleep(random.randrange(min_timeout, max_timeout))
 
-                assert self.should_be_subscribe_blocking()  # проверка на микробан
+                assert self.should_be_subscribe_blocking(), 'Микробан подписки.'  # проверка на микробан
 
                 self.file_write('ignore_list', user_subscribe)
                 subscribe_count = int(subscribe_count) + 1
@@ -156,9 +167,15 @@ class FunctionClass(FilterClass):
                 print('>> StaleElementReferenceException <<')
                 continue
 
-            except AssertionError:
-                print('======================МИКРОБАН ПОДПИСКИ======================')
-                break
+            except AssertionError as assertion:
+                if 'Микробан активности.' in assertion:
+                    print('====================== МИКРОБАН АКТИВНОСТИ ======================')
+                    break
+                elif 'Микробан подписки.' in assertion:
+                    print('====================== МИКРОБАН ПОДПИСКИ ======================')
+                    break
+                else:
+                    print('!!! Неизвестный Assert !!!')
 
             except WebDriverException:
                 subscribe_count += 0.1
@@ -256,6 +273,10 @@ class FunctionClass(FilterClass):
                 print('>> TimeoutException <<')
                 continue
 
+            except LoginError:
+                print('= = = = = = = = Не получилось залогиниться. = = = = = = = =')
+                continue
+
             except Exception:
                 traceback_text = traceback.format_exc()
                 date = datetime.now().strftime("%d-%m %H:%M:%S")
@@ -347,7 +368,7 @@ class FunctionClass(FilterClass):
                 subscribes_button = self.search_element((By.CSS_SELECTOR, 'li:nth-child(2) > a'))
                 subscribes_button.click()
 
-                subscribes_ul = self.search_element((By.XPATH, '/html/body/div[6]/div/div/div[2]'),
+                subscribes_ul = self.search_element((By.CSS_SELECTOR, 'div.RnEpo.Yx5HN > div > div > div.isgrP'),
                                                     type_wait=ec.presence_of_element_located)
                 for i in range(scroll_number_subscribers_list + 1):
                     browser.execute_script("arguments[0].scrollTop = arguments[0].scrollHeight", subscribes_ul)
@@ -373,6 +394,10 @@ class FunctionClass(FilterClass):
                 if timeout_exception_count == 3:
                     break
                 print('  TimeoutException ---')
+                continue
+
+            except LoginError:
+                print('= = = = = = = = Не получилось залогиниться. = = = = = = = =')
                 continue
 
             except Exception:

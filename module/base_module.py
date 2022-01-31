@@ -1,3 +1,4 @@
+from datetime import datetime
 from selenium.common.exceptions import TimeoutException, StaleElementReferenceException
 from selenium.webdriver.support import expected_conditions as ec
 from selenium.webdriver.support.ui import WebDriverWait
@@ -8,8 +9,14 @@ from data import proxy_list
 from settings import *
 import requests
 import time
+import re
+import json
 
 username, password = '', ''
+
+
+class LoginError(Exception):
+    pass
 
 
 class BaseClass:
@@ -35,22 +42,33 @@ class BaseClass:
         self.password = pass_word
 
     def login(self):
-        browser = self.browser
-        browser.get(self.link)
-        print(f'Логин с аккаунта --- {username}')
+        try:
+            browser = self.browser
+            browser.get(self.link)
+            print(f'Логин с аккаунта --- {username}')
 
-        username_input = self.search_element((By.NAME, "username"))
-        username_input.clear()
-        username_input.send_keys(username)
+            username_input = self.search_element((By.NAME, "username"))
+            username_input.clear()
+            username_input.send_keys(username)
 
-        password_input = self.search_element((By.NAME, "password"))
-        password_input.clear()
-        password_input.send_keys(password)
+            password_input = self.search_element((By.NAME, "password"))
+            password_input.clear()
+            password_input.send_keys(password)
 
-        password_input.send_keys(Keys.ENTER)
-        assert self.should_be_phone_number_input(), 'Требуется ввод номера телефона.'
-        assert self.should_be_verification_phone_number(), 'Требуется код из СМС.'
-        assert self.should_be_login_button(), '= = = = = = = = Не получилось залогиниться. = = = = = = = ='
+            password_input.send_keys(Keys.ENTER)
+            time.sleep(5)
+            assert self.should_be_login_form_error(), 'Ошибка авторизации. Красный текст под формой).'
+            assert self.should_be_verification_email(), 'Подозрительная попытка входа.'
+            assert self.should_be_phone_number_input(), 'Требуется ввод номера телефона.'
+            assert self.should_be_verification_phone_number(), 'Требуется код из СМС.'
+            assert self.should_be_login_button(), 'Не получилось залогиниться.'
+        except AssertionError as assertion:
+            assertion = str(assertion.args)
+            text = re.sub("[)(',]", '', assertion)
+            date = datetime.now().strftime("%d-%m %H:%M:%S")
+            log = f'{date} -- {username}: {text}\n'
+            self.file_write('logs/authorize_error', log)
+            raise LoginError(f'= = = = = = = = = = {text} = = = = = = = = = =')
 
         print('Залогинился.')
 
@@ -65,9 +83,10 @@ class BaseClass:
     def proxy_browser(self, chrome_options, proxy=proxy_list):
         chrome_options.add_argument('--proxy-server=%s' % proxy)
         self.browser = webdriver.Chrome(options=chrome_options)
-        self.browser.get('https://2ip.ru/')
+        self.browser.get("https://api.myip.com/")
         # noinspection PyTypeChecker
-        ip = self.search_element((By.CSS_SELECTOR, 'div.ip span'), type_wait=ec.presence_of_element_located).text
+        pre = self.search_element((By.TAG_NAME, "body"), type_wait=ec.presence_of_element_located).text
+        ip = json.loads(pre)['ip']
         assert ip not in '78.139.68.238'
         print(f'Подключение через прокси: {ip}')
         return self.browser
@@ -220,7 +239,7 @@ class BaseClass:
             exist = True
         return exist
 
-    # проверяет наличие окна ошибки подключения
+    # проверяет наличие окна ошибки подключения - НЕ СРАБАТЫВАЕТ
     def should_be_error_connection_page(self):
         try:
             # noinspection PyTypeChecker
@@ -253,5 +272,24 @@ class BaseClass:
             exist = True
         return exist
 
+    # проверяет наличие окна "подтвердите почту"
+    def should_be_verification_email(self):
+        try:
+            # noinspection PyTypeChecker
+            self.search_element((By.CSS_SELECTOR, 'div > div.GNbi9 > div > p'),
+                                timeout=1, type_wait=ec.presence_of_element_located)
+            exist = False
+        except TimeoutException:
+            exist = True
+        return exist
 
-'/html/body/div[1]/section/main/div[2]/div/div/div/div[1]/div[1]/span'
+    # проверяет наличие ошибки "Не получилось залогиниться" (красный шрифт под формой авторизации).
+    def should_be_login_form_error(self):
+        try:
+            # noinspection PyTypeChecker
+            self.search_element((By.CSS_SELECTOR, '#slfErrorAlert'),
+                                timeout=1, type_wait=ec.presence_of_element_located)
+            exist = False
+        except TimeoutException:
+            exist = True
+        return exist
