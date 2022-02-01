@@ -8,6 +8,7 @@ from selenium import webdriver
 from data import proxy_list
 from settings import *
 import requests
+import pickle
 import time
 import re
 import json
@@ -45,32 +46,56 @@ class BaseClass:
         try:
             browser = self.browser
             browser.get(self.link)
-            print(f'Логин с аккаунта --- {username}')
-
-            username_input = self.search_element((By.NAME, "username"))
-            username_input.clear()
-            username_input.send_keys(username)
-
-            password_input = self.search_element((By.NAME, "password"))
-            password_input.clear()
-            password_input.send_keys(password)
-
-            password_input.send_keys(Keys.ENTER)
-            time.sleep(5)
-            assert self.should_be_login_form_error(), 'Ошибка авторизации. Красный текст под формой).'
-            assert self.should_be_verification_email(), 'Подозрительная попытка входа.'
-            assert self.should_be_phone_number_input(), 'Требуется ввод номера телефона.'
-            assert self.should_be_verification_phone_number(), 'Требуется код из СМС.'
+            browser.delete_all_cookies()
+            for cookie in pickle.load(open(f'data/cookies/{username}_cookies', 'rb')):
+                browser.add_cookie(cookie)
+            time.sleep(1)
+            browser.refresh()
             assert self.should_be_login_button(), 'Не получилось залогиниться.'
+            print('Залогинился через cookies.')
+
         except AssertionError as assertion:
             assertion = str(assertion.args)
             text = re.sub("[)(',]", '', assertion)
             date = datetime.now().strftime("%d-%m %H:%M:%S")
-            log = f'{date} -- {username}: {text}\n'
+            log = f'{date}  <вход через cookies> -- {username}: {text}\n'
             self.file_write('logs/authorize_error', log)
             raise LoginError(f'= = = = = = = = = = {text} = = = = = = = = = =')
 
-        print('Залогинился.')
+        except FileNotFoundError:
+            try:
+                browser = self.browser
+                browser.get(self.link)
+                print(f'Логин с аккаунта --- {username}')
+
+                username_input = self.search_element((By.NAME, "username"))
+                username_input.clear()
+                username_input.send_keys(username)
+
+                password_input = self.search_element((By.NAME, "password"))
+                password_input.clear()
+                password_input.send_keys(password)
+
+                password_input.send_keys(Keys.ENTER)
+                time.sleep(5)
+                assert self.should_be_login_form_error(), 'Ошибка авторизации. Красный текст под формой).'
+                assert self.should_be_verification_email(), 'Подозрительная попытка входа.'
+                assert self.should_be_phone_number_input(), 'Требуется ввод номера телефона.'
+                assert self.should_be_verification_phone_number(), 'Требуется код из СМС.'
+                assert self.should_be_login_button(), 'Не получилось залогиниться.'
+
+                # сохраняем cookies
+                pickle.dump(browser.get_cookies(), open(f'data/cookies/{username}_cookies', 'wb'))
+
+            except AssertionError as assertion:
+                assertion = str(assertion.args)
+                text = re.sub("[)(',]", '', assertion)
+                date = datetime.now().strftime("%d-%m %H:%M:%S")
+                log = f'{date} -- {username}: {text}\n'
+                self.file_write('logs/authorize_error', log)
+                raise LoginError(f'= = = = = = = = = = {text} = = = = = = = = = =')
+
+            print(f'Залогинился и создал cookies ===> data/cookies/{username}_cookies.')
 
     def close_browser(self):
         self.browser.quit()
@@ -293,3 +318,10 @@ class BaseClass:
         except TimeoutException:
             exist = True
         return exist
+
+    def press_to_button_subscribe(self):
+        button = self.search_element((By.XPATH, '//button'))
+        if 'подписаться' in button.text.lower():
+            return button
+        else:
+            return None

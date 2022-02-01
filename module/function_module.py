@@ -129,20 +129,16 @@ class FunctionClass(FilterClass):
                 user_name = user_subscribe.split("/")[-2]
                 print(f'{datetime.now().strftime("%H:%M:%S")}-- <{username}> -- перешёл в профиль: {user_name}', end=' =====> ')
 
-                try:
-                    subscribe_button = self.search_element((By.CSS_SELECTOR, 'span.vBF20._1OSdk > button'), timeout=3)
-                except TimeoutException:
-                    subscribe_button = self.search_element((By.CSS_SELECTOR, 'header > section > div > div > div > button'),
-                                                           timeout=3)
-                subscribe_button.click()
-
-                time.sleep(random.randrange(min_timeout, max_timeout))
-
-                assert self.should_be_subscribe_blocking(), 'Микробан подписки.'  # проверка на микробан
-
-                self.file_write('ignore_list', user_subscribe)
-                subscribe_count = int(subscribe_count) + 1
-                print(f'Успешно. Подписок: {subscribe_count}')
+                button = self.press_to_button_subscribe()
+                if button is not None:
+                    button.click()
+                    time.sleep(random.randrange(min_timeout, max_timeout))
+                    assert self.should_be_subscribe_blocking(), 'Микробан подписки.'  # проверка на микробан
+                    self.file_write('ignore_list', user_subscribe)
+                    subscribe_count = int(subscribe_count) + 1
+                    print(f'Успешно. Подписок: {subscribe_count}')
+                else:
+                    print('Кнопка не найдена.')
 
             except TimeoutException:
                 traceback_text = traceback.format_exc()

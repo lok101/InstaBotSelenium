@@ -14,7 +14,6 @@ def filter_user_list():
                 print(f'Бот аккаунт - {user}', end=' =====> ')
                 username = bot_dict[user]['login']
                 password = bot_dict[user]['password']
-                # input('====ПАУЗА====')
                 my_bot = FunctionClass(username, password, headless_and_proxy)
                 my_bot.login()
                 my_bot.filter_user_list(user, i)
