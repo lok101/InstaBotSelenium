@@ -1,6 +1,7 @@
 from data import user_dict, tag_list, bot_dict
 from module.function_module import FunctionClass
 from settings import SearchUser
+from module.base_module import LoginError
 import random
 import time
 
@@ -20,6 +21,8 @@ def filter_user_list():
                 my_bot.close_browser()
                 time.sleep(SearchUser.timeout_between_restarts * 60)
             except AssertionError:
+                continue
+            except LoginError:
                 continue
     finally:
         my_bot.close_browser()

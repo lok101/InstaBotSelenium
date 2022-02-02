@@ -240,13 +240,14 @@ class BaseClass:
 
     # проверяет наличие "микробана" на активность
     def should_be_activity_blocking(self):
-        exist = None
         try:
             # noinspection PyTypeChecker
             error_message = self.search_element((By.CSS_SELECTOR, 'div > div.error-container > p'), timeout=2,
                                                 type_wait=ec.presence_of_element_located)
             if 'Подождите несколько минут, прежде чем пытаться снова' in error_message.text:
                 exist = False
+            else:
+                exist = True
         except TimeoutException:
             exist = True
         return exist
@@ -325,3 +326,11 @@ class BaseClass:
             return button
         else:
             return None
+
+    def printing_logs(self, mode, name_task=None):
+        if mode == 'sub-start':
+            pass
+        elif mode == 'sub-end':
+            pass
+        elif mode == 'task-finish':
+            message = f'= = = = ЗАДАЧА: {name_task} - ЗАВЕРШЕНА = = = ='

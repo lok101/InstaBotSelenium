@@ -126,8 +126,8 @@ class FunctionClass(FilterClass):
                     time.sleep(sleep_between_iterations * 60)
 
                 browser.get(user_subscribe)
-                user_name = user_subscribe.split("/")[-2]
-                print(f'{datetime.now().strftime("%H:%M:%S")}-- <{username}> -- перешёл в профиль: {user_name}', end=' =====> ')
+                account_name = user_subscribe.split("/")[-2]
+                print(f'{datetime.now().strftime("%H:%M:%S")}-- <{username}> -- перешёл в профиль: {account_name}', end=' =====> ')
 
                 button = self.press_to_button_subscribe()
                 if button is not None:
@@ -185,98 +185,208 @@ class FunctionClass(FilterClass):
         stop_word = 'Стоп-слово не присвоено на этапе модуля.'
         count_user_in_session = 0
         count_iteration = 0
+        while_flag = True
 
-        self.file_read('non_filtered/user_urls_subscribers', user_urls)
-        self.file_read('ignore_list', ignore_list)
-        self.file_read('filtered/user_urls_subscribers', filtered_user)
         self.file_write('logs/assert_stop_word_log', f'\n{datetime.now().strftime("%d-%m %H:%M:%S")} - старт.\n')
         self.file_write('logs/assert_bad_profile_log', f'\n{datetime.now().strftime("%d-%m %H:%M:%S")} - старт.\n')
 
-        print(f'Профилей в списке до взаимодействия с игнор-листом - {len(user_urls)}', end=', ')
-        user_list = user_urls.difference(ignore_list, filtered_user)
-        print(f'после - {len(user_list)}')
-        for user_filtered in user_list:
-            urls_list = set()
-            count_iteration += 1
-            try:
-                browser.get(user_filtered)
-                user_name = user_filtered.split("/")[-2]
-                print(f'{datetime.now().strftime("%H:%M:%S")} - {account_id} -- <Цикл - {iteration_number + 1}> \
-                -- Перешёл в профиль: {user_name}',
-                      end=' ======> ')
+        while while_flag:
+            self.file_read('non_filtered/user_urls_subscribers', user_urls)
+            self.file_read('ignore_list', ignore_list)
+            self.file_read('filtered/user_urls_subscribers', filtered_user)
 
-                assert self.should_be_user_page(), 'Страница не существует'
-                self.should_be_compliance_with_limits(max_coefficient=Subscribe.coefficient_subscribers,
-                                                      posts_max=Subscribe.posts_max, posts_min=Subscribe.posts_min,
-                                                      subscribers_max=Subscribe.subscribers_max,
-                                                      subscribers_min=Subscribe.subscribers_min,
-                                                      subscriptions_max=Subscribe.subscriptions_max,
-                                                      subscriptions_min=Subscribe.subscriptions_min,
-                                                      break_limit=Subscribe.break_limit)
+            print(f'Профилей в списке до взаимодействия с игнор-листом - {len(user_urls)}', end=', ')
+            user_list = user_urls.difference(ignore_list, filtered_user)
+            print(f'после - {len(user_list)}')
 
-                # поиск стоп-слов в биографии, если нашёл, то вернёт слово и уронит assert
-                flag_and_stop_word = self.should_be_stop_word_in_biography(stop_words=Subscribe.stop_word_dict)
-                flag, stop_word = flag_and_stop_word[0], flag_and_stop_word[1]
-                assert flag, 'СТОП-СЛОВО'  # assert-функции, вывод которых прописан КАПСОМ - пишутся в лог файл
+            for i in range(50):
+                urls_list = set()
+                count_iteration += 1
+                user_url = user_list.pop()
+                try:
+                    browser.get(user_url)
+                    user_name = user_url.split("/")[-2]
+                    print(f'{datetime.now().strftime("%H:%M:%S")} - {account_id} -- <Аккаунт - {iteration_number + 1}> \
+                    -- Перешёл в профиль: {user_name}', end=' ======> ')
 
-                self.file_write('filtered/user_urls_subscribers', user_filtered)
-                self.file_read('filtered/user_urls_subscribers', urls_list)
-                count_user_in_session += 1
-                user_list_count = len(urls_list.difference(ignore_list))
+                    assert self.should_be_user_page(), 'Страница не существует'
+                    self.should_be_compliance_with_limits(max_coefficient=Subscribe.coefficient_subscribers,
+                                                          posts_max=Subscribe.posts_max, posts_min=Subscribe.posts_min,
+                                                          subscribers_max=Subscribe.subscribers_max,
+                                                          subscribers_min=Subscribe.subscribers_min,
+                                                          subscriptions_max=Subscribe.subscriptions_max,
+                                                          subscriptions_min=Subscribe.subscriptions_min,
+                                                          break_limit=Subscribe.break_limit)
 
-                print(f'Подходит.')
-                print(f'Профилей в списке - {user_list_count}. \
-                Отобрано в сессии - {count_user_in_session}. Перебрал - {count_iteration}')
+                    # поиск стоп-слов в биографии, если нашёл, то вернёт слово и уронит assert
+                    flag_and_stop_word = self.should_be_stop_word_in_biography(stop_words=Subscribe.stop_word_dict)
+                    flag, stop_word = flag_and_stop_word[0], flag_and_stop_word[1]
+                    assert flag, 'СТОП-СЛОВО'  # assert-функции, вывод которых прописан КАПСОМ - пишутся в лог файл
 
-            except AssertionError as assertion:
-                assertion = str(assertion.args)
-                text = re.sub("[)(']", '', assertion)
+                    self.file_write('filtered/user_urls_subscribers', user_url)
+                    self.file_read('filtered/user_urls_subscribers', urls_list)
+                    count_user_in_session += 1
+                    user_list_count = len(urls_list.difference(ignore_list))
 
-                if 'Subscribe blocking' in assertion:
-                    print('======== МИКРОБАН АКТИВНОСТИ ========')
-                    break
-                elif 'Страница не существует' in assertion:
-                    print('Страница не существует')
-                    self.file_write('ignore_list', user_filtered)
+                    print(f'Подходит. Итерация - [{i}/50]')
+                    print(f'Профилей в списке - {user_list_count}. \
+                    Отобрано в сессии - {count_user_in_session}. Перебрал - {count_iteration}')
+
+                except AssertionError as assertion:
+                    assertion = str(assertion.args)
+                    text = re.sub("[)(']", '', assertion)
+
+                    if 'Subscribe blocking' in assertion:
+                        print('======== МИКРОБАН АКТИВНОСТИ ========')
+                        break
+                    elif 'Страница не существует' in assertion:
+                        print('Страница не существует')
+                        self.file_write('ignore_list', user_url)
+                        continue
+                    elif 'Страница не загрузилась' in assertion:
+                        print('Страница не загрузилась')
+
+                    self.file_write('ignore_list', user_url)
+                    # ловит стоп-слово, с которым упал assert и подставляет его в лог
+                    if 'СТОП-СЛОВО' in text:
+                        assert_log = f'{str(stop_word)} ===> {user_url}'
+                        self.file_write('logs/assert_stop_word_log', assert_log)
+                    elif 'ПРОФИЛЬ "ПОМОЙКА".' in text:
+                        assert_log = f'{user_url}'
+                        self.file_write('logs/assert_bad_profile_log', assert_log)
+
+                    print(f'{text[:-1]}. Итерация - [{i}/50]')
+                    time.sleep(timeout)
                     continue
-                elif 'Страница не загрузилась' in assertion:
-                    print('Страница не загрузилась')
 
-                self.file_write('ignore_list', user_filtered)
-                # ловит стоп-слово, с которым упал assert и подставляет его в лог
-                if 'СТОП-СЛОВО' in text:
-                    assert_log = f'{str(stop_word)} ===> {user_filtered}'
-                    self.file_write('logs/assert_stop_word_log', assert_log)
-                elif 'ПРОФИЛЬ "ПОМОЙКА".' in text:
-                    assert_log = f'{user_filtered}'
-                    self.file_write('logs/assert_bad_profile_log', assert_log)
+                except NoSuchElementException:
+                    traceback_text = traceback.format_exc()
+                    date = datetime.now().strftime("%d-%m %H:%M:%S")
+                    self.file_write('logs/traceback_filtered', date, traceback_text)
+                    print(f'>> NoSuchElementException. Итерация - [{i}/50]')
+                    continue
 
-                print(text[:-1])
-                time.sleep(timeout)
-                continue
+                except TimeoutException:
+                    traceback_text = traceback.format_exc()
+                    date = datetime.now().strftime("%d-%m %H:%M:%S")
+                    self.file_write('logs/traceback_filtered', date, traceback_text)
+                    print(f'>> TimeoutException. Итерация - [{i}/50]')
+                    continue
 
-            except NoSuchElementException:
-                traceback_text = traceback.format_exc()
-                date = datetime.now().strftime("%d-%m %H:%M:%S")
-                self.file_write('logs/traceback_filtered', date, traceback_text)
-                print('>> NoSuchElementException <<')
-                continue
+                except KeyError:
+                    print('В списке не осталось ссылок.')
+                    while_flag = False
+                    break
 
-            except TimeoutException:
-                traceback_text = traceback.format_exc()
-                date = datetime.now().strftime("%d-%m %H:%M:%S")
-                self.file_write('logs/traceback_filtered', date, traceback_text)
-                print('>> TimeoutException <<')
-                continue
+                except Exception:
+                    traceback_text = traceback.format_exc()
+                    date = datetime.now().strftime("%d-%m %H:%M:%S")
+                    self.file_write('logs/filtered', date, traceback_text)
+                    print('Неизвестная ошибка')
+                    continue
+        print('= = = = ФИЛЬТРАЦИЯ ЗАВЕРШЕНА = = = =')
 
-            except LoginError:
-                print('= = = = = = = = Не получилось залогиниться. = = = = = = = =')
-                continue
-
-            except Exception:
-                traceback_text = traceback.format_exc()
-                date = datetime.now().strftime("%d-%m %H:%M:%S")
-                self.file_write('logs/select', date, traceback_text)
+    # def filter_user_list(self, account_id, iteration_number, timeout=StartSettings.filtered_user_list_timeout):
+    #     browser = self.browser
+    #     user_urls, ignore_list, filtered_user = set(), set(), set()
+    #     stop_word = 'Стоп-слово не присвоено на этапе модуля.'
+    #     count_user_in_session = 0
+    #     count_iteration = 0
+    #
+    #     self.file_write('logs/assert_stop_word_log', f'\n{datetime.now().strftime("%d-%m %H:%M:%S")} - старт.\n')
+    #     self.file_write('logs/assert_bad_profile_log', f'\n{datetime.now().strftime("%d-%m %H:%M:%S")} - старт.\n')
+    #
+    #     self.file_read('non_filtered/user_urls_subscribers', user_urls)
+    #     self.file_read('ignore_list', ignore_list)
+    #     self.file_read('filtered/user_urls_subscribers', filtered_user)
+    #
+    #     print(f'Профилей в списке до взаимодействия с игнор-листом - {len(user_urls)}', end=', ')
+    #     user_list = user_urls.difference(ignore_list, filtered_user)
+    #     print(f'после - {len(user_list)}')
+    #
+    #     for user_filtered in user_list:
+    #         urls_list = set()
+    #         count_iteration += 1
+    #         try:
+    #             browser.get(user_filtered)
+    #             user_name = user_filtered.split("/")[-2]
+    #             print(f'{datetime.now().strftime("%H:%M:%S")} - {account_id} -- <Цикл - {iteration_number + 1}> \
+    #             -- Перешёл в профиль: {user_name}',
+    #                   end=' ======> ')
+    #
+    #             assert self.should_be_user_page(), 'Страница не существует'
+    #             self.should_be_compliance_with_limits(max_coefficient=Subscribe.coefficient_subscribers,
+    #                                                   posts_max=Subscribe.posts_max, posts_min=Subscribe.posts_min,
+    #                                                   subscribers_max=Subscribe.subscribers_max,
+    #                                                   subscribers_min=Subscribe.subscribers_min,
+    #                                                   subscriptions_max=Subscribe.subscriptions_max,
+    #                                                   subscriptions_min=Subscribe.subscriptions_min,
+    #                                                   break_limit=Subscribe.break_limit)
+    #
+    #             # поиск стоп-слов в биографии, если нашёл, то вернёт слово и уронит assert
+    #             flag_and_stop_word = self.should_be_stop_word_in_biography(stop_words=Subscribe.stop_word_dict)
+    #             flag, stop_word = flag_and_stop_word[0], flag_and_stop_word[1]
+    #             assert flag, 'СТОП-СЛОВО'  # assert-функции, вывод которых прописан КАПСОМ - пишутся в лог файл
+    #
+    #             self.file_write('filtered/user_urls_subscribers', user_filtered)
+    #             self.file_read('filtered/user_urls_subscribers', urls_list)
+    #             count_user_in_session += 1
+    #             user_list_count = len(urls_list.difference(ignore_list))
+    #
+    #             print(f'Подходит.')
+    #             print(f'Профилей в списке - {user_list_count}. \
+    #             Отобрано в сессии - {count_user_in_session}. Перебрал - {count_iteration}')
+    #
+    #         except AssertionError as assertion:
+    #             assertion = str(assertion.args)
+    #             text = re.sub("[)(']", '', assertion)
+    #
+    #             if 'Subscribe blocking' in assertion:
+    #                 print('======== МИКРОБАН АКТИВНОСТИ ========')
+    #                 break
+    #             elif 'Страница не существует' in assertion:
+    #                 print('Страница не существует')
+    #                 self.file_write('ignore_list', user_filtered)
+    #                 continue
+    #             elif 'Страница не загрузилась' in assertion:
+    #                 print('Страница не загрузилась')
+    #
+    #             self.file_write('ignore_list', user_filtered)
+    #             # ловит стоп-слово, с которым упал assert и подставляет его в лог
+    #             if 'СТОП-СЛОВО' in text:
+    #                 assert_log = f'{str(stop_word)} ===> {user_filtered}'
+    #                 self.file_write('logs/assert_stop_word_log', assert_log)
+    #             elif 'ПРОФИЛЬ "ПОМОЙКА".' in text:
+    #                 assert_log = f'{user_filtered}'
+    #                 self.file_write('logs/assert_bad_profile_log', assert_log)
+    #
+    #             print(text[:-1])
+    #             time.sleep(timeout)
+    #             continue
+    #
+    #         except NoSuchElementException:
+    #             traceback_text = traceback.format_exc()
+    #             date = datetime.now().strftime("%d-%m %H:%M:%S")
+    #             self.file_write('logs/traceback_filtered', date, traceback_text)
+    #             print('>> NoSuchElementException <<')
+    #             continue
+    #
+    #         except TimeoutException:
+    #             traceback_text = traceback.format_exc()
+    #             date = datetime.now().strftime("%d-%m %H:%M:%S")
+    #             self.file_write('logs/traceback_filtered', date, traceback_text)
+    #             print('>> TimeoutException <<')
+    #             continue
+    #
+    #         except LoginError:
+    #             print('= = = = = = = = Не получилось залогиниться. = = = = = = = =')
+    #             continue
+    #
+    #         except Exception:
+    #             traceback_text = traceback.format_exc()
+    #             date = datetime.now().strftime("%d-%m %H:%M:%S")
+    #             self.file_write('logs/filtered', date, traceback_text)
+    #             print('Неизвестная ошибка')
 
     # собирает список тех, кто комментировал посты, для сбора ссылок на посты вызывает "select_url_posts_to_hashtag"
     def select_commentators(self, hashtag=tag_list[0],
@@ -400,3 +510,4 @@ class FunctionClass(FilterClass):
                 traceback_text = traceback.format_exc()
                 date = datetime.now().strftime("%d-%m %H:%M:%S")
                 self.file_write('logs/select', date, traceback_text)
+                print('Неизвестная ошибка')
