@@ -20,6 +20,10 @@ class LoginError(Exception):
     pass
 
 
+class ActivBlocking(Exception):
+    pass
+
+
 class BaseClass:
     def __init__(self, user_name, pass_word, headless_and_proxy,
                  link='https://www.instagram.com/',
@@ -41,6 +45,8 @@ class BaseClass:
         self.link = link
         self.username = user_name
         self.password = pass_word
+
+        self.subscribe = None
 
     def login(self):
         try:
@@ -227,8 +233,8 @@ class BaseClass:
             exist = False
         return exist
 
-    # проверяет наличие "микробана" на подписку
-    def should_be_subscribe_blocking(self):
+    # проверяет наличие "микробана" на подписку/отписку
+    def should_be_subscribe_and_unsubscribe_blocking(self):
         try:
             # noinspection PyTypeChecker
             self.search_element((By.CSS_SELECTOR, 'div._08v79 > h3'), timeout=2,
@@ -254,13 +260,14 @@ class BaseClass:
 
     # проверяет, существует ли данная страница
     def should_be_user_page(self):
-        exist = None
         try:
             # noinspection PyTypeChecker
-            error_message = self.search_element((By.CSS_SELECTOR, 'main > div > div > h2'), timeout=1,
+            error_message = self.search_element((By.CSS_SELECTOR, 'div > div > h2'), timeout=1,
                                                 type_wait=ec.presence_of_element_located)
             if 'К сожалению, эта страница недоступна' in error_message.text:
                 exist = False
+            else:
+                exist = True
         except TimeoutException:
             exist = True
         return exist
@@ -326,11 +333,3 @@ class BaseClass:
             return button
         else:
             return None
-
-    def printing_logs(self, mode, name_task=None):
-        if mode == 'sub-start':
-            pass
-        elif mode == 'sub-end':
-            pass
-        elif mode == 'task-finish':
-            message = f'= = = = ЗАДАЧА: {name_task} - ЗАВЕРШЕНА = = = ='

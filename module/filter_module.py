@@ -11,6 +11,7 @@ class FilterClass(BaseClass):
                                          subscriptions_max, subscriptions_min, break_limit):
         # assert-функции, вывод которых прописан КАПСОМ - пишутся в лог файл
         assert self.should_be_activity_blocking(), 'Subscribe blocking'  # проверяет наличие "микробана" активности
+        assert self.should_be_user_page(), 'Страница недоступна.'
         assert self.should_be_error_connection_page(), 'Страница не загрузилась'
         assert self.should_be_private_profile(), 'Профиль закрыт.'
         assert self.should_be_subscribe(), 'Уже подписан.'

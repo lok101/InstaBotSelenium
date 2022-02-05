@@ -40,8 +40,8 @@ class Subscribe:
     min_timeout = 3
     max_timeout = 10
     subscribe_in_session = 40
-    sleep_between_iterations = 20
-    subscribe_limit_stop = 380
+    sleep_between_iterations = 10
+    subscribe_limit_stop = 240
     """FILTER"""
     subscribers_min, subscribers_max = 50, 7000
     subscriptions_min, subscriptions_max = 50, 7000
@@ -49,7 +49,7 @@ class Subscribe:
     coefficient_subscribers = 6
     min_subscribers = 60
     min_subscriptions = 60
-    break_limit = 350
+    break_limit = 100
     stop_word_dict = stop_word_dict
 
 
