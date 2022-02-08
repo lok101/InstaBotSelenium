@@ -37,9 +37,10 @@ class FunctionClass(FilterClass):
                 browser.get(f"https://www.instagram.com/{username}/")
                 assert self.should_be_error_connection_page(), 'Ошибка загрузки страницы.'
                 assert self.should_be_activity_blocking(), 'Микробан активности.'
-                following_count = self.search_element((
-                    By.XPATH, '//main/div/header/section/ul/li[3]/a/span'),
-                    type_wait=ec.presence_of_element_located).text
+                following_count = self.return_number_posts_subscribe_and_subscribers()[3]
+                if following_count == 0:
+                    print('= = = = ОТПИСКА ЗАВЕРШЕНА = = = =')
+                    break
                 print(f"Количество подписок: {following_count}")
                 count = 10
 
@@ -159,10 +160,18 @@ class FunctionClass(FilterClass):
                     time.sleep(2)
 
             except TimeoutException:
-                traceback_text = traceback.format_exc()
-                date = datetime.now().strftime("%d-%m %H:%M:%S")
-                self.file_write('logs/traceback_subscribe', date, traceback_text)
-                print('>> TimeoutException <<')
+                try:
+                    assert self.should_be_user_page(), 'Страница не существует.'
+                    assert self.should_be_error_connection_page(), 'Страница не загрузилась.'
+                except AssertionError as assertion:
+                    assertion = str(assertion.args)
+                    text = re.sub("[)(']", '', assertion)
+                    print(text)
+                except TimeoutException:
+                    traceback_text = traceback.format_exc()
+                    date = datetime.now().strftime("%d-%m %H:%M:%S")
+                    self.file_write('logs/traceback_subscribe', date, traceback_text)
+                    print('>> TimeoutException <<')
                 continue
 
             except NoSuchElementException:
@@ -293,11 +302,6 @@ class FunctionClass(FilterClass):
                         print(f'>> TimeoutException. Итерация - [{i}/50]')
                         continue
 
-                    except KeyError:
-                        print('В списке не осталось ссылок.')
-                        while_flag = False
-                        break
-
                     except Exception:
                         traceback_text = traceback.format_exc()
                         date = datetime.now().strftime("%d-%m %H:%M:%S")
@@ -306,6 +310,11 @@ class FunctionClass(FilterClass):
                         continue
             except ActivBlocking:
                 print('====================== МИКРОБАН АКТИВНОСТИ ======================')
+                break
+
+            except KeyError:
+                print('В списке не осталось ссылок.')
+                while_flag = False
                 break
         print('= = = = ФИЛЬТРАЦИЯ ЗАВЕРШЕНА = = = =')
 
@@ -369,10 +378,14 @@ class FunctionClass(FilterClass):
     ):
         browser = self.browser
         timeout_exception_count = 0
+
+        self.file_write('non_filtered/user_urls_subscribers', '', operating_mode='w')
+        print('Файл очищен.')
+
         if url_public_list is None:
             url_public_list = []
             self.file_read('url_lists/public_url_for_subscribe', url_public_list)
-            print(f'===> Итерация сбора {iter_count + 1} из {len(url_public_list) // 10 + 1}. <===')
+            print(f'===> Итерация сбора {iter_count + 1} из {len(url_public_list) // 10}. <===')
             url_public_list = url_public_list[int(str(iter_count) + '0'):int(str(iter_count + 1) + '0')]
         for url in url_public_list:
             try:

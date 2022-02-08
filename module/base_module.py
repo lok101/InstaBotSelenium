@@ -52,6 +52,7 @@ class BaseClass:
         try:
             browser = self.browser
             browser.get(self.link)
+            print(f'Логин с аккаунта - {self.username}')
             browser.delete_all_cookies()
             for cookie in pickle.load(open(f'data/cookies/{username}_cookies', 'rb')):
                 browser.add_cookie(cookie)

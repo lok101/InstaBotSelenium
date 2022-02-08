@@ -41,7 +41,7 @@ class Subscribe:
     max_timeout = 10
     subscribe_in_session = 40
     sleep_between_iterations = 10
-    subscribe_limit_stop = 240
+    subscribe_limit_stop = 290
     """FILTER"""
     subscribers_min, subscribers_max = 50, 7000
     subscriptions_min, subscriptions_max = 50, 7000
