@@ -55,6 +55,8 @@ def select_subscribers():
         headless_and_proxy = input('Headless(y/n) Proxy(y/n): ')
         with open('data/url_lists/public_url_for_subscribe.txt', 'r') as file:
             iteration_number = len(file.readlines())//10
+        with open('data/non_filtered/user_urls_subscribers.txt', 'w'):
+            print('Файл очищен.')
         for iter_count in range(iteration_number):
             try:
                 user = f'bot{random.randrange(1, len(bot_dict) + 1)}'

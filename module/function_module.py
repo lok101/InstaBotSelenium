@@ -379,9 +379,6 @@ class FunctionClass(FilterClass):
         browser = self.browser
         timeout_exception_count = 0
 
-        self.file_write('non_filtered/user_urls_subscribers', '', operating_mode='w')
-        print('Файл очищен.')
-
         if url_public_list is None:
             url_public_list = []
             self.file_read('url_lists/public_url_for_subscribe', url_public_list)
@@ -392,6 +389,9 @@ class FunctionClass(FilterClass):
                 browser.get(url)
                 user_name = url.split("/")[-2]
                 print(f'{datetime.now().strftime("%H:%M:%S")} Перешёл в профиль: {user_name}', end=' ======> ')
+
+                assert self.should_be_subscribe_and_unsubscribe_blocking(), 'Микробан активности.'
+                assert self.should_be_user_page(), 'Страница недоступна.'
 
                 if filter_mode == 'on':
                     self.should_be_compliance_with_limits(max_coefficient=SearchUser.coefficient_subscribers,
@@ -423,12 +423,28 @@ class FunctionClass(FilterClass):
                 with open('data/non_filtered/user_urls_subscribers.txt', 'r') as file:
                     size = len(file.readlines())
                     print(f'Успешно. Количество собранных пользователей: {size}.')
+
             except AssertionError as assertion:
                 assertion = str(assertion.args)
                 text = re.sub("[)(',]", '', assertion)
+                if 'Микробан активности.' in assertion:
+                    print('Микробан активности. Добавлена запись в лог.')
+                    date = datetime.now().strftime("%d-%m %H:%M:%S")
+                    log = f'{date} -- {username}: {text}\n'
+                    self.file_write('logs/authorize_error', log)
+                    break
+                if 'Страница недоступна.' in assertion:
+                    print('Страница больше недоступна по этому адресу. Добавлена запись в лог.')
+                    log = f'{date} -- {url}\n'
+                    self.file_write('url_lists/invalid_url', log)
+                    continue
                 print(text)
                 continue
+
             except TimeoutException:
+                traceback_text = traceback.format_exc()
+                date = f'{datetime.now().strftime("%d-%m %H:%M:%S")} - TimeoutException'
+                self.file_write('logs/select', date, traceback_text)
                 timeout_exception_count += 1
                 if timeout_exception_count == 3:
                     break

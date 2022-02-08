@@ -52,6 +52,7 @@ class BaseClass:
         try:
             browser = self.browser
             browser.get(self.link)
+            assert self.should_be_home_page(), 'Не загрузил домашнюю страницу.'
             print(f'Логин с аккаунта - {self.username}')
             browser.delete_all_cookies()
             for cookie in pickle.load(open(f'data/cookies/{username}_cookies', 'rb')):
@@ -328,9 +329,21 @@ class BaseClass:
             exist = True
         return exist
 
+    # ищет и нажимает кнопку "подписаться"
     def press_to_button_subscribe(self):
         button = self.search_element((By.XPATH, '//button'))
         if 'подписаться' in button.text.lower():
             return button
         else:
             return None
+
+    # проверяет, находится ли на странице логина
+    def should_be_home_page(self):
+        try:
+            # noinspection PyTypeChecker
+            self.search_element((By.NAME, "username"),
+                                timeout=10, type_wait=ec.presence_of_element_located)
+            exist = True
+        except TimeoutException:
+            exist = False
+        return exist
