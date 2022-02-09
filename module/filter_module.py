@@ -14,15 +14,12 @@ class FilterClass(BaseClass):
         assert self.should_be_subscribe(), 'Уже подписан.'
         assert self.should_be_posts(), 'В профиле нет публикаций.'
         assert self.should_be_profile_avatar(), 'Нет аватара.'
-        number_posts_subscribe_and_subscribers = self.return_number_posts_subscribe_and_subscribers()
-        posts_number = number_posts_subscribe_and_subscribers[1]
-        subscribers_count = number_posts_subscribe_and_subscribers[2]
-        subscriptions_count = number_posts_subscribe_and_subscribers[3]
-        coefficient = number_posts_subscribe_and_subscribers[0]
-        assert posts_max >= posts_number >= posts_min, 'Не прошёл по постам.'
-        assert subscribers_max >= subscribers_count >= subscribers_min, 'Не прошёл по подписчикам.'
-        assert subscriptions_max >= subscriptions_count >= subscriptions_min, 'Не прошёл по подпискам.'
-        if subscribers_count < break_limit:
+        data_dict = self.return_number_posts_subscribe_and_subscribers()
+        coefficient = data_dict['subs'] / data_dict['follow']
+        assert posts_max >= data_dict['posts'] >= posts_min, 'Не прошёл по постам.'
+        assert subscribers_max >= data_dict['follow'] >= subscribers_min, 'Не прошёл по подписчикам.'
+        assert subscriptions_max >= data_dict['subs'] >= subscriptions_min, 'Не прошёл по подпискам.'
+        if data_dict['follow'] < break_limit:
             assert coefficient <= max_coefficient, 'ПРОФИЛЬ "ПОМОЙКА".'
 
     # проверяет, подписан ли на пользователя
@@ -90,34 +87,3 @@ class FilterClass(BaseClass):
         except AssertionError:
             flag = False
         return [flag, word.lower()]
-
-    # возвращает количество постов, подписчиков, подписок и коэффициент подписки/подписчики
-    def return_number_posts_subscribe_and_subscribers(self):
-        try:
-            subscriptions_field = self.search_element((By.CSS_SELECTOR, 'li:nth-child(3) > a > div > span.g47SY'),
-                                                      type_wait=ec.presence_of_element_located, timeout=3)
-
-            subscriptions = int(
-                subscriptions_field.text.replace(" ", "").replace(',', ''))
-        except TimeoutException:
-            subscriptions = 0
-
-        try:
-            subscribe_field = self.search_element((By.CSS_SELECTOR, 'li:nth-child(2) > a > div > span.g47SY'),
-                                                  type_wait=ec.presence_of_element_located, timeout=3)
-            if ',' in subscribe_field.text:
-                subscribers = int(
-                    subscribe_field.text.replace(" ", "").replace(',', '').replace('тыс.', '00').replace('млн',
-                                                                                                         '00000'))
-            else:
-                subscribers = int(
-                    subscribe_field.text.replace(" ", "").replace('тыс.', '000').replace('млн', '000000'))
-        except TimeoutException:
-            subscribers = 1
-
-        post_number_field = self.search_element((By.CSS_SELECTOR, 'li:nth-child(1) > div > span.g47SY'),
-                                                type_wait=ec.presence_of_element_located)
-        posts_number = int(
-            post_number_field.text.replace(" ", "").replace(',', '').replace('тыс.', '000').replace('млн', '000000'))
-
-        return [subscriptions / subscribers, posts_number, subscribers, subscriptions]

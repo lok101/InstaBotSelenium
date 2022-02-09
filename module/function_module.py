@@ -9,16 +9,15 @@ from settings import *
 from data import tag_list
 import random
 import time
-import re
 
 
 class FunctionClass(FilterClass):
     # отписка от всех
     def unsubscribe_for_all_users(self,
-            min_sleep=Unsubscribe.min_sleep,
-            max_sleep=Unsubscribe.max_sleep,
-            sleep_between_iterations=Unsubscribe.sleep_between_iterations,
-    ):
+                                  min_sleep=Unsubscribe.min_sleep,
+                                  max_sleep=Unsubscribe.max_sleep,
+                                  sleep_between_iterations=Unsubscribe.sleep_between_iterations,
+                                  ):
         """
         min_sleep - минимальная задержка между отписками
         max_sleep - максимальная задержка между отписками
@@ -26,18 +25,16 @@ class FunctionClass(FilterClass):
         error_max - количество ошибок, которые пропустит цикл. После превышения - остановка.
         """
         self.mode = 'unsubscribe'
-        browser = self.browser
         count_restart = 0
 
         while count_restart < 20:
             try:
-                self.go_to_my_profile_page()
-                following_count = self.return_number_posts_subscribe_and_subscribers()[3]
+                count = 10
+                following_count = self.go_to_my_profile_page()
+
                 if following_count == 0:
                     print('= = = = ОТПИСКА ЗАВЕРШЕНА = = = =')
                     break
-                print(f"Количество подписок: {following_count}")
-                count = 10
 
                 following_button = self.search_element((By.XPATH, "//li[3]/a"))
                 following_button.click()
@@ -57,7 +54,7 @@ class FunctionClass(FilterClass):
                     self.search_element((By.CSS_SELECTOR, "button.-Cab_")).click()
                     assert self.should_be_subscribe_and_unsubscribe_blocking(), 'Микробан отписки.'
 
-                    print(f"Итерация #{count} >>> Отписался от пользователя  {datetime.now().strftime('%H:%M:%S')}")
+                    print(f"{datetime.now().strftime('%H:%M:%S')}. Итерация #{count}")
                     count -= 1
 
             except AssertionError as assertion:
@@ -99,36 +96,36 @@ class FunctionClass(FilterClass):
         self.mode = 'subscribe'
         user_list, ignore_list = set(), set()
         subscribe_count = 0.1
+
         self.file_read('filtered/user_urls_subscribers', user_list)
         self.file_read('ignore_list', ignore_list)
         user_list = user_list.difference(ignore_list)
 
         self.go_to_my_profile_page()
 
-        subscribe = self.return_number_posts_subscribe_and_subscribers()[3]
-        print(f'Профилей в списке - {len(user_list)}, подписок у аккаунта - {subscribe}')
+        subs = self.return_number_posts_subscribe_and_subscribers()['subs']
+        print(f'Профилей в списке - {len(user_list)}, подписок у аккаунта - {subs}')
 
         for user_url in user_list:
             try:
-                if subscribe + subscribe_count >= subscribe_limit:
+                if subs + subscribe_count >= subscribe_limit:
                     print('======================ПОДПИСКА ЗАВЕРШЕНА======================')
                     break
+
                 if subscribe_count % subscribe_in_session == 0:
                     browser.get(f"https://www.instagram.com/{username}/")
-                    subscribe = self.return_number_posts_subscribe_and_subscribers()[3]
+                    subs = self.return_number_posts_subscribe_and_subscribers()['subs']
                     print(f'{datetime.now().strftime("%H:%M:%S")} Подписался на очередные',
-                          f'{subscribe_in_session} пользователей. Всего подписок - {subscribe}.',
+                          f'{subscribe_in_session} пользователей. Всего подписок - {subs}.',
                           f'Таймаут {sleep_between_iterations} минут.')
 
                     subscribe_count = 0.1
-
                     self.file_read('ignore_list', ignore_list)
                     user_list = user_list.difference(ignore_list)
                     print(f'============ Осталось профилей для подписки - {len(user_list)} ============')
                     time.sleep(sleep_between_iterations * 60)
 
                 self.go_to_user_page(user_url, username)
-
                 button = self.press_to_button_subscribe()
                 if button is not None:
                     iteration_limit = 10
@@ -166,9 +163,7 @@ class FunctionClass(FilterClass):
                     assert self.should_be_user_page(), 'Страница не существует.'
                     assert self.should_be_error_connection_page(), 'Страница не загрузилась.'
                 except AssertionError as assertion:
-                    assertion = str(assertion.args)
-                    text = re.sub("[)(']", '', assertion)
-                    print(text)
+                    print(str(assertion.args)[2:-3])
                 except TimeoutException:
                     ex_type = str(type(ex)).split("'")[1].split('.')[-1]
                     self.print_and_save_log_traceback(ex_type, end_str=' ')
@@ -230,9 +225,7 @@ class FunctionClass(FilterClass):
                         print(f'Подходит. [{i + 1}/50]')
 
                     except AssertionError as assertion:
-                        assertion = str(assertion.args)
-                        text = re.sub("[)(']", '', assertion)
-
+                        text = str(assertion.args)[2:-3]
                         if 'Subscribe blocking' in assertion:
                             raise ActivBlocking('Микробан активности')
                         elif 'Страница не существует' in assertion:
@@ -320,8 +313,7 @@ class FunctionClass(FilterClass):
                     print(f'Успешно. Количество собранных пользователей: {size}.')
 
             except AssertionError as assertion:
-                assertion = str(assertion.args)
-                text = re.sub("[)(',]", '', assertion)
+                text = str(assertion.args)[2:-3]
                 if 'Микробан активности.' in assertion:
                     print('Микробан активности. Добавлена запись в лог.')
                     date = datetime.now().strftime("%d-%m %H:%M:%S")
@@ -338,7 +330,6 @@ class FunctionClass(FilterClass):
                 continue
 
             except LoginError:
-                print('= = = = = = = = Не получилось залогиниться. = = = = = = = =')
                 continue
 
             except Exception as ex:

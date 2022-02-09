@@ -94,12 +94,12 @@ class BaseClass:
                 pickle.dump(browser.get_cookies(), open(f'data/cookies/{self.username}_cookies', 'wb'))
 
             except AssertionError as assertion:
-                assertion = str(assertion.args)
-                text = re.sub("[)(',]", '', assertion)
+                text = str(assertion.args)[2:-3]
                 date = datetime.now().strftime("%d-%m %H:%M:%S")
                 log = f'{date} -- {self.username}: {text}\n'
                 self.file_write('logs/authorize_error', log)
-                raise LoginError(f'= = = = = = = = = = {text} = = = = = = = = = =')
+                print(f'= = = = {text} = = = =')
+                raise LoginError(f'{text}')
 
             print(f'Залогинился и создал cookies ===> data/cookies/{self.username}_cookies.')
 
@@ -361,6 +361,41 @@ class BaseClass:
             exist = False
         return exist
 
+    # возвращает количество постов, подписчиков, подписок и коэффициент подписки/подписчики
+    def return_number_posts_subscribe_and_subscribers(self):
+        dict_return = dict()
+        try:
+            # noinspection PyTypeChecker
+            subscriptions_field = self.search_element((By.CSS_SELECTOR, 'li:nth-child(3) > a > div > span.g47SY'),
+                                                      type_wait=ec.presence_of_element_located, timeout=3)
+
+            dict_return['subs'] = int(
+                subscriptions_field.text.replace(" ", "").replace(',', ''))
+        except TimeoutException:
+            dict_return['subs'] = 0
+
+        try:
+            # noinspection PyTypeChecker
+            subscribe_field = self.search_element((By.CSS_SELECTOR, 'li:nth-child(2) > a > div > span.g47SY'),
+                                                  type_wait=ec.presence_of_element_located, timeout=3)
+            if ',' in subscribe_field.text:
+                dict_return['follow'] = int(
+                    subscribe_field.text.replace(" ", "").replace(',', '').replace('тыс.', '00').replace('млн',
+                                                                                                         '00000'))
+            else:
+                dict_return['follow'] = int(
+                    subscribe_field.text.replace(" ", "").replace('тыс.', '000').replace('млн', '000000'))
+        except TimeoutException:
+            dict_return['follow'] = 1
+
+        # noinspection PyTypeChecker
+        post_number_field = self.search_element((By.CSS_SELECTOR, 'li:nth-child(1) > div > span.g47SY'),
+                                                type_wait=ec.presence_of_element_located)
+        dict_return['posts'] = int(
+            post_number_field.text.replace(" ", "").replace(',', '').replace('тыс.', '000').replace('млн', '000000'))
+
+        return dict_return
+
     def go_to_user_page(self, url, account='Не присвоен.'):
         self.browser.get(url)
         username = url.split("/")[-2]
@@ -375,3 +410,6 @@ class BaseClass:
         self.browser.get(url)
         assert self.should_be_error_connection_page(), 'Ошибка загрузки страницы.'
         assert self.should_be_activity_blocking(), 'Микробан активности.'
+        following_count = self.return_number_posts_subscribe_and_subscribers()['subs']
+        print(f"Количество подписок: {following_count}")
+        return following_count
