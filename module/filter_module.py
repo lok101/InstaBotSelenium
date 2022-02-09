@@ -10,9 +10,6 @@ class FilterClass(BaseClass):
     def should_be_compliance_with_limits(self, max_coefficient, posts_max, posts_min, subscribers_max, subscribers_min,
                                          subscriptions_max, subscriptions_min, break_limit):
         # assert-функции, вывод которых прописан КАПСОМ - пишутся в лог файл
-        assert self.should_be_activity_blocking(), 'Subscribe blocking'  # проверяет наличие "микробана" активности
-        assert self.should_be_user_page(), 'Страница недоступна.'
-        assert self.should_be_error_connection_page(), 'Страница не загрузилась'
         assert self.should_be_private_profile(), 'Профиль закрыт.'
         assert self.should_be_subscribe(), 'Уже подписан.'
         assert self.should_be_posts(), 'В профиле нет публикаций.'
@@ -97,7 +94,7 @@ class FilterClass(BaseClass):
     # возвращает количество постов, подписчиков, подписок и коэффициент подписки/подписчики
     def return_number_posts_subscribe_and_subscribers(self):
         try:
-            subscriptions_field = self.search_element((By.CSS_SELECTOR, 'li:nth-child(3) > a > span'),
+            subscriptions_field = self.search_element((By.CSS_SELECTOR, 'li:nth-child(3) > a > div > span.g47SY'),
                                                       type_wait=ec.presence_of_element_located, timeout=3)
 
             subscriptions = int(
@@ -106,7 +103,7 @@ class FilterClass(BaseClass):
             subscriptions = 0
 
         try:
-            subscribe_field = self.search_element((By.CSS_SELECTOR, 'li:nth-child(2) > a > span'),
+            subscribe_field = self.search_element((By.CSS_SELECTOR, 'li:nth-child(2) > a > div > span.g47SY'),
                                                   type_wait=ec.presence_of_element_located, timeout=3)
             if ',' in subscribe_field.text:
                 subscribers = int(
@@ -118,7 +115,7 @@ class FilterClass(BaseClass):
         except TimeoutException:
             subscribers = 1
 
-        post_number_field = self.search_element((By.CSS_SELECTOR, 'li:nth-child(1) > span > span'),
+        post_number_field = self.search_element((By.CSS_SELECTOR, 'li:nth-child(1) > div > span.g47SY'),
                                                 type_wait=ec.presence_of_element_located)
         posts_number = int(
             post_number_field.text.replace(" ", "").replace(',', '').replace('тыс.', '000').replace('млн', '000000'))

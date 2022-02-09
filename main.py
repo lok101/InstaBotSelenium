@@ -17,7 +17,7 @@ def filter_user_list():
                 password = bot_dict[user]['password']
                 my_bot = FunctionClass(username, password, headless_and_proxy)
                 my_bot.login()
-                my_bot.filter_user_list(user, i)
+                my_bot.filter_user_list(user)
                 my_bot.close_browser()
                 time.sleep(SearchUser.timeout_between_restarts * 60)
             except AssertionError:

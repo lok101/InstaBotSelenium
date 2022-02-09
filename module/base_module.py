@@ -8,12 +8,11 @@ from selenium import webdriver
 from data import proxy_list
 from settings import *
 import requests
+import traceback
 import pickle
 import time
 import re
 import json
-
-username, password = '', ''
 
 
 class LoginError(Exception):
@@ -32,8 +31,6 @@ class BaseClass:
         headless - запуск в режиме "без головы"
         timeout - таймаут implicitly_wait
         """
-        global username, password
-        username, password = user_name, pass_word
 
         chrome_options = webdriver.ChromeOptions()
         if headless_and_proxy[0].lower() == 'y':
@@ -47,6 +44,7 @@ class BaseClass:
         self.password = pass_word
 
         self.subscribe = None
+        self.mode = None   # присваивается внутри задачи, используется для вызова методов логирования и печати
 
     def login(self):
         try:
@@ -55,7 +53,7 @@ class BaseClass:
             assert self.should_be_home_page(), 'Не загрузил домашнюю страницу.'
             print(f'Логин с аккаунта - {self.username}')
             browser.delete_all_cookies()
-            for cookie in pickle.load(open(f'data/cookies/{username}_cookies', 'rb')):
+            for cookie in pickle.load(open(f'data/cookies/{self.username}_cookies', 'rb')):
                 browser.add_cookie(cookie)
             time.sleep(1)
             browser.refresh()
@@ -66,23 +64,23 @@ class BaseClass:
             assertion = str(assertion.args)
             text = re.sub("[)(',]", '', assertion)
             date = datetime.now().strftime("%d-%m %H:%M:%S")
-            log = f'{date}  <вход через cookies> -- {username}: {text}\n'
+            log = f'{date}  <вход через cookies> -- {self.username}: {text}\n'
             self.file_write('logs/authorize_error', log)
-            raise LoginError(f'= = = = = = = = = = {text} = = = = = = = = = =')
+            raise LoginError(f'{text}')
 
         except FileNotFoundError:
             try:
                 browser = self.browser
                 browser.get(self.link)
-                print(f'Логин с аккаунта --- {username}')
+                print(f'Логин с аккаунта --- {self.username}')
 
                 username_input = self.search_element((By.NAME, "username"))
                 username_input.clear()
-                username_input.send_keys(username)
+                username_input.send_keys(self.username)
 
                 password_input = self.search_element((By.NAME, "password"))
                 password_input.clear()
-                password_input.send_keys(password)
+                password_input.send_keys(self.password)
 
                 password_input.send_keys(Keys.ENTER)
                 time.sleep(5)
@@ -93,17 +91,17 @@ class BaseClass:
                 assert self.should_be_login_button(), 'Не получилось залогиниться.'
 
                 # сохраняем cookies
-                pickle.dump(browser.get_cookies(), open(f'data/cookies/{username}_cookies', 'wb'))
+                pickle.dump(browser.get_cookies(), open(f'data/cookies/{self.username}_cookies', 'wb'))
 
             except AssertionError as assertion:
                 assertion = str(assertion.args)
                 text = re.sub("[)(',]", '', assertion)
                 date = datetime.now().strftime("%d-%m %H:%M:%S")
-                log = f'{date} -- {username}: {text}\n'
+                log = f'{date} -- {self.username}: {text}\n'
                 self.file_write('logs/authorize_error', log)
                 raise LoginError(f'= = = = = = = = = = {text} = = = = = = = = = =')
 
-            print(f'Залогинился и создал cookies ===> data/cookies/{username}_cookies.')
+            print(f'Залогинился и создал cookies ===> data/cookies/{self.username}_cookies.')
 
     def close_browser(self):
         self.browser.quit()
@@ -156,6 +154,14 @@ class BaseClass:
             else:
                 file.write(str(value))
 
+    # сохраняет лог исключения в файл и печатает сообщение об исключении в консоль
+    def print_and_save_log_traceback(self, type_traceback, end_str='\n'):
+        traceback_text = traceback.format_exc().split('Stacktrace:')[0]
+        date = datetime.now().strftime("%d-%m %H:%M:%S")
+        path = f'logs/{self.mode}/{type_traceback}'
+        self.file_write(path, date, traceback_text)
+        print(f'>> {type_traceback}. Запись добавлена в лог: {path}', end=end_str)
+
     # возвращает элемент с использованием явного ожидания
     def search_element(self, locator, timeout=StartSettings.web_driver_wait, type_wait=ec.element_to_be_clickable):
         element = WebDriverWait(self.browser, timeout).until(type_wait(locator))
@@ -179,7 +185,7 @@ class BaseClass:
                     for public_block in tags:
                         profile_url = public_block.get_attribute('href')
                         len_user_url = len(profile_url.split('/'))  # у ссылки на профиль равен пяти.
-                        if len_user_url == 5 and 'www.instagram.com' in profile_url and username not in profile_url \
+                        if len_user_url == 5 and 'www.instagram.com' in profile_url and self.username not in profile_url \
                                 and 'explore' not in profile_url and ignore not in profile_url:
                             list_urls.add(profile_url)
                     return list_urls
@@ -191,7 +197,7 @@ class BaseClass:
                     for public_block in tags:
                         profile_url = public_block.get_attribute('href')
                         len_user_url = len(profile_url.split('/'))  # у ссылки на профиль равен пяти.
-                        if len_user_url == 5 and 'www.instagram.com' in profile_url and username not in profile_url \
+                        if len_user_url == 5 and 'www.instagram.com' in profile_url and self.username not in profile_url \
                                 and 'explore' not in profile_url and ignore not in profile_url:
                             list_urls.append(profile_url)
                     return list_urls
@@ -262,16 +268,23 @@ class BaseClass:
 
     # проверяет, существует ли данная страница
     def should_be_user_page(self):
-        try:
-            # noinspection PyTypeChecker
-            error_message = self.search_element((By.CSS_SELECTOR, 'div > div > h2'), timeout=1,
-                                                type_wait=ec.presence_of_element_located)
-            if 'К сожалению, эта страница недоступна' in error_message.text:
-                exist = False
-            else:
+        while True:
+            try:
+                # noinspection PyTypeChecker
+                error_message = self.search_element((By.CSS_SELECTOR, 'div > div > h2'), timeout=1,
+                                                    type_wait=ec.presence_of_element_located)
+                if 'К сожалению, эта страница недоступна' in error_message.text:
+                    exist = False
+                else:
+                    exist = True
+                break
+
+            except TimeoutException:
                 exist = True
-        except TimeoutException:
-            exist = True
+                break
+
+            except StaleElementReferenceException:
+                continue
         return exist
 
     # проверяет наличие окна ошибки подключения - НЕ СРАБАТЫВАЕТ
@@ -347,3 +360,18 @@ class BaseClass:
         except TimeoutException:
             exist = False
         return exist
+
+    def go_to_user_page(self, url, account='Не присвоен.'):
+        self.browser.get(url)
+        username = url.split("/")[-2]
+        print(f'{datetime.now().strftime("%H:%M:%S")} - {account} - Перешёл в профиль: {username}', end=' ======> ')
+
+        assert self.should_be_user_page(), 'Страница не существует'
+        assert self.should_be_error_connection_page(), 'Ошибка загрузки страницы.'
+        assert self.should_be_activity_blocking(), 'Микробан активности.'
+
+    def go_to_my_profile_page(self):
+        url = f'https://www.instagram.com/{self.username}/'
+        self.browser.get(url)
+        assert self.should_be_error_connection_page(), 'Ошибка загрузки страницы.'
+        assert self.should_be_activity_blocking(), 'Микробан активности.'
