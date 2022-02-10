@@ -1,4 +1,5 @@
 from selenium.common.exceptions import TimeoutException, StaleElementReferenceException
+from module.message_text_module import FilterMessage
 from selenium.webdriver.support import expected_conditions as ec
 from module.base_module import BaseClass
 from selenium.webdriver.common.by import By
@@ -10,17 +11,17 @@ class FilterClass(BaseClass):
     def should_be_compliance_with_limits(self, max_coefficient, posts_max, posts_min, subscribers_max, subscribers_min,
                                          subscriptions_max, subscriptions_min, break_limit):
         # assert-функции, вывод которых прописан КАПСОМ - пишутся в лог файл
-        assert self.should_be_private_profile(), 'Профиль закрыт.'
-        assert self.should_be_subscribe(), 'Уже подписан.'
-        assert self.should_be_posts(), 'В профиле нет публикаций.'
-        assert self.should_be_profile_avatar(), 'Нет аватара.'
+        assert self.should_be_profile_avatar(), FilterMessage.no_avatar
+        assert self.should_be_private_profile(), FilterMessage.profile_closed
+        assert self.should_be_subscribe(), FilterMessage.already_subscribe
+        assert self.should_be_posts(), FilterMessage.no_posts
         data_dict = self.return_number_posts_subscribe_and_subscribers()
         coefficient = data_dict['subs'] / data_dict['follow']
-        assert posts_max >= data_dict['posts'] >= posts_min, 'Не прошёл по постам.'
-        assert subscribers_max >= data_dict['follow'] >= subscribers_min, 'Не прошёл по подписчикам.'
-        assert subscriptions_max >= data_dict['subs'] >= subscriptions_min, 'Не прошёл по подпискам.'
+        assert posts_max >= data_dict['posts'] >= posts_min, FilterMessage.filter_posts
+        assert subscribers_max >= data_dict['follow'] >= subscribers_min, FilterMessage.filter_follow
+        assert subscriptions_max >= data_dict['subs'] >= subscriptions_min, FilterMessage.filter_subs
         if data_dict['follow'] < break_limit:
-            assert coefficient <= max_coefficient, 'ПРОФИЛЬ "ПОМОЙКА".'
+            assert coefficient <= max_coefficient, FilterMessage.bad_profile
 
     # проверяет, подписан ли на пользователя
     def should_be_subscribe(self):
@@ -28,7 +29,7 @@ class FilterClass(BaseClass):
         вернёт False если если подписка уже есть
         """
         try:
-            self.search_element((By.CSS_SELECTOR, 'span.vBF20._1OSdk > button > div > span'), timeout=1)
+            self.search_element((By.CSS_SELECTOR, 'span.vBF20._1OSdk > button > div > span'), timeout=0.5)
             exist = False
         except TimeoutException:
             exist = True
@@ -37,7 +38,7 @@ class FilterClass(BaseClass):
     # проверяет, есть ли публикации в профиле
     def should_be_posts(self):
         try:
-            self.search_element((By.XPATH, '//article/div[1]/div/div[2]/h1'), timeout=1)
+            self.search_element((By.XPATH, '//article/div[1]/div/div[2]/h1'), timeout=0.5)
             exist = False
         except TimeoutException:
             exist = True
@@ -46,7 +47,7 @@ class FilterClass(BaseClass):
     # проверяет, не является ли профиль закрытым
     def should_be_private_profile(self):
         try:
-            self.search_element((By.XPATH, '//article/div[1]/div/h2'), timeout=1)
+            self.search_element((By.XPATH, '//article/div[1]/div/h2'), timeout=0.5)
             exist = False
         except TimeoutException:
             exist = True

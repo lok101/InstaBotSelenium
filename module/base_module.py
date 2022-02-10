@@ -1,3 +1,4 @@
+from module.message_text_module import ErrorMessage
 from datetime import datetime
 from selenium.common.exceptions import TimeoutException, StaleElementReferenceException
 from selenium.webdriver.support import expected_conditions as ec
@@ -9,6 +10,7 @@ from data import proxy_list
 from settings import *
 import requests
 import traceback
+import random
 import pickle
 import time
 import re
@@ -33,6 +35,7 @@ class BaseClass:
         """
 
         chrome_options = webdriver.ChromeOptions()
+        chrome_options.add_argument('--log-level=3')
         if headless_and_proxy[0].lower() == 'y':
             chrome_options.add_argument("--headless")
         if headless_and_proxy[1].lower() == 'y':
@@ -45,6 +48,7 @@ class BaseClass:
 
         self.subscribe = None
         self.mode = None   # присваивается внутри задачи, используется для вызова методов логирования и печати
+        self.count_iteration = 0.1
 
     def login(self):
         try:
@@ -107,7 +111,8 @@ class BaseClass:
         self.browser.quit()
 
     def get_link(self, locator):
-        item = self.search_element(locator)
+        # noinspection PyTypeChecker
+        item = self.search_element(locator, type_wait=ec.presence_of_element_located, timeout=0.5)
         url = item.get_attribute('src')
         return url
 
@@ -287,15 +292,14 @@ class BaseClass:
                 continue
         return exist
 
-    # проверяет наличие окна ошибки подключения - НЕ СРАБАТЫВАЕТ
-    def should_be_error_connection_page(self):
+    def should_be_instagram_page(self):
         try:
             # noinspection PyTypeChecker
-            self.search_element((By.ID, '#t'), timeout=1,
+            self.search_element((By.CSS_SELECTOR, 'div._4EzTm > div.cq2ai'), timeout=5,
                                 type_wait=ec.presence_of_element_located)
-            exist = False
-        except TimeoutException:
             exist = True
+        except TimeoutException:
+            exist = False
         return exist
 
     # проверяет наличие окна "добавьте номер телефона"
@@ -343,12 +347,30 @@ class BaseClass:
         return exist
 
     # ищет и нажимает кнопку "подписаться"
-    def press_to_button_subscribe(self):
+    def press_to_button_subscribe(self, user_url):
         button = self.search_element((By.XPATH, '//button'))
         if 'подписаться' in button.text.lower():
-            return button
+            iteration_limit = 10
+            iteration_count = 0
+            while iteration_count < iteration_limit:
+                iteration_count += 1
+                try:
+                    button.click()
+                    time.sleep(random.randrange(Subscribe.min_timeout, Subscribe.max_timeout))
+                    assert self.should_be_subscribe_and_unsubscribe_blocking(), ErrorMessage.subscribe_blocking
+                    self.file_write('ignore_list', user_url)
+                    self.count_iteration = int(self.count_iteration) + 1
+                    print(f'Успешно. Подписок: {self.count_iteration}')
+                    break
+                except Exception as ex:
+                    ex_type = str(type(ex)).split("'")[1].split('.')[-1]
+                    self.print_and_save_log_traceback(ex_type)
+                    continue
+            print('Не смог нажать на кнопку.')
         else:
-            return None
+            print('Кнопка не найдена.')
+            self.file_write('ignore_list', user_url)
+            time.sleep(random.randrange(Subscribe.min_timeout, Subscribe.max_timeout))
 
     # проверяет, находится ли на странице логина
     def should_be_home_page(self):
@@ -396,20 +418,45 @@ class BaseClass:
 
         return dict_return
 
-    def go_to_user_page(self, url, account='Не присвоен.'):
+    # переходит на страницу по ссылке, запускает проверки на наличие страницы, загрузку страницы и наличие микробана
+    def go_to_user_page(self, url):
         self.browser.get(url)
         username = url.split("/")[-2]
-        print(f'{datetime.now().strftime("%H:%M:%S")} - {account} - Перешёл в профиль: {username}', end=' ======> ')
+        print(f'{datetime.now().strftime("%H:%M:%S")} - {self.username} - Перешёл в профиль: {username}', end=' ======> ')
 
-        assert self.should_be_user_page(), 'Страница не существует'
-        assert self.should_be_error_connection_page(), 'Ошибка загрузки страницы.'
+        assert self.should_be_instagram_page(), 'Ошибка загрузки страницы.'
         assert self.should_be_activity_blocking(), 'Микробан активности.'
+        assert self.should_be_user_page(), 'Страница не существует'
 
+    # переходит на свою страницу, запускает проверки на загрузку страницы и наличие микробана
+    # возвращает количество подписок
     def go_to_my_profile_page(self):
         url = f'https://www.instagram.com/{self.username}/'
         self.browser.get(url)
-        assert self.should_be_error_connection_page(), 'Ошибка загрузки страницы.'
+        assert self.should_be_instagram_page(), 'Ошибка загрузки страницы.'
         assert self.should_be_activity_blocking(), 'Микробан активности.'
-        following_count = self.return_number_posts_subscribe_and_subscribers()['subs']
-        print(f"Количество подписок: {following_count}")
-        return following_count
+        subs_count = self.return_number_posts_subscribe_and_subscribers()['subs']
+        print(f"Количество подписок: {subs_count}")
+        return subs_count
+
+    def difference_sets(self, item1, item2, item3=None):
+        user_set1, user_set2, user_set3 = set(), set(), set()
+        if item3 is not None:
+            if isinstance(item1, str):
+                self.file_read(item1, user_set1)
+                self.file_read(item2, user_set2)
+                self.file_read(item3, user_set3)
+                final_set = user_set1.difference(user_set2, user_set3)
+            elif isinstance(item1, set):
+                self.file_read(item2, user_set2)
+                self.file_read(item3, user_set3)
+                final_set = item1.difference(user_set2, user_set3)
+        else:
+            if isinstance(item1, str):
+                self.file_read(item1, user_set1)
+                self.file_read(item2, user_set2)
+                final_set = user_set1.difference(user_set2)
+            elif isinstance(item1, set):
+                self.file_read(item2, user_set2)
+                final_set = item1.difference(user_set2)
+        return final_set

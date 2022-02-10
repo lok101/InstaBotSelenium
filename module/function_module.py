@@ -1,12 +1,10 @@
-from selenium.common.exceptions import TimeoutException, StaleElementReferenceException
-from module.base_module import LoginError, ActivBlocking
+from module.base_module import ActivBlocking
 from selenium.webdriver.support import expected_conditions as ec
+from module.message_text_module import ErrorMessage, FilterMessage
 from selenium.webdriver.common.by import By
-import data
 from module.filter_module import FilterClass
 from datetime import datetime
 from settings import *
-from data import tag_list
 import random
 import time
 
@@ -22,12 +20,10 @@ class FunctionClass(FilterClass):
         min_sleep - минимальная задержка между отписками
         max_sleep - максимальная задержка между отписками
         sleep_between_iterations - таймаут между итерациями (по 10 отписок за итерацию)
-        error_max - количество ошибок, которые пропустит цикл. После превышения - остановка.
         """
         self.mode = 'unsubscribe'
-        count_restart = 0
 
-        while count_restart < 20:
+        while self.count_iteration < 20:
             try:
                 count = 10
                 following_count = self.go_to_my_profile_page()
@@ -52,158 +48,122 @@ class FunctionClass(FilterClass):
                     unsubscribe_button.click()
                     time.sleep(random.randrange(min_sleep - 2, max_sleep - 2))
                     self.search_element((By.CSS_SELECTOR, "button.-Cab_")).click()
-                    assert self.should_be_subscribe_and_unsubscribe_blocking(), 'Микробан отписки.'
+                    assert self.should_be_subscribe_and_unsubscribe_blocking(), ErrorMessage.unsubscribe_blocking
 
                     print(f"{datetime.now().strftime('%H:%M:%S')}. Итерация #{count}")
                     count -= 1
 
             except AssertionError as assertion:
-                assertion = str(assertion.args)
-                if 'Ошибка загрузки страницы.' in assertion:
-                    print('Ошибка загрузки страницы.')
-                elif 'Микробан активности.' in assertion:
-                    print('= = = = МИКРОБАН АКТИВНОСТИ = = = =')
-                elif 'Микробан отписки.' in assertion:
+                assertion_text = str(assertion.args)
+                if ErrorMessage.unsubscribe_blocking in assertion_text:
                     print('= = = = МИКРОБАН ОТПИСКИ = = = =')
                     break
+                elif ErrorMessage.activiti_blocking in assertion_text:
+                    print('= = = = МИКРОБАН АКТИВНОСТИ = = = =')
+                    break
+                elif ErrorMessage.page_loading_error in assertion_text:
+                    sleep = StartSettings.sleep_page_not_found
+                    print(f'Страница не загрузилась. Жду {sleep} секунд.')
+                    time.sleep(sleep)
+                    continue
                 else:
                     print('!!! Неизвестный Assert !!!')
-                continue
 
             except Exception as ex:
                 ex_type = str(type(ex)).split("'")[1].split('.')[-1]
-                self.print_and_save_log_traceback(ex_type, end_str='\n')
-                count_restart += 1
+                self.print_and_save_log_traceback(ex_type)
+                self.count_iteration += 1
                 continue
 
     # подписывается на юзеров из файла
-    def subscribe_to_user_list(
-            self, username, min_timeout=Subscribe.min_timeout,
-            max_timeout=Subscribe.max_timeout,
-            subscribe_in_session=Subscribe.subscribe_in_session,
-            sleep_between_iterations=Subscribe.sleep_between_iterations,
-            subscribe_limit=Subscribe.subscribe_limit_stop
-    ):
+    def subscribe_to_user_list(self, subscribe_in_session=Subscribe.subscribe_in_session,
+                               sleep_between_iterations=Subscribe.sleep_between_iterations,
+                               subscribe_limit=Subscribe.subscribe_limit_stop
+                               ):
         """
-        user_list - список юзеров для подписки
-        timeout - среднее время на одну подписку
-        scatter_timeout - разброс при вычислении таймаута
-        sleep_between_iterations - дополнительный таймаут на каждые subscribe_in_session подписок
-        limit_subscribes - максимальное число подписчиков у профиля (если больше, то пропустит этот профиль)
-        subscribe_limit - количество подписок в задаче
+        subscribe_in_session - количество подписок в одном заходе.
+        sleep_between_iterations - таймаут на каждые subscribe_in_session подписок.
+        subscribe_limit - количество подписок в задаче.
         """
-        browser = self.browser
         self.mode = 'subscribe'
-        user_list, ignore_list = set(), set()
-        subscribe_count = 0.1
-
-        self.file_read('filtered/user_urls_subscribers', user_list)
-        self.file_read('ignore_list', ignore_list)
-        user_list = user_list.difference(ignore_list)
-
-        self.go_to_my_profile_page()
-
-        subs = self.return_number_posts_subscribe_and_subscribers()['subs']
-        print(f'Профилей в списке - {len(user_list)}, подписок у аккаунта - {subs}')
+        user_list = self.difference_sets('filtered/user_urls_subscribers', 'filtered/user_urls_subscribers')
+        subs = self.go_to_my_profile_page()
 
         for user_url in user_list:
             try:
-                if subs + subscribe_count >= subscribe_limit:
-                    print('======================ПОДПИСКА ЗАВЕРШЕНА======================')
+                self.go_to_user_page(user_url)
+                self.press_to_button_subscribe(user_url)
+
+                if subs + self.count_iteration >= subscribe_limit:
+                    print('= = = = ПОДПИСКА ЗАВЕРШЕНА = = = =')
                     break
 
-                if subscribe_count % subscribe_in_session == 0:
-                    browser.get(f"https://www.instagram.com/{username}/")
-                    subs = self.return_number_posts_subscribe_and_subscribers()['subs']
+                if self.count_iteration % subscribe_in_session == 0:
+                    subs = self.go_to_my_profile_page()
                     print(f'{datetime.now().strftime("%H:%M:%S")} Подписался на очередные',
                           f'{subscribe_in_session} пользователей. Всего подписок - {subs}.',
                           f'Таймаут {sleep_between_iterations} минут.')
 
-                    subscribe_count = 0.1
-                    self.file_read('ignore_list', ignore_list)
-                    user_list = user_list.difference(ignore_list)
-                    print(f'============ Осталось профилей для подписки - {len(user_list)} ============')
+                    self.count_iteration = 0.1
+                    user_list = self.difference_sets('filtered/user_urls_subscribers', 'filtered/user_urls_subscribers')
+                    print(f'= = = = Осталось профилей для подписки - {len(user_list)} = = = =')
                     time.sleep(sleep_between_iterations * 60)
 
-                self.go_to_user_page(user_url, username)
-                button = self.press_to_button_subscribe()
-                if button is not None:
-                    iteration_limit = 10
-                    iteration_count = 0
-                    while iteration_count < iteration_limit:
-                        iteration_count += 1
-                        try:
-                            button.click()
-                            time.sleep(random.randrange(min_timeout, max_timeout))
-                            iteration_count = 10
-                            assert self.should_be_subscribe_and_unsubscribe_blocking(), 'Микробан подписки.'
-                            self.file_write('ignore_list', user_url)
-                            subscribe_count = int(subscribe_count) + 1
-                            print(f'Успешно. Подписок: {subscribe_count}')
-                        except StaleElementReferenceException:
-                            print('>> StaleElementReferenceException <<')
-                else:
-                    print('Кнопка не найдена.')
-                    self.file_write('ignore_list', user_url)
-                    time.sleep(2)
-
             except AssertionError as assertion:
-                assertion = str(assertion.args)
-                if 'Микробан активности.' in assertion:
-                    print('====================== МИКРОБАН АКТИВНОСТИ ======================')
+                assertion_text = str(assertion.args)
+                if ErrorMessage.subscribe_blocking in assertion_text:
+                    print('= = = = МИКРОБАН ПОДПИСКИ = = = =')
                     break
-                elif 'Микробан подписки.' in assertion:
-                    print('====================== МИКРОБАН ПОДПИСКИ ======================')
+                elif ErrorMessage.activiti_blocking in assertion_text:
+                    print('= = = = МИКРОБАН АКТИВНОСТИ = = = =')
                     break
+                elif ErrorMessage.page_not_found in assertion_text:
+                    print('Страница больше недоступна.')
+                    self.file_write('ignore_list', user_url)
+                    continue
+                elif ErrorMessage.page_loading_error in assertion_text:
+                    sleep = StartSettings.sleep_page_not_found
+                    print(f'Страница не загрузилась. Жду {sleep} секунд.')
+                    time.sleep(sleep)
+                    continue
                 else:
                     print('!!! Неизвестный Assert !!!')
 
-            except TimeoutException:
-                try:
-                    assert self.should_be_user_page(), 'Страница не существует.'
-                    assert self.should_be_error_connection_page(), 'Страница не загрузилась.'
-                except AssertionError as assertion:
-                    print(str(assertion.args)[2:-3])
-                except TimeoutException:
-                    ex_type = str(type(ex)).split("'")[1].split('.')[-1]
-                    self.print_and_save_log_traceback(ex_type, end_str=' ')
-                continue
-
             except Exception as ex:
-                subscribe_count += 0.1
+                self.count_iteration += 0.1
                 ex_type = str(type(ex)).split("'")[1].split('.')[-1]
-                self.print_and_save_log_traceback(ex_type, end_str='\n')
+                self.print_and_save_log_traceback(ex_type)
                 continue
 
     # фильтрует список профилей
-    def filter_user_list(self, account_id, timeout=StartSettings.filtered_user_list_timeout):
+    def filter_user_list(self, timeout=StartSettings.filtered_user_list_timeout):
         self.mode = 'filtered'
-        user_urls, ignore_list, filtered_user, urls_list = set(), set(), set(), set()
         stop_word = 'Стоп-слово не присвоено на этапе модуля.'
         count_user_in_session = 0
-        count_iteration = 0
+        self.count_iteration = 30
 
         self.file_write('logs/assert_stop_word_log', f'\n{datetime.now().strftime("%d-%m %H:%M:%S")} - старт.\n')
         self.file_write('logs/assert_bad_profile_log', f'\n{datetime.now().strftime("%d-%m %H:%M:%S")} - старт.\n')
 
         while True:
             try:
-                self.file_read('non_filtered/user_urls_subscribers', user_urls)
-                self.file_read('ignore_list', ignore_list)
-                self.file_read('filtered/user_urls_subscribers', filtered_user)
-
-                print(f'Профилей в списке до взаимодействия с игнор-листом - {len(user_urls)}', end=', ')
-                user_list = user_urls.difference(ignore_list, filtered_user)
-                self.file_read('filtered/user_urls_subscribers', urls_list)
-                user_list_count = len(urls_list.difference(ignore_list))
+                user_list = self.difference_sets(
+                    'non_filtered/user_urls_subscribers',
+                    'ignore_list',
+                    'filtered/user_urls_subscribers'
+                )
+                user_list_count = len(self.difference_sets(
+                    'filtered/user_urls_subscribers',
+                    'ignore_list'
+                ))
                 print(
-                    f'после - {len(user_list)}. Профилей в списке - {user_list_count}. Отобрано в сессии - {count_user_in_session}.')
+                    f'Не отфильтровано - <<<{len(user_list)}>>>. Готовых - {user_list_count}.',
+                    f'Отобрано в сессии - {count_user_in_session}.')
 
-                for i in range(50):
-                    count_iteration += 1
+                for i in range(self.count_iteration):
                     user_url = user_list.pop()
                     try:
-                        self.go_to_user_page(user_url, account_id)
+                        self.go_to_user_page(user_url)
 
                         self.should_be_compliance_with_limits(max_coefficient=Subscribe.coefficient_subscribers,
                                                               posts_max=Subscribe.posts_max,
@@ -217,88 +177,71 @@ class FunctionClass(FilterClass):
                         # поиск стоп-слов в биографии, если нашёл, то вернёт слово и уронит assert
                         flag_and_stop_word = self.should_be_stop_word_in_biography(stop_words=Subscribe.stop_word_dict)
                         flag, stop_word = flag_and_stop_word[0], flag_and_stop_word[1]
-                        assert flag, 'СТОП-СЛОВО'  # assert-функции, вывод которых прописан КАПСОМ - пишутся в лог файл
+                        assert flag, FilterMessage.stop_word
 
                         self.file_write('filtered/user_urls_subscribers', user_url)
                         count_user_in_session += 1
 
-                        print(f'Подходит. [{i + 1}/50]')
+                        print(f'Подходит. [{i + 1}/{self.count_iteration}]')
 
                     except AssertionError as assertion:
-                        text = str(assertion.args)[2:-3]
-                        if 'Subscribe blocking' in assertion:
-                            raise ActivBlocking('Микробан активности')
-                        elif 'Страница не существует' in assertion:
+                        assertion_text = str(assertion.args)
+                        if ErrorMessage.activiti_blocking in assertion_text:
+                            raise ActivBlocking
+                        elif ErrorMessage.page_not_found in assertion_text:
+                            print('Страница больше недоступна.')
                             self.file_write('ignore_list', user_url)
-                            print('Страница не существует')
                             continue
-                        elif 'Страница не загрузилась' in assertion:
-                            print('Страница не загрузилась')
+                        elif ErrorMessage.page_loading_error in assertion_text:
+                            sleep = StartSettings.sleep_page_not_found
+                            print(f'Страница не загрузилась. Жду {sleep} секунд.')
+                            time.sleep(sleep)
                             continue
-
-                        self.file_write('ignore_list', user_url)
-                        # ловит стоп-слово, с которым упал assert и подставляет его в лог
-                        if 'СТОП-СЛОВО' in text:
+                        elif FilterMessage.stop_word in assertion_text:
                             assert_log = f'{str(stop_word)} ===> {user_url}'
                             self.file_write('logs/assert_stop_word_log', assert_log)
-                        elif 'ПРОФИЛЬ "ПОМОЙКА".' in text:
+                            self.file_write('ignore_list', user_url)
+                            print(f'{FilterMessage.stop_word} [{i + 1}/{self.count_iteration}]')
+                            time.sleep(timeout)
+                            continue
+                        elif FilterMessage.bad_profile in assertion_text:
                             assert_log = f'{user_url}'
                             self.file_write('logs/assert_bad_profile_log', assert_log)
-
-                        print(f'{text[:-1]} [{i + 1}/50]')
-                        time.sleep(timeout)
-                        continue
+                            self.file_write('ignore_list', user_url)
+                            print(f'{FilterMessage.bad_profile} [{i + 1}/{self.count_iteration}]')
+                            time.sleep(timeout)
+                            continue
 
                     except Exception as ex:
                         ex_type = str(type(ex)).split("'")[1].split('.')[-1]
-                        self.print_and_save_log_traceback(ex_type, end_str='\n')
+                        self.print_and_save_log_traceback(ex_type)
                         continue
 
             except ActivBlocking:
-                print('====================== МИКРОБАН АКТИВНОСТИ ======================')
+                print('= = = = МИКРОБАН АКТИВНОСТИ = = = =')
                 break
 
             except KeyError:
-                print('В списке не осталось ссылок.')
+                print('= = = = ФИЛЬТРАЦИЯ ЗАВЕРШЕНА = = = =')
                 break
-        print('= = = = ФИЛЬТРАЦИЯ ЗАВЕРШЕНА = = = =')
 
     # собирает пользователей "по конкуренту" со списка ссылок
-    def select_subscribers(
-            self, username, iter_count,
-            url_public_list=None, filter_mode="off",
-            scroll_number_subscribers_list=SearchUser.scroll_number_subscribers_list,
-    ):
-        browser = self.browser
+    def select_subscribers(self, iter_count, scroll_number_subscribers_list=SearchUser.scroll_number_subscribers_list):
         self.mode = 'selection'
-
-        if url_public_list is None:
-            url_public_list = []
-            self.file_read('url_lists/public_url_for_subscribe', url_public_list)
-            print(f'===> Итерация сбора {iter_count + 1} из {len(url_public_list) // 10}. <===')
-            url_public_list = url_public_list[int(str(iter_count) + '0'):int(str(iter_count + 1) + '0')]
-        for user_url in url_public_list:
+        urls_public = []
+        self.file_read('url_lists/public_url_for_subscribe', urls_public)
+        print(f'= = = = Итерация сбора {iter_count + 1} из {len(urls_public) // 10}. = = = =')
+        urls_public = urls_public[int(str(iter_count) + '0'):int(str(iter_count + 1) + '0')]
+        for user_url in urls_public:
             try:
                 self.go_to_user_page(user_url)
-
-                if filter_mode == 'on':
-                    self.should_be_compliance_with_limits(max_coefficient=SearchUser.coefficient_subscribers,
-                                                          posts_max=SearchUser.posts_max,
-                                                          posts_min=SearchUser.posts_min,
-                                                          subscribers_max=SearchUser.subscribers_max,
-                                                          subscribers_min=SearchUser.subscribers_min,
-                                                          subscriptions_max=SearchUser.subscriptions_max,
-                                                          subscriptions_min=SearchUser.subscriptions_min,
-                                                          break_limit=SearchUser.break_limit)
-                    self.should_be_stop_word_in_biography(data.stop_word_public_dict)
-
                 subscribes_button = self.search_element((By.CSS_SELECTOR, 'li:nth-child(2) > a'))
                 subscribes_button.click()
 
                 subscribes_ul = self.search_element((By.CSS_SELECTOR, 'div.RnEpo.Yx5HN > div > div > div> div.isgrP'),
                                                     type_wait=ec.presence_of_element_located)
                 for i in range(scroll_number_subscribers_list + 1):
-                    browser.execute_script("arguments[0].scrollTop = arguments[0].scrollHeight", subscribes_ul)
+                    self.browser.execute_script("arguments[0].scrollTop = arguments[0].scrollHeight", subscribes_ul)
                     self.search_element((By.CSS_SELECTOR, 'li div svg.By4nA'), timeout=10,
                                         type_wait=ec.invisibility_of_element_located)
                     time.sleep(0.5)
@@ -306,85 +249,36 @@ class FunctionClass(FilterClass):
                                         type_wait=ec.invisibility_of_element_located)
                     time.sleep(0.5)
 
-                user_urls = self.tag_search(ignore=username)
+                user_urls = self.tag_search(ignore=self.username)
                 self.file_write('non_filtered/user_urls_subscribers', user_urls)
                 with open('data/non_filtered/user_urls_subscribers.txt', 'r') as file:
                     size = len(file.readlines())
                     print(f'Успешно. Количество собранных пользователей: {size}.')
 
             except AssertionError as assertion:
-                text = str(assertion.args)[2:-3]
-                if 'Микробан активности.' in assertion:
+                assertion_text = str(assertion.args)
+                if ErrorMessage.activiti_blocking in assertion_text:
                     print('Микробан активности. Добавлена запись в лог.')
                     date = datetime.now().strftime("%d-%m %H:%M:%S")
-                    log = f'{date} -- {username}: {text}\n'
-                    self.file_write('logs/authorize_error', log)
+                    log = f'{date} -- {self.username}\n'
+                    self.file_write('selection/authorize_error', log)
                     break
-                if 'Страница недоступна.' in assertion:
+                elif ErrorMessage.page_not_found in assertion_text:
                     print('Страница больше недоступна по этому адресу. Добавлена запись в лог.')
                     date = datetime.now().strftime("%d-%m %H:%M:%S")
                     log = f'{date} -- {user_url}\n'
-                    self.file_write('url_lists/invalid_url', log)
+                    self.file_write('selection/invalid_url', log)
                     continue
-                print(text)
-                continue
-
-            except LoginError:
+                elif ErrorMessage.page_loading_error in assertion_text:
+                    sleep = StartSettings.sleep_page_not_found
+                    print(f'Страница не загрузилась. Жду {sleep} секунд.')
+                    time.sleep(sleep)
+                    continue
+                else:
+                    print('!!! Неизвестный Assert !!!')
                 continue
 
             except Exception as ex:
                 ex_type = str(type(ex)).split("'")[1].split('.')[-1]
-                self.print_and_save_log_traceback(ex_type, end_str='\n')
+                self.print_and_save_log_traceback(ex_type)
                 continue
-
-    # собирает список тех, кто комментировал посты, для сбора ссылок на посты вызывает "select_url_posts_to_hashtag"
-    def select_commentators(self, hashtag=tag_list[0], number_scrolls=1, scrolls_timeout=1):
-        """
-        number_scrolls - количество прокруток поля комментариев у поста
-        scrolls_timeout - задержка перед прокруткой (иначе может падать с ошибкой NoSuchElement)
-        delete_file - если "yes", то очистит файл со ссылками перед записью
-        """
-        browser = self.browser
-        link_list = self.select_url_posts_to_hashtag(hashtag=hashtag)
-        for link in link_list:
-            browser.get(link)
-            comments_ul = self.search_element((By.XPATH, '//div[2]/div/div[2]/div[1]/ul'))
-
-            for number in range(number_scrolls):
-                time.sleep(2)
-                browser.execute_script("arguments[0].scrollTop = arguments[0].scrollHeight", comments_ul)
-                time.sleep(scrolls_timeout)
-
-                plus_button = self.search_element((By.XPATH, '//div/div[2]/div[1]/ul/li/div/button'))
-                plus_button.click()
-                time.sleep(scrolls_timeout)
-
-            # находит ссылку на профиль, опубликовавший запись, что бы кинуть его в игнор поиска по тегу
-            block_profile = self.search_element((By.XPATH, '//header/div[2]/div[1]/div[1]/span/a'))
-            name_profile = block_profile.get_attribute('href')
-
-            user_urls = self.tag_search(ignore=name_profile)
-            self.file_write('non_filtered/user_urls_commentators', user_urls)
-            with open('data/User_urls_commentators.txt', 'r') as file:
-                size = len(file.readlines())
-                print(f'Количество собранных пользователей: {size}')
-
-    # собирает список пабликов по тегу
-    def hashtag_public_search(self, username, tag_search, search_depth=SearchUser.search_depth):
-        """
-        search_name - имя, которое будет вводиться в строку поиска по профилям
-        delete_file - если "yes", то очистит файл со ссылками перед записью
-        """
-        browser = self.browser
-
-        print(f'--- Сбор ссылок по запросу: {tag_search} ---')
-        browser.get(f"https://www.instagram.com/{username}/")
-        used_by_url = []
-
-        search_input = self.search_element((By.CSS_SELECTOR, 'div.QY4Ed.P0xOK > input'))
-        search_input.send_keys(tag_search)
-
-        public_urls = self.tag_search(ignore=username, parameter=1.5)
-        for i in range(search_depth):
-            used_by_url.append(public_urls[i - 1])
-        self.select_subscribers(username, used_by_url, filter_mode='on')

@@ -8,6 +8,7 @@ class StartSettings:
     web_driver_wait = 30
     filtered_user_list_timeout = 1
     number_filter_iteration = 6
+    sleep_page_not_found = 5
 
 
 class Unsubscribe:
@@ -41,7 +42,7 @@ class Subscribe:
     max_timeout = 10
     subscribe_in_session = 40
     sleep_between_iterations = 10
-    subscribe_limit_stop = 290
+    subscribe_limit_stop = 240
     """FILTER"""
     subscribers_min, subscribers_max = 50, 7000
     subscriptions_min, subscriptions_max = 50, 7000
