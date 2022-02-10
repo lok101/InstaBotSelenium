@@ -16,3 +16,14 @@ class FilterMessage:
     filter_posts = 'Не прошёл по постам.'
     bad_profile = 'Профиль "помойка".'
     stop_word = 'Встречено стоп-слово.'
+
+
+class LoginErrorMessage:
+    input_code_from_sms = 'Требуется код из СМС.'
+    input_phone_number = 'Требуется ввод номера телефона.'
+    verification_email = 'Подозрительная попытка входа.'
+    login_form_error = 'Ошибка авторизации. (Красный текст под формой).'
+    not_login = 'Не получилось залогиниться.'
+    not_login_cookies = 'Не получилось залогиниться через Cookies.'
+    not_login_page = 'Не загрузил домашнюю страницу.'
+    verification_form = 'Поступил запрос на верификацию.'

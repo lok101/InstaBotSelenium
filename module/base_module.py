@@ -1,4 +1,5 @@
-from module.message_text_module import ErrorMessage
+import data
+from module.message_text_module import ErrorMessage, LoginErrorMessage
 from datetime import datetime
 from selenium.common.exceptions import TimeoutException, StaleElementReferenceException
 from selenium.webdriver.support import expected_conditions as ec
@@ -26,42 +27,43 @@ class ActivBlocking(Exception):
 
 
 class BaseClass:
-    def __init__(self, user_name, pass_word, headless_and_proxy,
-                 link='https://www.instagram.com/',
-                 ):
-        """
-        headless - запуск в режиме "без головы"
-        timeout - таймаут implicitly_wait
-        """
 
-        chrome_options = webdriver.ChromeOptions()
-        chrome_options.add_argument('--log-level=3')
-        if headless_and_proxy[0].lower() == 'y':
-            chrome_options.add_argument("--headless")
-        if headless_and_proxy[1].lower() == 'y':
-            self.browser = self.proxy_browser(chrome_options)
-        else:
-            self.browser = webdriver.Chrome(options=chrome_options)
-        self.link = link
-        self.username = user_name
-        self.password = pass_word
+    def __init__(self, username, password, headless_and_proxy, link='https://www.instagram.com/'):
 
-        self.subscribe = None
-        self.mode = None   # присваивается внутри задачи, используется для вызова методов логирования и печати
-        self.count_iteration = 0.1
+        try:
+            self.link = link
+            self.username = username
+            self.password = password
+
+            self.subscribe = None
+            self.mode = 'authorize'
+            self.count_iteration = 0.1
+
+            chrome_options = webdriver.ChromeOptions()
+            chrome_options.add_argument('--log-level=3')
+            if headless_and_proxy[0].lower() == 'y':
+                chrome_options.add_argument("--headless")
+            if headless_and_proxy[1].lower() == 'y':
+                self.browser = self.proxy_browser(chrome_options)
+            else:
+                self.browser = webdriver.Chrome(options=chrome_options)
+        except Exception as ex:
+            ex_type = str(type(ex)).split("'")[1].split('.')[-1]
+            self.print_and_save_log_traceback(ex_type)
 
     def login(self):
         try:
             browser = self.browser
             browser.get(self.link)
-            assert self.should_be_home_page(), 'Не загрузил домашнюю страницу.'
-            print(f'Логин с аккаунта - {self.username}')
+            assert self.should_be_home_page(), LoginErrorMessage.not_login_page
+            print(f'Логин с аккаунта - {self.username}', end=' ===> ')
             browser.delete_all_cookies()
             for cookie in pickle.load(open(f'data/cookies/{self.username}_cookies', 'rb')):
                 browser.add_cookie(cookie)
             time.sleep(1)
             browser.refresh()
-            assert self.should_be_login_button(), 'Не получилось залогиниться.'
+            assert self.should_be_verification_form(), LoginErrorMessage.verification_form
+            assert self.should_be_login_button(), LoginErrorMessage.not_login_cookies
             print('Залогинился через cookies.')
 
         except AssertionError as assertion:
@@ -69,7 +71,7 @@ class BaseClass:
             text = re.sub("[)(',]", '', assertion)
             date = datetime.now().strftime("%d-%m %H:%M:%S")
             log = f'{date}  <вход через cookies> -- {self.username}: {text}\n'
-            self.file_write('logs/authorize_error', log)
+            self.file_write('logs/authorize/authorize_error', log)
             raise LoginError(f'{text}')
 
         except FileNotFoundError:
@@ -88,11 +90,12 @@ class BaseClass:
 
                 password_input.send_keys(Keys.ENTER)
                 time.sleep(5)
-                assert self.should_be_login_form_error(), 'Ошибка авторизации. Красный текст под формой).'
-                assert self.should_be_verification_email(), 'Подозрительная попытка входа.'
-                assert self.should_be_phone_number_input(), 'Требуется ввод номера телефона.'
-                assert self.should_be_verification_phone_number(), 'Требуется код из СМС.'
-                assert self.should_be_login_button(), 'Не получилось залогиниться.'
+                assert self.should_be_login_form_error(), LoginErrorMessage.login_form_error
+                assert self.should_be_verification_form(), LoginErrorMessage.verification_form
+                assert self.should_be_verification_email(), LoginErrorMessage.verification_email
+                assert self.should_be_phone_number_input(), LoginErrorMessage.input_phone_number
+                assert self.should_be_verification_phone_number(), LoginErrorMessage.input_code_from_sms
+                assert self.should_be_login_button(), LoginErrorMessage.not_login
 
                 # сохраняем cookies
                 pickle.dump(browser.get_cookies(), open(f'data/cookies/{self.username}_cookies', 'wb'))
@@ -104,6 +107,10 @@ class BaseClass:
                 self.file_write('logs/authorize_error', log)
                 print(f'= = = = {text} = = = =')
                 raise LoginError(f'{text}')
+
+            except Exception as ex:
+                ex_type = str(type(ex)).split("'")[1].split('.')[-1]
+                self.print_and_save_log_traceback(ex_type)
 
             print(f'Залогинился и создал cookies ===> data/cookies/{self.username}_cookies.')
 
@@ -123,7 +130,7 @@ class BaseClass:
         # noinspection PyTypeChecker
         pre = self.search_element((By.TAG_NAME, "body"), type_wait=ec.presence_of_element_located).text
         ip = json.loads(pre)['ip']
-        assert ip not in '78.139.68.238'
+        assert ip not in data.my_ip
         print(f'Подключение через прокси: {ip}')
         return self.browser
 
@@ -165,7 +172,11 @@ class BaseClass:
         date = datetime.now().strftime("%d-%m %H:%M:%S")
         path = f'logs/{self.mode}/{type_traceback}'
         self.file_write(path, date, traceback_text)
-        print(f'>> {type_traceback}. Запись добавлена в лог: {path}', end=end_str)
+        if 'ERR_TUNNEL_CONNECTION_FAILED' in traceback_text:
+            timeout = StartSettings.err_proxy_timeout
+            print(f'>> ERR_TUNNEL_CONNECTION_FAILED. Запись добавлена в лог. Таймаут {timeout} секунд.', end=end_str)
+        else:
+            print(f'>> {self.mode} >> {type_traceback}. Запись добавлена в лог.', end=end_str)
 
     # возвращает элемент с использованием явного ожидания
     def search_element(self, locator, timeout=StartSettings.web_driver_wait, type_wait=ec.element_to_be_clickable):
@@ -324,6 +335,17 @@ class BaseClass:
             exist = True
         return exist
 
+    # div.ctQZg.KtFt3 > button > div
+    # проверяет наличие запроса на верификацию
+    def should_be_verification_form(self):
+        try:
+            # noinspection PyTypeChecker
+            self.search_element((By.CSS_SELECTOR, 'div.ctQZg.KtFt3 > button > div'), timeout=1)
+            exist = False
+        except TimeoutException:
+            exist = True
+        return exist
+
     # проверяет наличие окна "подтвердите почту"
     def should_be_verification_email(self):
         try:
@@ -422,19 +444,19 @@ class BaseClass:
     def go_to_user_page(self, url):
         self.browser.get(url)
         username = url.split("/")[-2]
-        print(f'{datetime.now().strftime("%H:%M:%S")} - {self.username} - Перешёл в профиль: {username}', end=' ======> ')
+        print(f'{datetime.now().strftime("%H:%M:%S")} - {self.username} - Перешёл в профиль: {username}', end=' ===> ')
 
-        assert self.should_be_instagram_page(), 'Ошибка загрузки страницы.'
-        assert self.should_be_activity_blocking(), 'Микробан активности.'
-        assert self.should_be_user_page(), 'Страница не существует'
+        assert self.should_be_instagram_page(), ErrorMessage.page_loading_error
+        assert self.should_be_activity_blocking(), ErrorMessage.activiti_blocking
+        assert self.should_be_user_page(), ErrorMessage.page_not_found
 
     # переходит на свою страницу, запускает проверки на загрузку страницы и наличие микробана
     # возвращает количество подписок
     def go_to_my_profile_page(self):
         url = f'https://www.instagram.com/{self.username}/'
         self.browser.get(url)
-        assert self.should_be_instagram_page(), 'Ошибка загрузки страницы.'
-        assert self.should_be_activity_blocking(), 'Микробан активности.'
+        assert self.should_be_instagram_page(), ErrorMessage.page_loading_error
+        assert self.should_be_activity_blocking(), ErrorMessage.activiti_blocking
         subs_count = self.return_number_posts_subscribe_and_subscribers()['subs']
         print(f"Количество подписок: {subs_count}")
         return subs_count

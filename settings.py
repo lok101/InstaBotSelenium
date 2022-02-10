@@ -9,6 +9,7 @@ class StartSettings:
     filtered_user_list_timeout = 1
     number_filter_iteration = 6
     sleep_page_not_found = 5
+    err_proxy_timeout = 30
 
 
 class Unsubscribe:
