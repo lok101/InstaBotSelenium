@@ -1,5 +1,5 @@
 import data
-from module.message_text_module import ErrorMessage, LoginErrorMessage
+from module.message_text_module import ErrorMessage, LoginErrorMessage, FilterMessage
 from datetime import datetime
 from selenium.common.exceptions import TimeoutException, StaleElementReferenceException
 from selenium.webdriver.support import expected_conditions as ec
@@ -35,9 +35,15 @@ class BaseClass:
             self.username = username
             self.password = password
 
-            self.subscribe = None
             self.mode = 'authorize'
-            self.count_iteration = 0.1
+            self.count_iteration = 0
+            self.count_limit = None
+            self.subscribe = None
+            self.flag = True
+            self.timeout = None
+            self.stop_word = None
+            self.user_url = None
+            self.exception_text = None
 
             chrome_options = webdriver.ChromeOptions()
             chrome_options.add_argument('--log-level=3')
@@ -119,7 +125,7 @@ class BaseClass:
 
     def get_link(self, locator):
         # noinspection PyTypeChecker
-        item = self.search_element(locator, type_wait=ec.presence_of_element_located, timeout=0.5)
+        item = self.search_element(locator, type_wait=ec.presence_of_element_located, timeout=10)
         url = item.get_attribute('src')
         return url
 
@@ -167,16 +173,78 @@ class BaseClass:
                 file.write(str(value))
 
     # сохраняет лог исключения в файл и печатает сообщение об исключении в консоль
-    def print_and_save_log_traceback(self, type_traceback, end_str='\n'):
+    def print_and_save_log_traceback(self, end_str='\n'):
         traceback_text = traceback.format_exc().split('Stacktrace:')[0]
         date = datetime.now().strftime("%d-%m %H:%M:%S")
-        path = f'logs/{self.mode}/{type_traceback}'
+        path = f'logs/{self.mode}/{self.exception_text}'
         self.file_write(path, date, traceback_text)
         if 'ERR_TUNNEL_CONNECTION_FAILED' in traceback_text:
             timeout = StartSettings.err_proxy_timeout
             print(f'>> ERR_TUNNEL_CONNECTION_FAILED. Запись добавлена в лог. Таймаут {timeout} секунд.', end=end_str)
         else:
-            print(f'>> {self.mode} >> {type_traceback}. Запись добавлена в лог.', end=end_str)
+            print(f'>> {self.mode} >> {self.exception_text}. Запись добавлена в лог.', end=end_str)
+
+    def print_log_assert_and_control_cycle(self):
+        if self.mode == 'selection':
+            if ErrorMessage.page_not_found in self.exception_text:
+                print('Страница больше недоступна по этому адресу. Добавлена запись в лог.')
+                date = datetime.now().strftime("%d-%m %H:%M:%S")
+                log = f'{date} -- {self.user_url}\n'
+                self.file_write('logs/selection/invalid_url', log)
+
+        elif self.mode == 'filtered':
+            if FilterMessage.stop_word in self.exception_text:
+                assert_log = f'{str(self.stop_word)} ===> {self.user_url}'
+                self.file_write('logs/assert_stop_word_log', assert_log)
+                self.file_write('ignore_list', self.user_url)
+                print(f'{FilterMessage.stop_word}')
+                time.sleep(self.timeout)
+
+            elif FilterMessage.bad_profile in self.exception_text:
+                assert_log = f'{self.user_url}'
+                self.file_write('logs/assert_bad_profile_log', assert_log)
+                self.file_write('ignore_list', self.user_url)
+                print(f'{FilterMessage.bad_profile}')
+                time.sleep(self.timeout)
+
+            elif ErrorMessage.page_not_found in self.exception_text:
+                self.file_write('ignore_list', self.user_url)
+                print(f'Страница больше недоступна.')
+
+            elif ErrorMessage.activiti_blocking in self.exception_text:
+                raise ActivBlocking
+
+            else:
+                self.file_write('ignore_list', self.user_url)
+                print(f'{self.exception_text[2:-3]}')
+        else:
+            if ErrorMessage.subscribe_blocking in self.exception_text:
+                self.flag = False
+                print('= = = = МИКРОБАН ПОДПИСКИ = = = =')
+
+            elif ErrorMessage.unsubscribe_blocking in self.exception_text:
+                self.flag = False
+                print('= = = = МИКРОБАН ОТПИСКИ = = = =')
+
+            elif ErrorMessage.activiti_blocking in self.exception_text:
+                self.flag = False
+                print('= = = = МИКРОБАН АКТИВНОСТИ = = = =')
+
+            elif LoginErrorMessage.verification_form in self.exception_text:
+                self.flag = False
+                print('Получен запрос на верификацию.')
+
+            elif ErrorMessage.page_not_found in self.exception_text:
+                print('Страница больше недоступна.')
+                self.file_write('ignore_list', self.user_url)
+
+            elif ErrorMessage.page_loading_error in self.exception_text:
+                sleep = StartSettings.sleep_page_not_found
+                print(f'<< Страница не загрузилась. Жду {sleep} секунд. >>')
+                time.sleep(sleep)
+
+            else:
+                print(f'Assert не был обработан -- {self.exception_text[2:-3]}')
 
     # возвращает элемент с использованием явного ожидания
     def search_element(self, locator, timeout=StartSettings.web_driver_wait, type_wait=ec.element_to_be_clickable):
@@ -186,12 +254,10 @@ class BaseClass:
     # возвращает список по тегу
     def tag_search(self, parameter=1, ignore=None):
         """
-        parameter=1 - возвращает список ссылок на профили
+        parameter = 1 - возвращает список ссылок на профили
         parameter == 1.5 - возвращает список ссылок на профили в выпадающем меню поиска
-        parameter=2 - возвращает список ссылок на посты
-        ignore - ключевое слово для игнора (сверяется со ссылкой)
+        ignore - ключевое слово для игнорирования (сверяется со ссылкой)
         """
-        # print(f'Вызван tag_search с параметром: {parameter}')
         list_urls = set()
         while True:
             try:
@@ -282,7 +348,7 @@ class BaseClass:
             exist = True
         return exist
 
-    # проверяет, существует ли данная страница
+    # проверяет, существует ли страница по данной ссылке
     def should_be_user_page(self):
         while True:
             try:
@@ -303,6 +369,7 @@ class BaseClass:
                 continue
         return exist
 
+    # проверяет, находится ли на странице инстаграм (ищет иконку справа-сверху)
     def should_be_instagram_page(self):
         try:
             # noinspection PyTypeChecker
@@ -335,7 +402,6 @@ class BaseClass:
             exist = True
         return exist
 
-    # div.ctQZg.KtFt3 > button > div
     # проверяет наличие запроса на верификацию
     def should_be_verification_form(self):
         try:
@@ -376,19 +442,13 @@ class BaseClass:
             iteration_count = 0
             while iteration_count < iteration_limit:
                 iteration_count += 1
-                try:
-                    button.click()
-                    time.sleep(random.randrange(Subscribe.min_timeout, Subscribe.max_timeout))
-                    assert self.should_be_subscribe_and_unsubscribe_blocking(), ErrorMessage.subscribe_blocking
-                    self.file_write('ignore_list', user_url)
-                    self.count_iteration = int(self.count_iteration) + 1
-                    print(f'Успешно. Подписок: {self.count_iteration}')
-                    break
-                except Exception as ex:
-                    ex_type = str(type(ex)).split("'")[1].split('.')[-1]
-                    self.print_and_save_log_traceback(ex_type)
-                    continue
-            print('Не смог нажать на кнопку.')
+                button.click()
+                time.sleep(random.randrange(Subscribe.min_timeout, Subscribe.max_timeout))
+                assert self.should_be_subscribe_and_unsubscribe_blocking(), ErrorMessage.subscribe_blocking
+                self.file_write('ignore_list', user_url)
+                self.count_iteration += 1
+                print(f'Успешно. Подписок в сессии: {self.count_iteration}')
+                break
         else:
             print('Кнопка не найдена.')
             self.file_write('ignore_list', user_url)
@@ -441,25 +501,27 @@ class BaseClass:
         return dict_return
 
     # переходит на страницу по ссылке, запускает проверки на наличие страницы, загрузку страницы и наличие микробана
-    def go_to_user_page(self, url):
-        self.browser.get(url)
-        username = url.split("/")[-2]
-        print(f'{datetime.now().strftime("%H:%M:%S")} - {self.username} - Перешёл в профиль: {username}', end=' ===> ')
+    def go_to_user_page(self, end_str=' ===> '):
+        self.browser.get(self.user_url)
+        username = self.user_url.split("/")[-2]
+        print(f'{datetime.now().strftime("%H:%M:%S")} - {self.username} - [{self.count_iteration}/{self.count_limit}]',
+              f'Перешёл в профиль: {username}', end=end_str)
 
         assert self.should_be_instagram_page(), ErrorMessage.page_loading_error
         assert self.should_be_activity_blocking(), ErrorMessage.activiti_blocking
         assert self.should_be_user_page(), ErrorMessage.page_not_found
+        assert self.should_be_verification_form(), LoginErrorMessage.verification_form
 
     # переходит на свою страницу, запускает проверки на загрузку страницы и наличие микробана
     # возвращает количество подписок
-    def go_to_my_profile_page(self):
+    def go_to_my_profile_page(self, end_str='\n'):
         url = f'https://www.instagram.com/{self.username}/'
         self.browser.get(url)
         assert self.should_be_instagram_page(), ErrorMessage.page_loading_error
         assert self.should_be_activity_blocking(), ErrorMessage.activiti_blocking
-        subs_count = self.return_number_posts_subscribe_and_subscribers()['subs']
-        print(f"Количество подписок: {subs_count}")
-        return subs_count
+        assert self.should_be_verification_form(), LoginErrorMessage.verification_form
+        self.subscribe = self.return_number_posts_subscribe_and_subscribers()['subs']
+        print(f"Количество подписок: {self.subscribe}", end=end_str)
 
     def difference_sets(self, item1, item2, item3=None):
         user_set1, user_set2, user_set3 = set(), set(), set()
