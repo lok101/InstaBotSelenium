@@ -6,6 +6,7 @@ from selenium.webdriver.support import expected_conditions as ec
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.common.by import By
 from selenium.webdriver.common.keys import Keys
+from module.exception_module import LoginError, ActivBlocking, VerificationError, BotException
 from selenium import webdriver
 from data import proxy_list
 from settings import *
@@ -18,107 +19,112 @@ import re
 import json
 
 
-class LoginError(Exception):
-    pass
-
-
-class ActivBlocking(Exception):
-    pass
-
-
 class BaseClass:
 
     def __init__(self, username, password, headless_and_proxy, link='https://www.instagram.com/'):
 
-        try:
-            self.link = link
-            self.username = username
-            self.password = password
+        self.link = link
+        self.username = username
+        self.password = password
 
-            self.mode = 'authorize'
-            self.count_iteration = 0
-            self.count_limit = None
-            self.subscribe = None
-            self.flag = True
-            self.timeout = None
-            self.stop_word = None
-            self.user_url = None
-            self.exception_text = None
+        self.mode = 'authorize'
+        self.count_iteration = 0
+        self.count_limit = None
+        self.subscribe = None
+        self.timeout = None
+        self.stop_word = None
+        self.user_url = None
+        self.exception_text = None
 
-            chrome_options = webdriver.ChromeOptions()
-            chrome_options.add_argument('--log-level=3')
-            if headless_and_proxy[0].lower() == 'y':
-                chrome_options.add_argument("--headless")
-            if headless_and_proxy[1].lower() == 'y':
-                self.browser = self.proxy_browser(chrome_options)
-            else:
-                self.browser = webdriver.Chrome(options=chrome_options)
-        except Exception as ex:
-            ex_type = str(type(ex)).split("'")[1].split('.')[-1]
-            self.print_and_save_log_traceback(ex_type)
+        chrome_options = webdriver.ChromeOptions()
+        chrome_options.add_argument('--log-level=3')
+        if headless_and_proxy[0].lower() == 'y':
+            chrome_options.add_argument("--headless")
+        if headless_and_proxy[1].lower() == 'y':
+            chrome_options.add_argument(f'--proxy-server={proxy_list}')
+            self.browser = webdriver.Chrome(options=chrome_options)
+        else:
+            self.browser = webdriver.Chrome(options=chrome_options)
 
     def login(self):
-        try:
-            browser = self.browser
-            browser.get(self.link)
-            assert self.should_be_home_page(), LoginErrorMessage.not_login_page
-            print(f'Логин с аккаунта - {self.username}', end=' ===> ')
-            browser.delete_all_cookies()
-            for cookie in pickle.load(open(f'data/cookies/{self.username}_cookies', 'rb')):
-                browser.add_cookie(cookie)
-            time.sleep(1)
-            browser.refresh()
-            assert self.should_be_verification_form(), LoginErrorMessage.verification_form
-            assert self.should_be_login_button(), LoginErrorMessage.not_login_cookies
-            print('Залогинился через cookies.')
-
-        except AssertionError as assertion:
-            assertion = str(assertion.args)
-            text = re.sub("[)(',]", '', assertion)
-            date = datetime.now().strftime("%d-%m %H:%M:%S")
-            log = f'{date}  <вход через cookies> -- {self.username}: {text}\n'
-            self.file_write('logs/authorize/authorize_error', log)
-            raise LoginError(f'{text}')
-
-        except FileNotFoundError:
+        while True:
             try:
-                browser = self.browser
-                browser.get(self.link)
-                print(f'Логин с аккаунта --- {self.username}')
+                try:
+                    self.browser.get("https://api.myip.com/")
+                    # noinspection PyTypeChecker
+                    pre = self.search_element((By.TAG_NAME, "body"), type_wait=ec.presence_of_element_located).text
+                    ip = json.loads(pre)['ip']
+                    assert ip not in data.my_ip
+                    print(f'Подключение через прокси: {ip}')
 
-                username_input = self.search_element((By.NAME, "username"))
-                username_input.clear()
-                username_input.send_keys(self.username)
+                    self.browser.get(self.link)
+                    assert self.should_be_home_page(), LoginErrorMessage.not_login_page
+                    print(f'Логин с аккаунта - {self.username}', end=' ===> ')
+                    self.browser.delete_all_cookies()
+                    for cookie in pickle.load(open(f'data/cookies/{self.username}_cookies', 'rb')):
+                        self.browser.add_cookie(cookie)
+                    time.sleep(1)
+                    self.browser.refresh()
+                    assert self.should_be_verification_form(), LoginErrorMessage.verification_form
+                    assert self.should_be_login_button(), LoginErrorMessage.not_login_cookies
+                    print('Залогинился через cookies.')
 
-                password_input = self.search_element((By.NAME, "password"))
-                password_input.clear()
-                password_input.send_keys(self.password)
+                except AssertionError as assertion:
+                    assertion = str(assertion.args)
+                    text = re.sub("[)(',]", '', assertion)
+                    date = datetime.now().strftime("%d-%m %H:%M:%S")
+                    log = f'{date}  <вход через cookies> -- {self.username}: {text}\n'
+                    self.file_write('logs/authorize/authorize_error', log)
+                    raise LoginError(f'{text}')
 
-                password_input.send_keys(Keys.ENTER)
-                time.sleep(5)
-                assert self.should_be_login_form_error(), LoginErrorMessage.login_form_error
-                assert self.should_be_verification_form(), LoginErrorMessage.verification_form
-                assert self.should_be_verification_email(), LoginErrorMessage.verification_email
-                assert self.should_be_phone_number_input(), LoginErrorMessage.input_phone_number
-                assert self.should_be_verification_phone_number(), LoginErrorMessage.input_code_from_sms
-                assert self.should_be_login_button(), LoginErrorMessage.not_login
+                except FileNotFoundError:
+                    try:
+                        browser = self.browser
+                        browser.get(self.link)
+                        print(f'Логин с аккаунта --- {self.username}')
 
-                # сохраняем cookies
-                pickle.dump(browser.get_cookies(), open(f'data/cookies/{self.username}_cookies', 'wb'))
+                        username_input = self.search_element((By.NAME, "username"))
+                        username_input.clear()
+                        username_input.send_keys(self.username)
 
-            except AssertionError as assertion:
-                text = str(assertion.args)[2:-3]
-                date = datetime.now().strftime("%d-%m %H:%M:%S")
-                log = f'{date} -- {self.username}: {text}\n'
-                self.file_write('logs/authorize_error', log)
-                print(f'= = = = {text} = = = =')
-                raise LoginError(f'{text}')
+                        password_input = self.search_element((By.NAME, "password"))
+                        password_input.clear()
+                        password_input.send_keys(self.password)
 
-            except Exception as ex:
-                ex_type = str(type(ex)).split("'")[1].split('.')[-1]
-                self.print_and_save_log_traceback(ex_type)
+                        password_input.send_keys(Keys.ENTER)
+                        time.sleep(5)
+                        assert self.should_be_login_form_error(), LoginErrorMessage.login_form_error
+                        assert self.should_be_verification_form(), LoginErrorMessage.verification_form
+                        assert self.should_be_verification_email(), LoginErrorMessage.verification_email
+                        assert self.should_be_phone_number_input(), LoginErrorMessage.input_phone_number
+                        assert self.should_be_verification_phone_number(), LoginErrorMessage.input_code_from_sms
+                        assert self.should_be_login_button(), LoginErrorMessage.not_login
 
-            print(f'Залогинился и создал cookies ===> data/cookies/{self.username}_cookies.')
+                        # сохраняем cookies
+                        pickle.dump(browser.get_cookies(), open(f'data/cookies/{self.username}_cookies', 'wb'))
+
+                    except AssertionError as assertion:
+                        text = str(assertion.args)[2:-3]
+                        date = datetime.now().strftime("%d-%m %H:%M:%S")
+                        log = f'{date} -- {self.username}: {text}\n'
+                        self.file_write('logs/authorize/authorize_error', log)
+                        print(f'= = = = {text} = = = =')
+                        raise LoginError(f'{text}')
+
+                    except Exception as ex:
+                        self.exception_text = str(type(ex)).split("'")[1].split('.')[-1]
+                        self.print_and_save_log_traceback()
+
+                    print(f'Залогинился и создал cookies ===> data/cookies/{self.username}_cookies.')
+
+                except Exception as ex:
+                    self.exception_text = str(type(ex)).split("'")[1].split('.')[-1]
+                    self.print_and_save_log_traceback()
+
+            except ConnectionError:
+                continue
+            else:
+                break
 
     def close_browser(self):
         self.browser.quit()
@@ -128,17 +134,6 @@ class BaseClass:
         item = self.search_element(locator, type_wait=ec.presence_of_element_located, timeout=10)
         url = item.get_attribute('src')
         return url
-
-    def proxy_browser(self, chrome_options, proxy=proxy_list):
-        chrome_options.add_argument('--proxy-server=%s' % proxy)
-        self.browser = webdriver.Chrome(options=chrome_options)
-        self.browser.get("https://api.myip.com/")
-        # noinspection PyTypeChecker
-        pre = self.search_element((By.TAG_NAME, "body"), type_wait=ec.presence_of_element_located).text
-        ip = json.loads(pre)['ip']
-        assert ip not in data.my_ip
-        print(f'Подключение через прокси: {ip}')
-        return self.browser
 
     @staticmethod
     def download_for_link(link):
@@ -178,71 +173,67 @@ class BaseClass:
         date = datetime.now().strftime("%d-%m %H:%M:%S")
         path = f'logs/{self.mode}/{self.exception_text}'
         self.file_write(path, date, traceback_text)
-        if 'ERR_TUNNEL_CONNECTION_FAILED' in traceback_text:
+        if 'CONNECTION_FAILED' in traceback_text:
             timeout = StartSettings.err_proxy_timeout
-            print(f'>> ERR_TUNNEL_CONNECTION_FAILED. Запись добавлена в лог. Таймаут {timeout} секунд.', end=end_str)
+            error_name = traceback_text.split('net::')[1].split('\n')[0]
+            print(f'>> {error_name}. Запись добавлена в лог. Таймаут {timeout} секунд.', end=end_str)
+            time.sleep(timeout)
         else:
             print(f'>> {self.mode} >> {self.exception_text}. Запись добавлена в лог.', end=end_str)
 
     def print_log_assert_and_control_cycle(self):
-        if self.mode == 'selection':
-            if ErrorMessage.page_not_found in self.exception_text:
+        if ErrorMessage.subscribe_blocking in self.exception_text:
+            print('= = = = МИКРОБАН ПОДПИСКИ = = = =')
+            raise ActivBlocking
+
+        if ErrorMessage.unsubscribe_blocking in self.exception_text:
+            print('= = = = МИКРОБАН ОТПИСКИ = = = =')
+            raise ActivBlocking
+
+        if ErrorMessage.activiti_blocking in self.exception_text:
+            print('= = = = МИКРОБАН АКТИВНОСТИ = = = =')
+            raise ActivBlocking
+
+        if LoginErrorMessage.verification_form in self.exception_text:
+            date = datetime.now().strftime("%d-%m %H:%M:%S")
+            log = f'{date}  {self.mode} -- {self.username}: {self.exception_text}\n'
+            self.file_write('logs/authorize/authorize_error', log)
+            print('Получен запрос на верификацию.')
+            raise VerificationError
+
+        if ErrorMessage.page_not_found in self.exception_text:
+            if self.mode == 'selection':
                 print('Страница больше недоступна по этому адресу. Добавлена запись в лог.')
                 date = datetime.now().strftime("%d-%m %H:%M:%S")
                 log = f'{date} -- {self.user_url}\n'
                 self.file_write('logs/selection/invalid_url', log)
-
-        elif self.mode == 'filtered':
-            if FilterMessage.stop_word in self.exception_text:
-                assert_log = f'{str(self.stop_word)} ===> {self.user_url}'
-                self.file_write('logs/assert_stop_word_log', assert_log)
-                self.file_write('ignore_list', self.user_url)
-                print(f'{FilterMessage.stop_word}')
-                time.sleep(self.timeout)
-
-            elif FilterMessage.bad_profile in self.exception_text:
-                assert_log = f'{self.user_url}'
-                self.file_write('logs/assert_bad_profile_log', assert_log)
-                self.file_write('ignore_list', self.user_url)
-                print(f'{FilterMessage.bad_profile}')
-                time.sleep(self.timeout)
-
-            elif ErrorMessage.page_not_found in self.exception_text:
-                self.file_write('ignore_list', self.user_url)
-                print(f'Страница больше недоступна.')
-
-            elif ErrorMessage.activiti_blocking in self.exception_text:
-                raise ActivBlocking
-
             else:
-                self.file_write('ignore_list', self.user_url)
-                print(f'{self.exception_text[2:-3]}')
-        else:
-            if ErrorMessage.subscribe_blocking in self.exception_text:
-                self.flag = False
-                print('= = = = МИКРОБАН ПОДПИСКИ = = = =')
-
-            elif ErrorMessage.unsubscribe_blocking in self.exception_text:
-                self.flag = False
-                print('= = = = МИКРОБАН ОТПИСКИ = = = =')
-
-            elif ErrorMessage.activiti_blocking in self.exception_text:
-                self.flag = False
-                print('= = = = МИКРОБАН АКТИВНОСТИ = = = =')
-
-            elif LoginErrorMessage.verification_form in self.exception_text:
-                self.flag = False
-                print('Получен запрос на верификацию.')
-
-            elif ErrorMessage.page_not_found in self.exception_text:
                 print('Страница больше недоступна.')
                 self.file_write('ignore_list', self.user_url)
 
-            elif ErrorMessage.page_loading_error in self.exception_text:
-                sleep = StartSettings.sleep_page_not_found
-                print(f'<< Страница не загрузилась. Жду {sleep} секунд. >>')
-                time.sleep(sleep)
+        elif ErrorMessage.page_loading_error in self.exception_text:
+            sleep = StartSettings.sleep_page_not_found
+            print(f'<< Страница не загрузилась. Жду {sleep} секунд. >>')
+            time.sleep(sleep)
 
+        elif FilterMessage.stop_word in self.exception_text:
+            assert_log = f'{str(self.stop_word)} ===> {self.user_url}'
+            self.file_write('logs/assert_stop_word_log', assert_log)
+            self.file_write('ignore_list', self.user_url)
+            print(f'{FilterMessage.stop_word}')
+            time.sleep(self.timeout)
+
+        elif FilterMessage.bad_profile in self.exception_text:
+            assert_log = f'{self.user_url}'
+            self.file_write('logs/assert_bad_profile_log', assert_log)
+            self.file_write('ignore_list', self.user_url)
+            print(f'{FilterMessage.bad_profile}')
+            time.sleep(self.timeout)
+
+        else:
+            if self.mode == 'filtered':
+                self.file_write('ignore_list', self.user_url)
+                print(f'{self.exception_text[2:-3]}')
             else:
                 print(f'Assert не был обработан -- {self.exception_text[2:-3]}')
 
@@ -254,7 +245,7 @@ class BaseClass:
     # возвращает список по тегу
     def tag_search(self, parameter=1, ignore=None):
         """
-        parameter = 1 - возвращает список ссылок на профили
+        Parameter = 1 - возвращает список ссылок на профили
         parameter == 1.5 - возвращает список ссылок на профили в выпадающем меню поиска
         ignore - ключевое слово для игнорирования (сверяется со ссылкой)
         """
@@ -267,8 +258,11 @@ class BaseClass:
                     for public_block in tags:
                         profile_url = public_block.get_attribute('href')
                         len_user_url = len(profile_url.split('/'))  # у ссылки на профиль равен пяти.
-                        if len_user_url == 5 and 'www.instagram.com' in profile_url and self.username not in profile_url \
-                                and 'explore' not in profile_url and ignore not in profile_url:
+                        if len_user_url == 5 \
+                                and 'www.instagram.com' in profile_url \
+                                and self.username not in profile_url \
+                                and 'explore' not in profile_url \
+                                and ignore not in profile_url:
                             list_urls.add(profile_url)
                     return list_urls
 
@@ -279,8 +273,11 @@ class BaseClass:
                     for public_block in tags:
                         profile_url = public_block.get_attribute('href')
                         len_user_url = len(profile_url.split('/'))  # у ссылки на профиль равен пяти.
-                        if len_user_url == 5 and 'www.instagram.com' in profile_url and self.username not in profile_url \
-                                and 'explore' not in profile_url and ignore not in profile_url:
+                        if len_user_url == 5 \
+                                and 'www.instagram.com' in profile_url \
+                                and self.username not in profile_url \
+                                and 'explore' not in profile_url \
+                                and ignore not in profile_url:
                             list_urls.append(profile_url)
                     return list_urls
 
@@ -373,7 +370,7 @@ class BaseClass:
     def should_be_instagram_page(self):
         try:
             # noinspection PyTypeChecker
-            self.search_element((By.CSS_SELECTOR, 'div._4EzTm > div.cq2ai'), timeout=5,
+            self.search_element((By.CSS_SELECTOR, '[href=\'/\']'), timeout=15,
                                 type_wait=ec.presence_of_element_located)
             exist = True
         except TimeoutException:
@@ -435,7 +432,7 @@ class BaseClass:
         return exist
 
     # ищет и нажимает кнопку "подписаться"
-    def press_to_button_subscribe(self, user_url):
+    def press_to_button_subscribe(self):
         button = self.search_element((By.XPATH, '//button'))
         if 'подписаться' in button.text.lower():
             iteration_limit = 10
@@ -445,13 +442,13 @@ class BaseClass:
                 button.click()
                 time.sleep(random.randrange(Subscribe.min_timeout, Subscribe.max_timeout))
                 assert self.should_be_subscribe_and_unsubscribe_blocking(), ErrorMessage.subscribe_blocking
-                self.file_write('ignore_list', user_url)
+                self.file_write('ignore_list', self.user_url)
                 self.count_iteration += 1
-                print(f'Успешно. Подписок в сессии: {self.count_iteration}')
+                print('Успешно.')
                 break
         else:
             print('Кнопка не найдена.')
-            self.file_write('ignore_list', user_url)
+            self.file_write('ignore_list', self.user_url)
             time.sleep(random.randrange(Subscribe.min_timeout, Subscribe.max_timeout))
 
     # проверяет, находится ли на странице логина
@@ -504,8 +501,9 @@ class BaseClass:
     def go_to_user_page(self, end_str=' ===> '):
         self.browser.get(self.user_url)
         username = self.user_url.split("/")[-2]
-        print(f'{datetime.now().strftime("%H:%M:%S")} - {self.username} - [{self.count_iteration}/{self.count_limit}]',
-              f'Перешёл в профиль: {username}', end=end_str)
+        print(
+          f'{datetime.now().strftime("%H:%M:%S")} - {self.username} - [{self.count_iteration + 1}/{self.count_limit}]',
+          f'Перешёл в профиль: {username}', end=end_str)
 
         assert self.should_be_instagram_page(), ErrorMessage.page_loading_error
         assert self.should_be_activity_blocking(), ErrorMessage.activiti_blocking

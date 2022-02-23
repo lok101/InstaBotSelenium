@@ -1,7 +1,7 @@
 from data import user_dict, bot_dict
 from module.function_module import FunctionClass
 from settings import SearchUser
-from module.base_module import LoginError
+from module.base_module import ActivBlocking
 import random
 import time
 
@@ -42,9 +42,8 @@ def filter_user_list():
                 my_bot.filter_user_list()
                 my_bot.close_browser()
                 time.sleep(SearchUser.timeout_between_restarts * 60)
-            except AssertionError:
-                continue
-            except LoginError:
+            except Exception as ex:
+                print(ex)
                 continue
     finally:
         my_bot.close_browser()
@@ -67,9 +66,8 @@ def select_subscribers():
                 my_bot.login()
                 my_bot.select_subscribers(iter_count)
                 my_bot.close_browser()
-            except Exception as error:
-                print(error)
-            finally:
+            except Exception as ex:
+                print(ex)
                 continue
     finally:
         my_bot.close_browser()
@@ -83,14 +81,16 @@ def subscribe_to_user_list():
 
         for i in range(user_input.count(' ') + 1):
             account_list.append(user_input.split(' ')[i])
-
         for user in account_list:
-            username = user_dict[user]['login']
-            password = user_dict[user]['password']
-            my_bot = FunctionClass(username, password, headless_and_proxy)
-            my_bot.login()
-            my_bot.subscribe_to_user_list()
-            my_bot.close_browser()
+            try:
+                username = user_dict[user]['login']
+                password = user_dict[user]['password']
+                my_bot = FunctionClass(username, password, headless_and_proxy)
+                my_bot.login()
+                my_bot.subscribe_to_user_list()
+                my_bot.close_browser()
+            except ActivBlocking:
+                continue
     finally:
         my_bot.close_browser()
 

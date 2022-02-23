@@ -23,12 +23,12 @@ class FunctionClass(FilterClass):
         """
         self.mode = 'unsubscribe'
 
-        while self.count_iteration < 20 and self.flag:
+        while self.count_iteration < 20:
             try:
                 count = 10
-                following_count = self.go_to_my_profile_page()
+                self.go_to_my_profile_page()
 
-                if following_count == 0:
+                if self.subscribe == 0:
                     print('= = = = ОТПИСКА ЗАВЕРШЕНА = = = =')
                     break
 
@@ -79,11 +79,9 @@ class FunctionClass(FilterClass):
         self.count_limit = Subscribe.subscribe_limit_stop - self.subscribe
 
         for self.user_url in user_list:
-            if not self.flag:
-                break
             try:
-                self.go_to_user_page(self.user_url)
-                self.press_to_button_subscribe(self.user_url)
+                self.go_to_user_page()
+                self.press_to_button_subscribe()
 
                 if self.count_iteration >= self.count_limit:
                     print('= = = = ПОДПИСКА ЗАВЕРШЕНА = = = =')
@@ -119,7 +117,7 @@ class FunctionClass(FilterClass):
         self.file_write('logs/assert_stop_word_log', f'\n{datetime.now().strftime("%d-%m %H:%M:%S")} - старт.\n')
         self.file_write('logs/assert_bad_profile_log', f'\n{datetime.now().strftime("%d-%m %H:%M:%S")} - старт.\n')
 
-        while self.flag:
+        while True:
             try:
                 user_list = self.difference_sets(
                     'non_filtered/user_urls_subscribers',
@@ -136,7 +134,7 @@ class FunctionClass(FilterClass):
 
                 for i in range(self.count_limit):
                     self.user_url = user_list.pop()
-                    self.count_iteration = i + 1
+                    self.count_iteration = i
                     try:
                         self.go_to_user_page()
                         self.should_be_compliance_with_limits()
@@ -165,13 +163,14 @@ class FunctionClass(FilterClass):
         self.mode = 'selection'
         urls_public = []
         self.file_read('url_lists/public_url_for_subscribe', urls_public)
+        self.count_iteration = iter_count * 10
+        self.count_limit = len(urls_public)
         print(f'= = = = Итерация сбора {iter_count + 1} из {len(urls_public) // 10}. = = = =')
         urls_public = urls_public[int(str(iter_count) + '0'):int(str(iter_count + 1) + '0')]
         for self.user_url in urls_public:
-            if not self.flag:
-                break
             try:
-                self.go_to_user_page(self.user_url)
+                self.go_to_user_page()
+                self.count_iteration += 1
                 subscribes_button = self.search_element((By.CSS_SELECTOR, 'li:nth-child(2) > a'))
                 subscribes_button.click()
 
