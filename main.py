@@ -1,113 +1,124 @@
-from data import user_dict, bot_dict
+import settings
 from module.function_module import FunctionClass
+from module.exception_module import BotException
 from settings import SearchUser
-from module.base_module import ActivBlocking
+import data
 import random
 import time
 
 
 def bot():
-    while True:
+    my_bot = StartBot()
+    my_bot.start()
+
+
+class StartBot(FunctionClass):
+    def start(self):
         try:
-            operating_status = input('Укажите режим работы: ')
-            if operating_status == 'fil':
-                filter_user_list()
+            self.parameter_input()
+            self.browser_parameter()
 
-            elif operating_status == 'sub':
-                subscribe_to_user_list()
+            if 'short' in self.working_mode:
+                self.start_short_subscribe()
 
-            elif operating_status == 'uns':
-                unsubscribe_for_all_users()
+            elif 'sub' in self.working_mode:
+                self.start_short_subscribe()
 
-            elif operating_status == 'sel':
-                select_subscribers()
+            elif 'uns' in self.working_mode:
+                self.start_short_subscribe()
 
-            else:
-                raise NameError('Неверный режим работы.')
-        except NameError:
-            continue
+            elif 'sel' in self.working_mode:
+                self.start_short_subscribe()
 
+            elif 'short' in self.working_mode:
+                self.start_short_subscribe()
 
-def filter_user_list():
-    try:
-        headless_and_proxy = input('Headless(y/n) Proxy(y/n): ')
-        for i in range(SearchUser.number_restart_filtered):
-            try:
-                user = f'bot{random.randrange(1, len(bot_dict))}'
-                print(f'Бот аккаунт - {user}', end=' =====> ')
-                username = bot_dict[user]['login']
-                password = bot_dict[user]['password']
-                my_bot = FunctionClass(username, password, headless_and_proxy)
-                my_bot.login()
-                my_bot.filter_user_list()
-                my_bot.close_browser()
-                time.sleep(SearchUser.timeout_between_restarts * 60)
-            except Exception as ex:
-                print(ex)
-                continue
-    finally:
-        my_bot.close_browser()
+        except KeyboardInterrupt:
+            print('Остановлено командой с клавиатуры.')
+        finally:
+            if self.browser is not None:
+                self.close_browser()
 
+    def start_unsubscribe(self):
+        try:
+            user_input = input('Введите имя аккаунта: ')
+            self.username = data.user_dict[user_input]['login']
+            self.password = data.user_dict[user_input]['password']
+            self.login()
+            self.unsubscribe_for_all_users()
+            self.close_browser()
+        except BotException as ex:
+            self.exception_text = str(type(ex)).split("'")[1].split('.')[-1]
+            self.print_and_save_log_traceback()
 
-def select_subscribers():
-    try:
-        headless_and_proxy = input('Headless(y/n) Proxy(y/n): ')
-        with open('data/url_lists/public_url_for_subscribe.txt', 'r') as file:
-            iteration_number = len(file.readlines())//10
-        with open('data/non_filtered/user_urls_subscribers.txt', 'w'):
-            print('Файл очищен.')
-        for iter_count in range(iteration_number):
-            try:
-                user = f'bot{random.randrange(1, len(bot_dict) + 1)}'
-                print(f'Бот аккаунт - {user}', end=' =====> ')
-                username = bot_dict[user]['login']
-                password = bot_dict[user]['password']
-                my_bot = FunctionClass(username, password, headless_and_proxy)
-                my_bot.login()
-                my_bot.select_subscribers(iter_count)
-                my_bot.close_browser()
-            except Exception as ex:
-                print(ex)
-                continue
-    finally:
-        my_bot.close_browser()
-
-
-def subscribe_to_user_list():
-    try:
+    def start_subscribe(self):
         account_list = []
         user_input = input('Введите имя аккаунта: ')
-        headless_and_proxy = input('Headless(y/n) Proxy(y/n): ')
-
         for i in range(user_input.count(' ') + 1):
             account_list.append(user_input.split(' ')[i])
         for user in account_list:
             try:
-                username = user_dict[user]['login']
-                password = user_dict[user]['password']
-                my_bot = FunctionClass(username, password, headless_and_proxy)
-                my_bot.login()
-                my_bot.subscribe_to_user_list()
-                my_bot.close_browser()
-            except ActivBlocking:
+                self.username = data.user_dict[user]['login']
+                self.password = data.user_dict[user]['password']
+                self.login()
+                self.subscribe_to_user_list()
+                self.close_browser()
+            except BotException as ex:
+                self.exception_text = str(type(ex)).split("'")[1].split('.')[-1]
+                self.print_and_save_log_traceback()
                 continue
-    finally:
-        my_bot.close_browser()
 
+    def start_short_subscribe(self):
+        cycle_count = settings.ShortSubscribe.subscribe_limit_stop // settings.ShortSubscribe.subscribe_in_session
+        for self.cycle in range(cycle_count):
+            for account in range(len(data.preparatory_account)):
+                try:
+                    print(f'Аккаунт [{account + 1}/{len(data.preparatory_account)}]', end=' -- ')
+                    self.username = data.preparatory_account[str(account)]['login']
+                    self.password = data.preparatory_account[str(account)]['password']
+                    self.login()
+                    self.short_subscribe()
+                    self.close_browser()
+                except BotException as ex:
+                    self.exception_text = str(type(ex)).split("'")[1].split('.')[-1]
+                    self.print_and_save_log_traceback()
+                    continue
 
-def unsubscribe_for_all_users():
-    try:
-        user_input = input('Введите имя аккаунта: ')
-        username = user_dict[user_input]['login']
-        password = user_dict[user_input]['password']
-        headless_and_proxy = input('Headless(y/n) Proxy(y/n): ')
-        my_bot = FunctionClass(username, password, headless_and_proxy)
-        my_bot.login()
-        my_bot.unsubscribe_for_all_users()
-        my_bot.close_browser()
-    finally:
-        my_bot.close_browser()
+    def start_selection(self):
+        with open(F'data/url_lists/{self.mode["file_name"]}.txt', 'r') as file:
+            iteration_number = len(file.readlines()) // 10
+        with open('data/non_filtered/user_urls_subscribers.txt', 'w'):
+            print('Файл очищен.')
+        for iter_count in range(iteration_number):
+            try:
+                user = f'bot{random.randrange(1, len(data.bot_dict) + 1)}'
+                print(f'Бот аккаунт - {user}', end=' =====> ')
+                self.username = data.bot_dict[user]['login']
+                self.password = data.bot_dict[user]['password']
+                self.login()
+                self.select_subscribers(iter_count)
+                self.close_browser()
+            except BotException as ex:
+                self.exception_text = str(type(ex)).split("'")[1].split('.')[-1]
+                self.print_and_save_log_traceback()
+                continue
+
+    def start_filtered(self):
+        for i in range(SearchUser.number_restart_filtered):
+            try:
+                user = f'bot{random.randrange(1, len(data.bot_dict))}'
+                print(f'Бот аккаунт - {user}', end=' =====> ')
+                self.username = data.bot_dict[user]['login']
+                self.password = data.bot_dict[user]['password']
+                self.login()
+                self.filter_user_list()
+                self.close_browser()
+                time.sleep(SearchUser.timeout_between_restarts * 60)
+            except BotException as ex:
+                self.exception_text = str(type(ex)).split("'")[1].split('.')[-1]
+                self.print_and_save_log_traceback()
+                continue
 
 
 if __name__ == '__main__':
-    bot().run()
+    bot()

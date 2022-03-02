@@ -6,7 +6,7 @@ from selenium.webdriver.support import expected_conditions as ec
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.common.by import By
 from selenium.webdriver.common.keys import Keys
-from module.exception_module import LoginError, ActivBlocking, VerificationError, BotException
+from module.exception_module import LoginError, ActivBlocking, VerificationError
 from selenium import webdriver
 from data import proxy_list
 from settings import *
@@ -15,20 +15,28 @@ import traceback
 import random
 import pickle
 import time
-import re
 import json
 
 
 class BaseClass:
 
-    def __init__(self, username, password, headless_and_proxy, link='https://www.instagram.com/'):
+    def __init__(self):
 
-        self.link = link
-        self.username = username
-        self.password = password
+        self.link = 'https://www.instagram.com/'
+        self.username = None
+        self.password = None
+        self.browser = None
+        self.headless = True
+        self.proxy = True
+        self.working_mode = None
+        self.chrome_options = None
+        self.file_name = None
 
+        self.cycle = None
+        self.max_timeout = None
+        self.min_timeout = None
         self.mode = 'authorize'
-        self.count_iteration = 0
+        self.count_iteration = None
         self.count_limit = None
         self.subscribe = None
         self.timeout = None
@@ -36,26 +44,33 @@ class BaseClass:
         self.user_url = None
         self.exception_text = None
 
-        chrome_options = webdriver.ChromeOptions()
-        chrome_options.add_argument('--log-level=3')
-        if headless_and_proxy[0].lower() == 'y':
-            chrome_options.add_argument("--headless")
-        if headless_and_proxy[1].lower() == 'y':
-            chrome_options.add_argument(f'--proxy-server={proxy_list}')
-            self.browser = webdriver.Chrome(options=chrome_options)
-        else:
-            self.browser = webdriver.Chrome(options=chrome_options)
+    def browser_parameter(self):
+        self.chrome_options = webdriver.ChromeOptions()
+        self.chrome_options.add_argument('--log-level=3')
+        if self.headless is True:
+            self.chrome_options.add_argument("--headless")
+        if self.proxy is True:
+            self.chrome_options.add_argument(f'--proxy-server={proxy_list}')
+
+    def parameter_input(self):
+        self.working_mode = input('Укажите режим работы (-параметры): ')
+        if '-p' in self.working_mode:
+            self.proxy = False
+        if '-h' in self.working_mode:
+            self.headless = False
 
     def login(self):
         while True:
             try:
                 try:
-                    self.browser.get("https://api.myip.com/")
-                    # noinspection PyTypeChecker
-                    pre = self.search_element((By.TAG_NAME, "body"), type_wait=ec.presence_of_element_located).text
-                    ip = json.loads(pre)['ip']
-                    assert ip not in data.my_ip
-                    print(f'Подключение через прокси: {ip}')
+                    self.browser = webdriver.Chrome(options=self.chrome_options)
+                    if self.proxy is True:
+                        self.browser.get("https://api.myip.com/")
+                        # noinspection PyTypeChecker
+                        pre = self.search_element((By.TAG_NAME, "body"), type_wait=ec.presence_of_element_located).text
+                        ip = json.loads(pre)['ip']
+                        assert ip not in data.my_ip
+                        print(f'Подключение через прокси: {ip}')
 
                     self.browser.get(self.link)
                     assert self.should_be_home_page(), LoginErrorMessage.not_login_page
@@ -70,12 +85,11 @@ class BaseClass:
                     print('Залогинился через cookies.')
 
                 except AssertionError as assertion:
-                    assertion = str(assertion.args)
-                    text = re.sub("[)(',]", '', assertion)
+                    self.exception_text = str(assertion.args)[2:-3]
                     date = datetime.now().strftime("%d-%m %H:%M:%S")
-                    log = f'{date}  <вход через cookies> -- {self.username}: {text}\n'
+                    log = f'{date}  <вход через cookies> -- {self.username}: {self.exception_text}\n'
                     self.file_write('logs/authorize/authorize_error', log)
-                    raise LoginError(f'{text}')
+                    raise LoginError(f'{self.exception_text}')
 
                 except FileNotFoundError:
                     try:
@@ -313,7 +327,7 @@ class BaseClass:
     def should_be_login_button(self):
         try:
             # noinspection PyTypeChecker
-            self.search_element((By.CSS_SELECTOR, 'div:nth-child(6) > span > img'),
+            self.search_element((By.CSS_SELECTOR, 'div:nth-child(6) > span > img'), timeout=2,
                                 type_wait=ec.presence_of_element_located)
             exist = True
         except TimeoutException:
@@ -403,7 +417,7 @@ class BaseClass:
     def should_be_verification_form(self):
         try:
             # noinspection PyTypeChecker
-            self.search_element((By.CSS_SELECTOR, 'div.ctQZg.KtFt3 > button > div'), timeout=1)
+            self.search_element((By.CSS_SELECTOR, 'div.ctQZg.KtFt3 > button > div'), timeout=2)
             exist = False
         except TimeoutException:
             exist = True
@@ -440,7 +454,7 @@ class BaseClass:
             while iteration_count < iteration_limit:
                 iteration_count += 1
                 button.click()
-                time.sleep(random.randrange(Subscribe.min_timeout, Subscribe.max_timeout))
+                time.sleep(random.randrange(self.min_timeout, self.max_timeout))
                 assert self.should_be_subscribe_and_unsubscribe_blocking(), ErrorMessage.subscribe_blocking
                 self.file_write('ignore_list', self.user_url)
                 self.count_iteration += 1

@@ -63,20 +63,55 @@ class FunctionClass(FilterClass):
                 self.count_iteration += 1
                 continue
 
+    def short_subscribe(self):
+        self.mode = 'short_subscribe'
+
+        self.min_timeout = ShortSubscribe.min_timeout
+        self.max_timeout = ShortSubscribe.max_timeout
+        self.count_iteration = int(str(self.cycle) + str(0))
+        self.count_limit = (self.cycle + 1) * ShortSubscribe.subscribe_in_session
+        user_list = self.difference_sets('filtered/user_urls_subscribers', 'ignore_list')
+
+        self.go_to_my_profile_page()
+
+        for self.user_url in user_list:
+            try:
+                self.go_to_user_page()
+                self.press_to_button_subscribe()
+
+                if self.count_iteration >= self.count_limit:
+                    user_list = self.difference_sets('filtered/user_urls_subscribers', 'ignore_list')
+                    print(f'Подписался на {self.count_limit} профилей. Перехожу в следующий аккаунт.',
+                          f'Осталось профилей - {len(user_list)}')
+                    break
+
+            except AssertionError as assertion:
+                self.exception_text = str(assertion.args)
+                self.print_log_assert_and_control_cycle()
+
+            except Exception as ex:
+                self.exception_text = str(type(ex)).split("'")[1].split('.')[-1]
+                self.print_and_save_log_traceback()
+                continue
+
     # подписывается на юзеров из файла
     def subscribe_to_user_list(self):
-
-        subscribe_in_session = Subscribe.subscribe_in_session
-        sleep_between_iterations = Subscribe.sleep_between_iterations
         """
         subscribe_in_session - количество подписок в одном заходе.
         sleep_between_iterations - таймаут на каждые subscribe_in_session подписок.
         self.count_limit - количество подписок в задаче.
         """
         self.mode = 'subscribe'
+
+        subscribe_in_session = Subscribe.subscribe_in_session
+        sleep_between_iterations = Subscribe.sleep_between_iterations
+        subscribe_limit_stop = Subscribe.subscribe_limit_stop
+        self.min_timeout = Subscribe.min_timeout
+        self.max_timeout = Subscribe.max_timeout
+        self.count_iteration = 0
         user_list = self.difference_sets('filtered/user_urls_subscribers', 'ignore_list')
         self.go_to_my_profile_page()
-        self.count_limit = Subscribe.subscribe_limit_stop - self.subscribe
+        self.count_limit = subscribe_limit_stop - self.subscribe
 
         for self.user_url in user_list:
             try:
@@ -162,7 +197,7 @@ class FunctionClass(FilterClass):
 
         self.mode = 'selection'
         urls_public = []
-        self.file_read('url_lists/public_url_for_subscribe', urls_public)
+        self.file_read(f'url_lists/subscribers_urls', urls_public)
         self.count_iteration = iter_count * 10
         self.count_limit = len(urls_public)
         print(f'= = = = Итерация сбора {iter_count + 1} из {len(urls_public) // 10}. = = = =')

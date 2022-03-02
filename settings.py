@@ -55,6 +55,14 @@ class Subscribe:
     stop_word_dict = stop_word_dict
 
 
+class ShortSubscribe:
+    min_timeout = 5
+    max_timeout = 15
+    subscribe_in_session = 10
+    sleep_between_iterations = 5
+    subscribe_limit_stop = 40
+
+
 class SearchUser:
     """
     search_depth - количество профилей из меню поиска, попадающих в выборку, при сборе аудитории
