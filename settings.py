@@ -6,7 +6,6 @@ class StartSettings:
     web_driver_wait - сколько ждать появления элемента
     """
     web_driver_wait = 30
-    filtered_user_list_timeout = 1
     number_filter_iteration = 6
     sleep_page_not_found = 5
     err_proxy_timeout = 40

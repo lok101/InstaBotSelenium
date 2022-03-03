@@ -17,21 +17,7 @@ class StartBot(FunctionClass):
         try:
             self.parameter_input()
             self.browser_parameter()
-
-            if 'short' in self.working_mode:
-                self.start_short_subscribe()
-
-            elif 'sub' in self.working_mode:
-                self.start_short_subscribe()
-
-            elif 'uns' in self.working_mode:
-                self.start_short_subscribe()
-
-            elif 'sel' in self.working_mode:
-                self.start_short_subscribe()
-
-            elif 'short' in self.working_mode:
-                self.start_short_subscribe()
+            eval(f'self.start_{self.working_mode}()')
 
         except KeyboardInterrupt:
             print('Остановлено командой с клавиатуры.')
@@ -85,9 +71,9 @@ class StartBot(FunctionClass):
                     continue
 
     def start_selection(self):
-        with open(F'data/url_lists/{self.mode["file_name"]}.txt', 'r') as file:
+        with open(f'data/{self.read_file_path}', 'r') as file:
             iteration_number = len(file.readlines()) // 10
-        with open('data/non_filtered/user_urls_subscribers.txt', 'w'):
+        with open(f'data/{self.write_file_path}', 'w'):
             print('Файл очищен.')
         for iter_count in range(iteration_number):
             try:

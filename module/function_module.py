@@ -64,15 +64,22 @@ class FunctionClass(FilterClass):
                 continue
 
     def short_subscribe(self):
-        self.mode = 'short_subscribe'
+        try:
+            self.mode = 'short_subscribe'
+            self.min_timeout = ShortSubscribe.min_timeout
+            self.max_timeout = ShortSubscribe.max_timeout
+            self.count_iteration = int(str(self.cycle) + str(0))
+            self.count_limit = (self.cycle + 1) * ShortSubscribe.subscribe_in_session
+            user_list = self.difference_sets('filtered/user_urls_subscribers.txt', 'ignore_list.txt')
+            self.go_to_my_profile_page()
 
-        self.min_timeout = ShortSubscribe.min_timeout
-        self.max_timeout = ShortSubscribe.max_timeout
-        self.count_iteration = int(str(self.cycle) + str(0))
-        self.count_limit = (self.cycle + 1) * ShortSubscribe.subscribe_in_session
-        user_list = self.difference_sets('filtered/user_urls_subscribers', 'ignore_list')
+        except AssertionError as assertion:
+            self.exception_text = str(assertion.args)
+            self.print_log_assert_and_control_cycle()
 
-        self.go_to_my_profile_page()
+        except Exception as ex:
+            self.exception_text = str(type(ex)).split("'")[1].split('.')[-1]
+            self.print_and_save_log_traceback()
 
         for self.user_url in user_list:
             try:
@@ -80,7 +87,7 @@ class FunctionClass(FilterClass):
                 self.press_to_button_subscribe()
 
                 if self.count_iteration >= self.count_limit:
-                    user_list = self.difference_sets('filtered/user_urls_subscribers', 'ignore_list')
+                    user_list = self.difference_sets('filtered/user_urls_subscribers.txt', 'ignore_list.txt')
                     print(f'Подписался на {self.count_limit} профилей. Перехожу в следующий аккаунт.',
                           f'Осталось профилей - {len(user_list)}')
                     break
@@ -109,7 +116,7 @@ class FunctionClass(FilterClass):
         self.min_timeout = Subscribe.min_timeout
         self.max_timeout = Subscribe.max_timeout
         self.count_iteration = 0
-        user_list = self.difference_sets('filtered/user_urls_subscribers', 'ignore_list')
+        user_list = self.difference_sets('filtered/user_urls_subscribers.txt', 'ignore_list.txt')
         self.go_to_my_profile_page()
         self.count_limit = subscribe_limit_stop - self.subscribe
 
@@ -127,7 +134,7 @@ class FunctionClass(FilterClass):
                     print(f'{datetime.now().strftime("%H:%M:%S")} Подписался на очередные',
                           f'{subscribe_in_session} пользователей. Таймаут {sleep_between_iterations} минут.')
 
-                    user_list = self.difference_sets('filtered/user_urls_subscribers', 'ignore_list')
+                    user_list = self.difference_sets('filtered/user_urls_subscribers.txt', 'ignore_list.txt')
                     print(f'= = = = Осталось профилей для подписки - {len(user_list)} = = = =')
                     time.sleep(sleep_between_iterations * 60)
 
@@ -144,24 +151,22 @@ class FunctionClass(FilterClass):
     def filter_user_list(self):
 
         self.mode = 'filtered'
-        self.timeout = StartSettings.filtered_user_list_timeout
-        self.stop_word = 'Стоп-слово не присвоено на этапе модуля.'
         count_user_in_session = 0
         self.count_limit = 30
 
-        self.file_write('logs/assert_stop_word_log', f'\n{datetime.now().strftime("%d-%m %H:%M:%S")} - старт.\n')
-        self.file_write('logs/assert_bad_profile_log', f'\n{datetime.now().strftime("%d-%m %H:%M:%S")} - старт.\n')
+        self.file_write('logs/assert_stop_word_log.txt', f'\n{datetime.now().strftime("%d-%m %H:%M:%S")} - старт.\n')
+        self.file_write('logs/assert_bad_profile_log.txt', f'\n{datetime.now().strftime("%d-%m %H:%M:%S")} - старт.\n')
 
         while True:
             try:
                 user_list = self.difference_sets(
-                    'non_filtered/user_urls_subscribers',
-                    'ignore_list',
-                    'filtered/user_urls_subscribers'
+                    'non_filtered/user_urls_subscribers.txt',
+                    'ignore_list.txt',
+                    'filtered/user_urls_subscribers.txt'
                 )
                 user_list_count = len(self.difference_sets(
-                    'filtered/user_urls_subscribers',
-                    'ignore_list'
+                    'filtered/user_urls_subscribers.txt',
+                    'ignore_list.txt'
                 ))
                 print(
                     f'\nНе отфильтровано - <<<{len(user_list)}>>>. Готовых - {user_list_count}.',
@@ -173,7 +178,7 @@ class FunctionClass(FilterClass):
                     try:
                         self.go_to_user_page()
                         self.should_be_compliance_with_limits()
-                        self.file_write('filtered/user_urls_subscribers', self.user_url)
+                        self.file_write('filtered/user_urls_subscribers.txt', self.user_url)
                         count_user_in_session += 1
                         print('Подходит.')
 
@@ -197,7 +202,7 @@ class FunctionClass(FilterClass):
 
         self.mode = 'selection'
         urls_public = []
-        self.file_read(f'url_lists/subscribers_urls', urls_public)
+        self.file_read(self.read_file_path, urls_public)
         self.count_iteration = iter_count * 10
         self.count_limit = len(urls_public)
         print(f'= = = = Итерация сбора {iter_count + 1} из {len(urls_public) // 10}. = = = =')
@@ -221,8 +226,8 @@ class FunctionClass(FilterClass):
                     time.sleep(0.5)
 
                 user_urls = self.tag_search(ignore=self.username)
-                self.file_write('non_filtered/user_urls_subscribers', user_urls)
-                with open('data/non_filtered/user_urls_subscribers.txt', 'r') as file:
+                self.file_write(self.write_file_path, user_urls)
+                with open(f'data/{self.write_file_path}', 'r') as file:
                     size = len(file.readlines())
                     print(f'Успешно. Количество собранных пользователей: {size}.')
 

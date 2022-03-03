@@ -26,20 +26,22 @@ class BaseClass:
         self.username = None
         self.password = None
         self.browser = None
-        self.headless = True
-        self.proxy = True
         self.working_mode = None
         self.chrome_options = None
-        self.file_name = None
+        self.read_file_path = None
+        self.write_file_path = None
+
+        self.headless = True
+        self.proxy = True
+        self.load_strategy = True
 
         self.cycle = None
         self.max_timeout = None
         self.min_timeout = None
         self.mode = 'authorize'
-        self.count_iteration = None
+        self.count_iteration = 0
         self.count_limit = None
         self.subscribe = None
-        self.timeout = None
         self.stop_word = None
         self.user_url = None
         self.exception_text = None
@@ -51,13 +53,38 @@ class BaseClass:
             self.chrome_options.add_argument("--headless")
         if self.proxy is True:
             self.chrome_options.add_argument(f'--proxy-server={proxy_list}')
+        if self.load_strategy is True:
+            self.chrome_options.page_load_strategy = 'eager'
 
     def parameter_input(self):
-        self.working_mode = input('Укажите режим работы (-параметры): ')
-        if '-p' in self.working_mode:
+        user_input = input('Укажите режим работы (-параметры): ')
+        if '-p' in user_input:
             self.proxy = False
-        if '-h' in self.working_mode:
+        if '-h' in user_input:
             self.headless = False
+        if '-e' in user_input:
+            self.load_strategy = False
+
+        if 'short' in user_input.split(' ')[0]:
+            self.working_mode = 'short_subscribe'
+
+        elif 'sub' in user_input.split(' ')[0]:
+            self.working_mode = 'subscribe'
+
+        elif 'uns' in user_input.split(' ')[0]:
+            self.working_mode = 'unsubscribe'
+
+        elif 'sel' in user_input.split(' ')[0]:
+            self.working_mode = 'selection'
+            if '-short' in user_input:
+                self.read_file_path = 'url_lists/short_subscribers_urls.txt'
+                self.write_file_path = 'non_filtered/short_subscribers_urls.txt'
+            else:
+                self.read_file_path = 'url_lists/subscribers_urls.txt'
+                self.write_file_path = 'non_filtered/subscribers_urls.txt'
+
+        elif 'fil' in user_input.split(' ')[0]:
+            self.working_mode = 'filtered'
 
     def login(self):
         while True:
@@ -88,7 +115,7 @@ class BaseClass:
                     self.exception_text = str(assertion.args)[2:-3]
                     date = datetime.now().strftime("%d-%m %H:%M:%S")
                     log = f'{date}  <вход через cookies> -- {self.username}: {self.exception_text}\n'
-                    self.file_write('logs/authorize/authorize_error', log)
+                    self.file_write('logs/authorize/authorize_error.txt', log)
                     raise LoginError(f'{self.exception_text}')
 
                 except FileNotFoundError:
@@ -121,7 +148,7 @@ class BaseClass:
                         text = str(assertion.args)[2:-3]
                         date = datetime.now().strftime("%d-%m %H:%M:%S")
                         log = f'{date} -- {self.username}: {text}\n'
-                        self.file_write('logs/authorize/authorize_error', log)
+                        self.file_write('logs/authorize/authorize_error.txt', log)
                         print(f'= = = = {text} = = = =')
                         raise LoginError(f'{text}')
 
@@ -157,7 +184,7 @@ class BaseClass:
 
     @staticmethod
     def file_read(file_name, value, operating_mode='r'):
-        with open(f'data/{file_name}.txt', operating_mode) as file:
+        with open(f'data/{file_name}', operating_mode) as file:
             if isinstance(value, set):
                 for link in file:
                     value.add(link)
@@ -167,7 +194,7 @@ class BaseClass:
 
     @staticmethod
     def file_write(file_name, value, value2=None, operating_mode='a'):
-        with open(f'data/{file_name}.txt', operating_mode) as file:
+        with open(f'data/{file_name}', operating_mode) as file:
             if value2 is not None:
                 file.write(str(value) + '\n')
                 file.write(str(value2) + '\n \n')
@@ -185,7 +212,7 @@ class BaseClass:
     def print_and_save_log_traceback(self, end_str='\n'):
         traceback_text = traceback.format_exc().split('Stacktrace:')[0]
         date = datetime.now().strftime("%d-%m %H:%M:%S")
-        path = f'logs/{self.mode}/{self.exception_text}'
+        path = f'logs/{self.mode}/{self.exception_text}.txt'
         self.file_write(path, date, traceback_text)
         if 'CONNECTION_FAILED' in traceback_text:
             timeout = StartSettings.err_proxy_timeout
@@ -211,7 +238,7 @@ class BaseClass:
         if LoginErrorMessage.verification_form in self.exception_text:
             date = datetime.now().strftime("%d-%m %H:%M:%S")
             log = f'{date}  {self.mode} -- {self.username}: {self.exception_text}\n'
-            self.file_write('logs/authorize/authorize_error', log)
+            self.file_write('logs/authorize/authorize_error.txt', log)
             print('Получен запрос на верификацию.')
             raise VerificationError
 
@@ -220,10 +247,10 @@ class BaseClass:
                 print('Страница больше недоступна по этому адресу. Добавлена запись в лог.')
                 date = datetime.now().strftime("%d-%m %H:%M:%S")
                 log = f'{date} -- {self.user_url}\n'
-                self.file_write('logs/selection/invalid_url', log)
+                self.file_write('logs/selection/invalid_url.txt', log)
             else:
                 print('Страница больше недоступна.')
-                self.file_write('ignore_list', self.user_url)
+                self.file_write('ignore_list.txt', self.user_url)
 
         elif ErrorMessage.page_loading_error in self.exception_text:
             sleep = StartSettings.sleep_page_not_found
@@ -232,21 +259,19 @@ class BaseClass:
 
         elif FilterMessage.stop_word in self.exception_text:
             assert_log = f'{str(self.stop_word)} ===> {self.user_url}'
-            self.file_write('logs/assert_stop_word_log', assert_log)
-            self.file_write('ignore_list', self.user_url)
+            self.file_write('logs/assert_stop_word_log.txt', assert_log)
+            self.file_write('ignore_list.txt', self.user_url)
             print(f'{FilterMessage.stop_word}')
-            time.sleep(self.timeout)
 
         elif FilterMessage.bad_profile in self.exception_text:
             assert_log = f'{self.user_url}'
-            self.file_write('logs/assert_bad_profile_log', assert_log)
-            self.file_write('ignore_list', self.user_url)
+            self.file_write('logs/assert_bad_profile_log.txt', assert_log)
+            self.file_write('ignore_list.txt', self.user_url)
             print(f'{FilterMessage.bad_profile}')
-            time.sleep(self.timeout)
 
         else:
             if self.mode == 'filtered':
-                self.file_write('ignore_list', self.user_url)
+                self.file_write('ignore_list.txt', self.user_url)
                 print(f'{self.exception_text[2:-3]}')
             else:
                 print(f'Assert не был обработан -- {self.exception_text[2:-3]}')
@@ -323,11 +348,11 @@ class BaseClass:
         print('Ссылки на посты собраны.')
         return posts_url_list
 
-    # проверяет, если ли мини-иконка профиля (используется для проверки входа в аккаунт)
+    # проверяет, если ли мини-иконка домика вверху страницы (используется для проверки входа в аккаунт)
     def should_be_login_button(self):
         try:
             # noinspection PyTypeChecker
-            self.search_element((By.CSS_SELECTOR, 'div:nth-child(6) > span > img'), timeout=2,
+            self.search_element((By.CSS_SELECTOR, 'div.ctQZg.KtFt3 > div > div:nth-child(1)'), timeout=2,
                                 type_wait=ec.presence_of_element_located)
             exist = True
         except TimeoutException:
@@ -456,13 +481,14 @@ class BaseClass:
                 button.click()
                 time.sleep(random.randrange(self.min_timeout, self.max_timeout))
                 assert self.should_be_subscribe_and_unsubscribe_blocking(), ErrorMessage.subscribe_blocking
-                self.file_write('ignore_list', self.user_url)
+                if self.mode != 'short_subscribe':
+                    self.file_write('ignore_list.txt', self.user_url)
                 self.count_iteration += 1
                 print('Успешно.')
                 break
         else:
             print('Кнопка не найдена.')
-            self.file_write('ignore_list', self.user_url)
+            self.file_write('ignore_list.txt', self.user_url)
             time.sleep(random.randrange(Subscribe.min_timeout, Subscribe.max_timeout))
 
     # проверяет, находится ли на странице логина
