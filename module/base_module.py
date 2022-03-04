@@ -49,6 +49,8 @@ class BaseClass:
     def browser_parameter(self):
         self.chrome_options = webdriver.ChromeOptions()
         self.chrome_options.add_argument('--log-level=3')
+        self.chrome_options.add_argument('--ignore-certificate-errors-spki-list')
+        self.chrome_options.add_experimental_option('excludeSwitches', ['enable-logging'])
         if self.headless is True:
             self.chrome_options.add_argument("--headless")
         if self.proxy is True:
@@ -122,7 +124,6 @@ class BaseClass:
                     try:
                         browser = self.browser
                         browser.get(self.link)
-                        print(f'Логин с аккаунта --- {self.username}')
 
                         username_input = self.search_element((By.NAME, "username"))
                         username_input.clear()

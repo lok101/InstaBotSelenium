@@ -12,6 +12,10 @@ def bot():
     my_bot.start()
 
 
+def GUI_start(account, mode):
+    print(f'Задача {mode} для аккаунта {account} запущена.')
+
+
 class StartBot(FunctionClass):
     def start(self):
         try:
