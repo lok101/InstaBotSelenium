@@ -1,8 +1,8 @@
-from module.base_module import ActivBlocking
 from selenium.webdriver.support import expected_conditions as ec
-from module.message_text_module import ErrorMessage
-from selenium.webdriver.common.by import By
+from module.exception_module import BotException, FilterException
 from module.filter_module import FilterClass
+from selenium.webdriver.common.by import By
+from selenium import webdriver
 from datetime import datetime
 from settings import *
 import random
@@ -10,6 +10,30 @@ import time
 
 
 class FunctionClass(FilterClass):
+    def login(self):
+        while True:
+            try:
+                try:
+                    try:
+                        self.browser = webdriver.Chrome(options=self.chrome_options)
+                        if self.proxy:
+                            self.check_proxy_ip()
+                        self.browser.get(self.link)
+                        self.should_be_home_page()
+                        self.cookie_login()
+                        break
+
+                    except FileNotFoundError:
+                        self.not_cookie_login()
+                        break
+
+                except Exception as exception:
+                    self.exception = exception
+                    self.standard_exception_handling()
+                    break
+            except ConnectionError:
+                continue
+
     # отписка от всех
     def unsubscribe_for_all_users(self):
 
@@ -48,20 +72,19 @@ class FunctionClass(FilterClass):
                     unsubscribe_button.click()
                     time.sleep(random.randrange(min_sleep - 2, max_sleep - 2))
                     self.search_element((By.CSS_SELECTOR, "button.-Cab_")).click()
-                    assert self.should_be_subscribe_and_unsubscribe_blocking(), ErrorMessage.unsubscribe_blocking
+                    self.should_be_subscribe_and_unsubscribe_blocking()
 
                     print(f"{datetime.now().strftime('%H:%M:%S')}. Итерация #{count}")
                     count -= 1
 
-            except AssertionError as assertion:
-                self.exception_text = str(assertion.args)
-                self.print_log_assert_and_control_cycle()
+            except BotException as exception:
+                self.exception = exception
+                self.bot_exception_handling()
 
-            except Exception as ex:
-                self.exception_text = str(type(ex)).split("'")[1].split('.')[-1]
-                self.print_and_save_log_traceback()
+            except Exception as exception:
+                self.exception = exception
+                self.standard_exception_handling()
                 self.count_iteration += 1
-                continue
 
     def short_subscribe(self):
         try:
@@ -73,13 +96,13 @@ class FunctionClass(FilterClass):
             user_list = self.difference_sets('filtered/user_urls_subscribers.txt', 'ignore_list.txt')
             self.go_to_my_profile_page()
 
-        except AssertionError as assertion:
-            self.exception_text = str(assertion.args)
-            self.print_log_assert_and_control_cycle()
+        except BotException as exception:
+            self.exception = exception
+            self.bot_exception_handling()
 
-        except Exception as ex:
-            self.exception_text = str(type(ex)).split("'")[1].split('.')[-1]
-            self.print_and_save_log_traceback()
+        except Exception as exception:
+            self.exception = exception
+            self.standard_exception_handling()
 
         for self.user_url in user_list:
             try:
@@ -92,14 +115,13 @@ class FunctionClass(FilterClass):
                           f'Осталось профилей - {len(user_list)}')
                     break
 
-            except AssertionError as assertion:
-                self.exception_text = str(assertion.args)
-                self.print_log_assert_and_control_cycle()
+            except BotException as exception:
+                self.exception = exception
+                self.bot_exception_handling()
 
-            except Exception as ex:
-                self.exception_text = str(type(ex)).split("'")[1].split('.')[-1]
-                self.print_and_save_log_traceback()
-                continue
+            except Exception as exception:
+                self.exception = exception
+                self.standard_exception_handling()
 
     # подписывается на юзеров из файла
     def subscribe_to_user_list(self):
@@ -138,14 +160,13 @@ class FunctionClass(FilterClass):
                     print(f'= = = = Осталось профилей для подписки - {len(user_list)} = = = =')
                     time.sleep(sleep_between_iterations * 60)
 
-            except AssertionError as assertion:
-                self.exception_text = str(assertion.args)
-                self.print_log_assert_and_control_cycle()
+            except BotException as exception:
+                self.exception = exception
+                self.bot_exception_handling()
 
-            except Exception as ex:
-                self.exception_text = str(type(ex)).split("'")[1].split('.')[-1]
-                self.print_and_save_log_traceback()
-                continue
+            except Exception as exception:
+                self.exception = exception
+                self.standard_exception_handling()
 
     # фильтрует список профилей
     def filter_user_list(self):
@@ -154,46 +175,44 @@ class FunctionClass(FilterClass):
         count_user_in_session = 0
         self.count_limit = 30
 
-        self.file_write('logs/assert_stop_word_log.txt', f'\n{datetime.now().strftime("%d-%m %H:%M:%S")} - старт.\n')
-        self.file_write('logs/assert_bad_profile_log.txt', f'\n{datetime.now().strftime("%d-%m %H:%M:%S")} - старт.\n')
+        self.file_write('logs/stop_word_log.txt', f'\n{datetime.now().strftime("%d-%m %H:%M:%S")} - старт.\n')
+        self.file_write('logs/bad_profile_log.txt', f'\n{datetime.now().strftime("%d-%m %H:%M:%S")} - старт.\n')
 
         while True:
-            try:
-                user_list = self.difference_sets(
-                    'non_filtered/user_urls_subscribers.txt',
-                    'ignore_list.txt',
-                    'filtered/user_urls_subscribers.txt'
-                )
-                user_list_count = len(self.difference_sets(
-                    'filtered/user_urls_subscribers.txt',
-                    'ignore_list.txt'
-                ))
-                print(
-                    f'\nНе отфильтровано - <<<{len(user_list)}>>>. Готовых - {user_list_count}.',
-                    f'Отобрано в сессии - {count_user_in_session}.\n')
+            user_list = self.difference_sets(
+                'non_filtered/user_urls_subscribers.txt',
+                'ignore_list.txt',
+                'filtered/user_urls_subscribers.txt'
+            )
+            user_list_count = len(self.difference_sets(
+                'filtered/user_urls_subscribers.txt',
+                'ignore_list.txt'
+            ))
+            print(
+                f'\nНе отфильтровано - <<<{len(user_list)}>>>. Готовых - {user_list_count}.',
+                f'Отобрано в сессии - {count_user_in_session}.\n')
 
-                for i in range(self.count_limit):
-                    self.user_url = user_list.pop()
-                    self.count_iteration = i
-                    try:
-                        self.go_to_user_page()
-                        self.should_be_compliance_with_limits()
-                        self.file_write('filtered/user_urls_subscribers.txt', self.user_url)
-                        count_user_in_session += 1
-                        print('Подходит.')
+            for i in range(self.count_limit):
+                self.user_url = user_list.pop()
+                self.count_iteration = i
+                try:
+                    self.go_to_user_page()
+                    self.should_be_compliance_with_limits()
+                    self.file_write('filtered/user_urls_subscribers.txt', self.user_url)
+                    count_user_in_session += 1
+                    print('Подходит.')
 
-                    except AssertionError as assertion:
-                        self.exception_text = str(assertion.args)
-                        self.print_log_assert_and_control_cycle()
+                except FilterException as exception:
+                    self.exception = exception
+                    self.filter_exception_handling()
 
-                    except Exception as ex:
-                        self.exception_text = str(type(ex)).split("'")[1].split('.')[-1]
-                        self.print_and_save_log_traceback()
-                        continue
+                except BotException as exception:
+                    self.exception = exception
+                    self.bot_exception_handling()
 
-            except ActivBlocking:
-                print('= = = = МИКРОБАН АКТИВНОСТИ = = = =')
-                break
+                except Exception as exception:
+                    self.exception = exception
+                    self.standard_exception_handling()
 
     # собирает пользователей "по конкуренту" со списка ссылок
     def select_subscribers(self, iter_count):
@@ -231,11 +250,7 @@ class FunctionClass(FilterClass):
                     size = len(file.readlines())
                     print(f'Успешно. Количество собранных пользователей: {size}.')
 
-            except AssertionError as assertion:
-                self.exception_text = str(assertion.args)
-                self.print_log_assert_and_control_cycle()
-
-            except Exception as ex:
-                self.exception_text = str(type(ex)).split("'")[1].split('.')[-1]
-                self.print_and_save_log_traceback()
+            except Exception as exception:
+                self.exception = exception
+                self.standard_exception_handling()
                 continue

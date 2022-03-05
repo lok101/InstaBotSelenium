@@ -1,9 +1,10 @@
 class ErrorMessage:
     page_loading_error = 'Ошибка загрузки страницы.'
     activiti_blocking = 'Микробан активности.'
+    subscribe_unsubscribe_blocking = 'Микробан подписки/отписки.'
     subscribe_blocking = 'Микробан подписки.'
     unsubscribe_blocking = 'Микробан отписки.'
-    page_not_found = 'Страница не существует.'
+    page_not_exist = 'Страница не существует.'
 
 
 class FilterMessage:
@@ -21,7 +22,7 @@ class FilterMessage:
 class LoginErrorMessage:
     input_code_from_sms = 'Требуется код из СМС.'
     input_phone_number = 'Требуется ввод номера телефона.'
-    verification_email = 'Подозрительная попытка входа.'
+    verification_email = 'Требуется подтверждение почты.'
     login_form_error = 'Ошибка авторизации. (Красный текст под формой).'
     not_login = 'Не получилось залогиниться.'
     not_login_cookies = 'Не получилось залогиниться через Cookies.'

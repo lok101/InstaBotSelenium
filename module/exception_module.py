@@ -1,14 +1,55 @@
+class BotCriticalException(Exception):
+    def __init__(self, message):
+        self.message = message
+
+    def __str__(self):
+        return f'{self.__class__.__name__}, {self.message} '
+
+
+class LoginError(BotCriticalException):
+    pass
+
+
+class ActivBlocking(BotCriticalException):
+    pass
+
+
+class VerificationError(BotCriticalException):
+    pass
+
+
 class BotException(Exception):
+    def __init__(self, message):
+        self.message = message
+
+    def __str__(self):
+        return f'{self.__class__.__name__}, {self.message} '
+
+
+class UserPageNotExist(BotException):
     pass
 
 
-class LoginError(BotException):
+class PageLoadingError(BotException):
     pass
 
 
-class ActivBlocking(BotException):
-    pass
+class FilterException(Exception):
+    def __init__(self, message):
+        self.message = message
+
+    def __str__(self):
+        return f'{self.__class__.__name__}, {self.message} '
 
 
-class VerificationError(BotException):
+class StopWordException(FilterException):
+    def __init__(self, message, stop_word):
+        super(StopWordException, self).__init__(message)
+        self.stop_word = stop_word
+
+    def __str__(self):
+        return f'{self.__class__.__name__}, {self.message}. Стоп-слово: {self.stop_word} '
+
+
+class BadProfileException(FilterException):
     pass

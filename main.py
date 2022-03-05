@@ -1,6 +1,6 @@
 import settings
 from module.function_module import FunctionClass
-from module.exception_module import BotException
+from module.exception_module import BotCriticalException
 from settings import SearchUser
 import data
 import random
@@ -12,10 +12,6 @@ def bot():
     my_bot.start()
 
 
-def GUI_start(account, mode):
-    print(f'Задача {mode} для аккаунта {account} запущена.')
-
-
 class StartBot(FunctionClass):
     def start(self):
         try:
@@ -23,11 +19,10 @@ class StartBot(FunctionClass):
             self.browser_parameter()
             eval(f'self.start_{self.working_mode}()')
 
-        except KeyboardInterrupt:
-            print('Остановлено командой с клавиатуры.')
         finally:
+            print('what')
             if self.browser is not None:
-                self.close_browser()
+                self.browser.quit()
 
     def start_unsubscribe(self):
         try:
@@ -36,10 +31,10 @@ class StartBot(FunctionClass):
             self.password = data.user_dict[user_input]['password']
             self.login()
             self.unsubscribe_for_all_users()
-            self.close_browser()
-        except BotException as ex:
-            self.exception_text = str(type(ex)).split("'")[1].split('.')[-1]
-            self.print_and_save_log_traceback()
+            self.browser.quit()
+        except BotCriticalException as exception:
+            self.exception = exception
+            self.bot_critical_exception_handling()
 
     def start_subscribe(self):
         account_list = []
@@ -52,11 +47,10 @@ class StartBot(FunctionClass):
                 self.password = data.user_dict[user]['password']
                 self.login()
                 self.subscribe_to_user_list()
-                self.close_browser()
-            except BotException as ex:
-                self.exception_text = str(type(ex)).split("'")[1].split('.')[-1]
-                self.print_and_save_log_traceback()
-                continue
+                self.browser.quit()
+            except BotCriticalException as exception:
+                self.exception = exception
+                self.bot_critical_exception_handling()
 
     def start_short_subscribe(self):
         cycle_count = settings.ShortSubscribe.subscribe_limit_stop // settings.ShortSubscribe.subscribe_in_session
@@ -68,11 +62,10 @@ class StartBot(FunctionClass):
                     self.password = data.preparatory_account[str(account)]['password']
                     self.login()
                     self.short_subscribe()
-                    self.close_browser()
-                except BotException as ex:
-                    self.exception_text = str(type(ex)).split("'")[1].split('.')[-1]
-                    self.print_and_save_log_traceback()
-                    continue
+                    self.browser.quit()
+                except BotCriticalException as exception:
+                    self.exception = exception
+                    self.bot_critical_exception_handling()
 
     def start_selection(self):
         with open(f'data/{self.read_file_path}', 'r') as file:
@@ -87,11 +80,10 @@ class StartBot(FunctionClass):
                 self.password = data.bot_dict[user]['password']
                 self.login()
                 self.select_subscribers(iter_count)
-                self.close_browser()
-            except BotException as ex:
-                self.exception_text = str(type(ex)).split("'")[1].split('.')[-1]
-                self.print_and_save_log_traceback()
-                continue
+                self.browser.quit()
+            except BotCriticalException as exception:
+                self.exception = exception
+                self.bot_critical_exception_handling()
 
     def start_filtered(self):
         for i in range(SearchUser.number_restart_filtered):
@@ -102,12 +94,11 @@ class StartBot(FunctionClass):
                 self.password = data.bot_dict[user]['password']
                 self.login()
                 self.filter_user_list()
-                self.close_browser()
+                self.browser.quit()
                 time.sleep(SearchUser.timeout_between_restarts * 60)
-            except BotException as ex:
-                self.exception_text = str(type(ex)).split("'")[1].split('.')[-1]
-                self.print_and_save_log_traceback()
-                continue
+            except BotCriticalException as exception:
+                self.exception = exception
+                self.bot_critical_exception_handling()
 
 
 if __name__ == '__main__':

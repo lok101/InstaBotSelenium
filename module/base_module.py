@@ -1,19 +1,17 @@
-import data
-from module.message_text_module import ErrorMessage, LoginErrorMessage, FilterMessage
-from datetime import datetime
 from selenium.common.exceptions import TimeoutException, StaleElementReferenceException
+from module.message_text_module import ErrorMessage, LoginErrorMessage
 from selenium.webdriver.support import expected_conditions as ec
 from selenium.webdriver.support.ui import WebDriverWait
-from selenium.webdriver.common.by import By
 from selenium.webdriver.common.keys import Keys
-from module.exception_module import LoginError, ActivBlocking, VerificationError
+from selenium.webdriver.common.by import By
+from module.exception_module import *
 from selenium import webdriver
-from data import proxy_list
+from datetime import datetime
 from settings import *
-import requests
+from data import *
 import traceback
-import random
 import pickle
+import random
 import time
 import json
 
@@ -42,8 +40,10 @@ class BaseClass:
         self.count_iteration = 0
         self.count_limit = None
         self.subscribe = None
-        self.stop_word = None
         self.user_url = None
+
+        self.exception = None
+        self.exception_name = None
         self.exception_text = None
 
     def browser_parameter(self):
@@ -88,88 +88,48 @@ class BaseClass:
         elif 'fil' in user_input.split(' ')[0]:
             self.working_mode = 'filtered'
 
-    def login(self):
-        while True:
-            try:
-                try:
-                    self.browser = webdriver.Chrome(options=self.chrome_options)
-                    if self.proxy is True:
-                        self.browser.get("https://api.myip.com/")
-                        # noinspection PyTypeChecker
-                        pre = self.search_element((By.TAG_NAME, "body"), type_wait=ec.presence_of_element_located).text
-                        ip = json.loads(pre)['ip']
-                        assert ip not in data.my_ip
-                        print(f'Подключение через прокси: {ip}')
+    def cookie_login(self):
+        self.browser.delete_all_cookies()
+        for cookie in pickle.load(open(f'data/cookies/{self.username}_cookies', 'rb')):
+            self.browser.add_cookie(cookie)
+        time.sleep(1)
+        self.browser.refresh()
+        self.should_be_verification_form()
+        self.should_be_login_button()
+        print('Залогинился через cookies.')
 
-                    self.browser.get(self.link)
-                    assert self.should_be_home_page(), LoginErrorMessage.not_login_page
-                    print(f'Логин с аккаунта - {self.username}', end=' ===> ')
-                    self.browser.delete_all_cookies()
-                    for cookie in pickle.load(open(f'data/cookies/{self.username}_cookies', 'rb')):
-                        self.browser.add_cookie(cookie)
-                    time.sleep(1)
-                    self.browser.refresh()
-                    assert self.should_be_verification_form(), LoginErrorMessage.verification_form
-                    assert self.should_be_login_button(), LoginErrorMessage.not_login_cookies
-                    print('Залогинился через cookies.')
+    def not_cookie_login(self):
+        self.browser.get(self.link)
 
-                except AssertionError as assertion:
-                    self.exception_text = str(assertion.args)[2:-3]
-                    date = datetime.now().strftime("%d-%m %H:%M:%S")
-                    log = f'{date}  <вход через cookies> -- {self.username}: {self.exception_text}\n'
-                    self.file_write('logs/authorize/authorize_error.txt', log)
-                    raise LoginError(f'{self.exception_text}')
+        username_input = self.search_element((By.NAME, "username"))
+        username_input.clear()
+        username_input.send_keys(self.username)
 
-                except FileNotFoundError:
-                    try:
-                        browser = self.browser
-                        browser.get(self.link)
+        password_input = self.search_element((By.NAME, "password"))
+        password_input.clear()
+        password_input.send_keys(self.password)
 
-                        username_input = self.search_element((By.NAME, "username"))
-                        username_input.clear()
-                        username_input.send_keys(self.username)
+        password_input.send_keys(Keys.ENTER)
+        time.sleep(5)
+        self.should_be_login_form_error()
+        self.should_be_verification_form()
+        self.should_be_verification_email()
+        self.should_be_phone_number_input()
+        self.should_be_verification_phone_number()
+        self.should_be_login_button()
 
-                        password_input = self.search_element((By.NAME, "password"))
-                        password_input.clear()
-                        password_input.send_keys(self.password)
+        # сохраняем cookies
+        pickle.dump(self.browser.get_cookies(), open(f'data/cookies/{self.username}_cookies', 'wb'))
+        print(f'Залогинился и создал cookies ===> data/cookies/{self.username}_cookies.')
 
-                        password_input.send_keys(Keys.ENTER)
-                        time.sleep(5)
-                        assert self.should_be_login_form_error(), LoginErrorMessage.login_form_error
-                        assert self.should_be_verification_form(), LoginErrorMessage.verification_form
-                        assert self.should_be_verification_email(), LoginErrorMessage.verification_email
-                        assert self.should_be_phone_number_input(), LoginErrorMessage.input_phone_number
-                        assert self.should_be_verification_phone_number(), LoginErrorMessage.input_code_from_sms
-                        assert self.should_be_login_button(), LoginErrorMessage.not_login
-
-                        # сохраняем cookies
-                        pickle.dump(browser.get_cookies(), open(f'data/cookies/{self.username}_cookies', 'wb'))
-
-                    except AssertionError as assertion:
-                        text = str(assertion.args)[2:-3]
-                        date = datetime.now().strftime("%d-%m %H:%M:%S")
-                        log = f'{date} -- {self.username}: {text}\n'
-                        self.file_write('logs/authorize/authorize_error.txt', log)
-                        print(f'= = = = {text} = = = =')
-                        raise LoginError(f'{text}')
-
-                    except Exception as ex:
-                        self.exception_text = str(type(ex)).split("'")[1].split('.')[-1]
-                        self.print_and_save_log_traceback()
-
-                    print(f'Залогинился и создал cookies ===> data/cookies/{self.username}_cookies.')
-
-                except Exception as ex:
-                    self.exception_text = str(type(ex)).split("'")[1].split('.')[-1]
-                    self.print_and_save_log_traceback()
-
-            except ConnectionError:
-                continue
-            else:
-                break
-
-    def close_browser(self):
-        self.browser.quit()
+    def check_proxy_ip(self):
+        self.browser.get("https://api.myip.com/")
+        # noinspection PyTypeChecker
+        pre = self.search_element((By.TAG_NAME, "body"), type_wait=ec.presence_of_element_located).text
+        actual_ip = json.loads(pre)['ip']
+        if actual_ip in my_ip:
+            raise ConnectionError('При подключении через прокси зафиксирован "родной" IP-адрес.')
+        print(f'Подключение через прокси: {actual_ip}')
 
     def get_link(self, locator):
         # noinspection PyTypeChecker
@@ -177,110 +137,9 @@ class BaseClass:
         url = item.get_attribute('src')
         return url
 
-    @staticmethod
-    def download_for_link(link):
-        get_img = requests.get(link)
-        with open('data/profile_avatar.jpg', 'wb') as img_file:
-            img_file.write(get_img.content)
-
-    @staticmethod
-    def file_read(file_name, value, operating_mode='r'):
-        with open(f'data/{file_name}', operating_mode) as file:
-            if isinstance(value, set):
-                for link in file:
-                    value.add(link)
-            elif isinstance(value, list):
-                for link in file:
-                    value.append(link)
-
-    @staticmethod
-    def file_write(file_name, value, value2=None, operating_mode='a'):
-        with open(f'data/{file_name}', operating_mode) as file:
-            if value2 is not None:
-                file.write(str(value) + '\n')
-                file.write(str(value2) + '\n \n')
-            elif isinstance(value, (list, set)):
-                if '\n' in value.pop():
-                    for item in value:
-                        file.write(item)
-                else:
-                    for item in value:
-                        file.write(item + '\n')
-            else:
-                file.write(str(value))
-
-    # сохраняет лог исключения в файл и печатает сообщение об исключении в консоль
-    def print_and_save_log_traceback(self, end_str='\n'):
-        traceback_text = traceback.format_exc().split('Stacktrace:')[0]
-        date = datetime.now().strftime("%d-%m %H:%M:%S")
-        path = f'logs/{self.mode}/{self.exception_text}.txt'
-        self.file_write(path, date, traceback_text)
-        if 'CONNECTION_FAILED' in traceback_text:
-            timeout = StartSettings.err_proxy_timeout
-            error_name = traceback_text.split('net::')[1].split('\n')[0]
-            print(f'>> {error_name}. Запись добавлена в лог. Таймаут {timeout} секунд.', end=end_str)
-            time.sleep(timeout)
-        else:
-            print(f'>> {self.mode} >> {self.exception_text}. Запись добавлена в лог.', end=end_str)
-
-    def print_log_assert_and_control_cycle(self):
-        if ErrorMessage.subscribe_blocking in self.exception_text:
-            print('= = = = МИКРОБАН ПОДПИСКИ = = = =')
-            raise ActivBlocking
-
-        if ErrorMessage.unsubscribe_blocking in self.exception_text:
-            print('= = = = МИКРОБАН ОТПИСКИ = = = =')
-            raise ActivBlocking
-
-        if ErrorMessage.activiti_blocking in self.exception_text:
-            print('= = = = МИКРОБАН АКТИВНОСТИ = = = =')
-            raise ActivBlocking
-
-        if LoginErrorMessage.verification_form in self.exception_text:
-            date = datetime.now().strftime("%d-%m %H:%M:%S")
-            log = f'{date}  {self.mode} -- {self.username}: {self.exception_text}\n'
-            self.file_write('logs/authorize/authorize_error.txt', log)
-            print('Получен запрос на верификацию.')
-            raise VerificationError
-
-        if ErrorMessage.page_not_found in self.exception_text:
-            if self.mode == 'selection':
-                print('Страница больше недоступна по этому адресу. Добавлена запись в лог.')
-                date = datetime.now().strftime("%d-%m %H:%M:%S")
-                log = f'{date} -- {self.user_url}\n'
-                self.file_write('logs/selection/invalid_url.txt', log)
-            else:
-                print('Страница больше недоступна.')
-                self.file_write('ignore_list.txt', self.user_url)
-
-        elif ErrorMessage.page_loading_error in self.exception_text:
-            sleep = StartSettings.sleep_page_not_found
-            print(f'<< Страница не загрузилась. Жду {sleep} секунд. >>')
-            time.sleep(sleep)
-
-        elif FilterMessage.stop_word in self.exception_text:
-            assert_log = f'{str(self.stop_word)} ===> {self.user_url}'
-            self.file_write('logs/assert_stop_word_log.txt', assert_log)
-            self.file_write('ignore_list.txt', self.user_url)
-            print(f'{FilterMessage.stop_word}')
-
-        elif FilterMessage.bad_profile in self.exception_text:
-            assert_log = f'{self.user_url}'
-            self.file_write('logs/assert_bad_profile_log.txt', assert_log)
-            self.file_write('ignore_list.txt', self.user_url)
-            print(f'{FilterMessage.bad_profile}')
-
-        else:
-            if self.mode == 'filtered':
-                self.file_write('ignore_list.txt', self.user_url)
-                print(f'{self.exception_text[2:-3]}')
-            else:
-                print(f'Assert не был обработан -- {self.exception_text[2:-3]}')
-
     # возвращает элемент с использованием явного ожидания
     def search_element(self, locator, timeout=StartSettings.web_driver_wait, type_wait=ec.element_to_be_clickable):
-        element = WebDriverWait(self.browser, timeout).until(type_wait(locator))
-        return element
+        return WebDriverWait(self.browser, timeout).until(type_wait(locator))
 
     # возвращает список по тегу
     def tag_search(self, parameter=1, ignore=None):
@@ -336,8 +195,7 @@ class BaseClass:
 
     # возвращает список из 9 постов по хештегу
     def select_url_posts_to_hashtag(self, hashtag):
-        browser = self.browser
-        browser.get(f'https://www.instagram.com/explore/tags/{hashtag}/')
+        self.browser.get(f'https://www.instagram.com/explore/tags/{hashtag}/')
         posts_block = self.search_element((By.XPATH, '//main/article/div[1]/div/div'))
         posts = posts_block.find_elements_by_tag_name('a')
         posts_url_list = []
@@ -349,159 +207,72 @@ class BaseClass:
         print('Ссылки на посты собраны.')
         return posts_url_list
 
-    # проверяет, если ли мини-иконка домика вверху страницы (используется для проверки входа в аккаунт)
-    def should_be_login_button(self):
-        try:
-            # noinspection PyTypeChecker
-            self.search_element((By.CSS_SELECTOR, 'div.ctQZg.KtFt3 > div > div:nth-child(1)'), timeout=2,
-                                type_wait=ec.presence_of_element_located)
-            exist = True
-        except TimeoutException:
-            exist = False
-        return exist
+    @staticmethod
+    def file_read(file_name, value, operating_mode='r'):
+        with open(f'data/{file_name}', operating_mode) as file:
+            if isinstance(value, set):
+                for link in file:
+                    value.add(link)
+            elif isinstance(value, list):
+                for link in file:
+                    value.append(link)
 
-    # проверяет наличие "микробана" на подписку/отписку
-    def should_be_subscribe_and_unsubscribe_blocking(self):
-        try:
-            # noinspection PyTypeChecker
-            self.search_element((By.CSS_SELECTOR, 'div._08v79 > h3'), timeout=2,
-                                type_wait=ec.presence_of_element_located)
-            exist = False
-        except TimeoutException:
-            exist = True
-        return exist
-
-    # проверяет наличие "микробана" на активность
-    def should_be_activity_blocking(self):
-        try:
-            # noinspection PyTypeChecker
-            error_message = self.search_element((By.CSS_SELECTOR, 'div > div.error-container > p'), timeout=2,
-                                                type_wait=ec.presence_of_element_located)
-            if 'Подождите несколько минут, прежде чем пытаться снова' in error_message.text:
-                exist = False
-            else:
-                exist = True
-        except TimeoutException:
-            exist = True
-        return exist
-
-    # проверяет, существует ли страница по данной ссылке
-    def should_be_user_page(self):
-        while True:
-            try:
-                # noinspection PyTypeChecker
-                error_message = self.search_element((By.CSS_SELECTOR, 'div > div > h2'), timeout=1,
-                                                    type_wait=ec.presence_of_element_located)
-                if 'К сожалению, эта страница недоступна' in error_message.text:
-                    exist = False
+    @staticmethod
+    def file_write(file_name, value, value2=None, operating_mode='a'):
+        with open(f'data/{file_name}', operating_mode) as file:
+            if value2 is not None:
+                file.write(str(value) + '\n')
+                file.write(str(value2) + '\n \n')
+            elif isinstance(value, (list, set)):
+                if '\n' in value.pop():
+                    for item in value:
+                        file.write(item)
                 else:
-                    exist = True
-                break
+                    for item in value:
+                        file.write(item + '\n')
+            else:
+                file.write(str(value))
 
-            except TimeoutException:
-                exist = True
-                break
+    # сохраняет лог исключения в файл и печатает сообщение об исключении в консоль
+    def standard_exception_handling(self):
 
-            except StaleElementReferenceException:
-                continue
-        return exist
+        self.save_log_exception()
 
-    # проверяет, находится ли на странице инстаграм (ищет иконку справа-сверху)
-    def should_be_instagram_page(self):
-        try:
-            # noinspection PyTypeChecker
-            self.search_element((By.CSS_SELECTOR, '[href=\'/\']'), timeout=15,
-                                type_wait=ec.presence_of_element_located)
-            exist = True
-        except TimeoutException:
-            exist = False
-        return exist
-
-    # проверяет наличие окна "добавьте номер телефона"
-    def should_be_phone_number_input(self):
-        try:
-            # noinspection PyTypeChecker
-            self.search_element((By.CSS_SELECTOR, 'div.qF0y9.Igw0E.IwRSH.eGOV_._4EzTm.dQ9Hi > h3'), timeout=1,
-                                type_wait=ec.presence_of_element_located)
-            exist = False
-        except TimeoutException:
-            exist = True
-        return exist
-
-    # проверяет наличие окна "подтвердите номер телефона"
-    def should_be_verification_phone_number(self):
-        try:
-            # noinspection PyTypeChecker
-            self.search_element((By.XPATH, '/html/body/div[1]/section/main/div[2]/div/div/div/div[1]/div[1]/span'),
-                                timeout=1, type_wait=ec.presence_of_element_located)
-            exist = False
-        except TimeoutException:
-            exist = True
-        return exist
-
-    # проверяет наличие запроса на верификацию
-    def should_be_verification_form(self):
-        try:
-            # noinspection PyTypeChecker
-            self.search_element((By.CSS_SELECTOR, 'div.ctQZg.KtFt3 > button > div'), timeout=2)
-            exist = False
-        except TimeoutException:
-            exist = True
-        return exist
-
-    # проверяет наличие окна "подтвердите почту"
-    def should_be_verification_email(self):
-        try:
-            # noinspection PyTypeChecker
-            self.search_element((By.CSS_SELECTOR, 'div > div.GNbi9 > div > p'),
-                                timeout=1, type_wait=ec.presence_of_element_located)
-            exist = False
-        except TimeoutException:
-            exist = True
-        return exist
-
-    # проверяет наличие ошибки "Не получилось залогиниться" (красный шрифт под формой авторизации).
-    def should_be_login_form_error(self):
-        try:
-            # noinspection PyTypeChecker
-            self.search_element((By.CSS_SELECTOR, '#slfErrorAlert'),
-                                timeout=1, type_wait=ec.presence_of_element_located)
-            exist = False
-        except TimeoutException:
-            exist = True
-        return exist
-
-    # ищет и нажимает кнопку "подписаться"
-    def press_to_button_subscribe(self):
-        button = self.search_element((By.XPATH, '//button'))
-        if 'подписаться' in button.text.lower():
-            iteration_limit = 10
-            iteration_count = 0
-            while iteration_count < iteration_limit:
-                iteration_count += 1
-                button.click()
-                time.sleep(random.randrange(self.min_timeout, self.max_timeout))
-                assert self.should_be_subscribe_and_unsubscribe_blocking(), ErrorMessage.subscribe_blocking
-                if self.mode != 'short_subscribe':
-                    self.file_write('ignore_list.txt', self.user_url)
-                self.count_iteration += 1
-                print('Успешно.')
-                break
+        if 'CONNECTION_FAILED' in self.exception_text:
+            timeout = StartSettings.err_proxy_timeout
+            error_name = self.exception_text.split('net::')[1].split('\n')[0]
+            print(f'>> {self.mode} >> {error_name}. Запись добавлена в лог. Таймаут {timeout} секунд.')
+            time.sleep(timeout)
+            if self.mode == 'authorize':
+                raise ConnectionError
         else:
-            print('Кнопка не найдена.')
-            self.file_write('ignore_list.txt', self.user_url)
-            time.sleep(random.randrange(Subscribe.min_timeout, Subscribe.max_timeout))
+            print(f'>> {self.mode} >> {self.exception_name}. Запись добавлена в лог.')
 
-    # проверяет, находится ли на странице логина
-    def should_be_home_page(self):
-        try:
-            # noinspection PyTypeChecker
-            self.search_element((By.NAME, "username"),
-                                timeout=10, type_wait=ec.presence_of_element_located)
-            exist = True
-        except TimeoutException:
-            exist = False
-        return exist
+    def bot_critical_exception_handling(self):
+        self.save_log_exception()
+        print(f'>> {self.mode} >> {self.exception_name}. Запись добавлена в лог.')
+
+    def bot_exception_handling(self):
+        self.save_log_exception()
+        print(f'>> {self.mode} >> {self.exception_name}. Запись добавлена в лог.')
+
+    def filter_exception_handling(self):
+        self.save_log_exception()
+        print(f'>> {self.mode} >> {self.exception_name}. Запись добавлена в лог.')
+
+    def save_log_exception(self):
+        self.exception_name = str(type(self.exception)).split("'")[1].split('.')[-1]
+        date = datetime.now().strftime("%d-%m %H:%M:%S")
+        path = f'logs/{self.mode}/{self.exception_name}.txt'
+        if isinstance(self.exception, (StopWordException, BadProfileException)):
+            # подставляет ссылку, и текст исключения, отбрасывая название исключения
+            self.exception_text = self.user_url + ' ' + str(self.exception).split(f'{self.exception_name}, ')[1]
+            self.file_write(path, date, self.exception_text)
+        elif isinstance(self.exception, FilterException):
+            self.exception_text = traceback.format_exc().split('Stacktrace:')[0]
+        else:
+            self.exception_text = traceback.format_exc().split('Stacktrace:')[0]
+            self.file_write(path, date, self.exception_text)
 
     # возвращает количество постов, подписчиков, подписок и коэффициент подписки/подписчики
     def return_number_posts_subscribe_and_subscribers(self):
@@ -538,30 +309,7 @@ class BaseClass:
 
         return dict_return
 
-    # переходит на страницу по ссылке, запускает проверки на наличие страницы, загрузку страницы и наличие микробана
-    def go_to_user_page(self, end_str=' ===> '):
-        self.browser.get(self.user_url)
-        username = self.user_url.split("/")[-2]
-        print(
-          f'{datetime.now().strftime("%H:%M:%S")} - {self.username} - [{self.count_iteration + 1}/{self.count_limit}]',
-          f'Перешёл в профиль: {username}', end=end_str)
-
-        assert self.should_be_instagram_page(), ErrorMessage.page_loading_error
-        assert self.should_be_activity_blocking(), ErrorMessage.activiti_blocking
-        assert self.should_be_user_page(), ErrorMessage.page_not_found
-        assert self.should_be_verification_form(), LoginErrorMessage.verification_form
-
-    # переходит на свою страницу, запускает проверки на загрузку страницы и наличие микробана
-    # возвращает количество подписок
-    def go_to_my_profile_page(self, end_str='\n'):
-        url = f'https://www.instagram.com/{self.username}/'
-        self.browser.get(url)
-        assert self.should_be_instagram_page(), ErrorMessage.page_loading_error
-        assert self.should_be_activity_blocking(), ErrorMessage.activiti_blocking
-        assert self.should_be_verification_form(), LoginErrorMessage.verification_form
-        self.subscribe = self.return_number_posts_subscribe_and_subscribers()['subs']
-        print(f"Количество подписок: {self.subscribe}", end=end_str)
-
+    # возвращает результат вычитания второго и третьего множества из первого
     def difference_sets(self, item1, item2, item3=None):
         user_set1, user_set2, user_set3 = set(), set(), set()
         if item3 is not None:
@@ -583,3 +331,173 @@ class BaseClass:
                 self.file_read(item2, user_set2)
                 final_set = item1.difference(user_set2)
         return final_set
+
+    # ищет и нажимает кнопку "подписаться"
+    def press_to_button_subscribe(self):
+        button = self.search_element((By.XPATH, '//button'))
+        if 'подписаться' in button.text.lower():
+            iteration_limit = 10
+            iteration_count = 0
+            while iteration_count < iteration_limit:
+                iteration_count += 1
+                button.click()
+                time.sleep(random.randrange(self.min_timeout, self.max_timeout))
+                assert self.should_be_subscribe_and_unsubscribe_blocking(), ErrorMessage.subscribe_blocking
+                if self.mode != 'short_subscribe':
+                    self.file_write('ignore_list.txt', self.user_url)
+                self.count_iteration += 1
+                print('Успешно.')
+                break
+        else:
+            print('Кнопка не найдена.')
+            self.file_write('ignore_list.txt', self.user_url)
+            time.sleep(random.randrange(Subscribe.min_timeout, Subscribe.max_timeout))
+
+    # переходит на страницу по ссылке, запускает проверки на наличие страницы, загрузку страницы и наличие микробана
+    def go_to_user_page(self, end_str=' ===> '):
+        self.browser.get(self.user_url)
+        username = self.user_url.split("/")[-2]
+        print(
+          f'{datetime.now().strftime("%H:%M:%S")} - {self.username} - [{self.count_iteration + 1}/{self.count_limit}]',
+          f'Перешёл в профиль: {username}', end=end_str)
+
+        self.should_be_instagram_page()
+        self.should_be_activity_blocking()
+        self.should_be_user_page()
+        self.should_be_verification_form()
+
+    # переходит на свою страницу, запускает проверки, возвращает количество подписок
+    def go_to_my_profile_page(self, end_str='\n'):
+        url = f'https://www.instagram.com/{self.username}/'
+        self.browser.get(url)
+        self.should_be_instagram_page()
+        self.should_be_activity_blocking()
+        self.should_be_verification_form()
+
+        self.subscribe = self.return_number_posts_subscribe_and_subscribers()['subs']
+        print(f"Количество подписок: {self.subscribe}", end=end_str)
+
+    # проверяет наличие окна "добавьте номер телефона"
+    def should_be_phone_number_input(self):
+        try:
+            # noinspection PyTypeChecker
+            self.search_element((By.CSS_SELECTOR, 'div.qF0y9.Igw0E.IwRSH.eGOV_._4EzTm.dQ9Hi > h3'), timeout=1,
+                                type_wait=ec.presence_of_element_located)
+            raise LoginError(LoginErrorMessage.input_phone_number)
+
+        except TimeoutException:
+            pass
+
+    # проверяет наличие окна "подтвердите номер телефона"
+    def should_be_verification_phone_number(self):
+        try:
+            # noinspection PyTypeChecker
+            self.search_element((By.XPATH, '/html/body/div[1]/section/main/div[2]/div/div/div/div[1]/div[1]/span'),
+                                timeout=1, type_wait=ec.presence_of_element_located)
+            raise LoginError(LoginErrorMessage.input_code_from_sms)
+
+        except TimeoutException:
+            pass
+
+    # проверяет наличие запроса на верификацию
+    def should_be_verification_form(self):
+        try:
+            # noinspection PyTypeChecker
+            self.search_element((By.CSS_SELECTOR, 'div.ctQZg.KtFt3 > button > div'), timeout=2)
+            raise LoginError(LoginErrorMessage.verification_form)
+
+        except TimeoutException:
+            pass
+
+    # проверяет наличие окна "подтвердите почту"
+    def should_be_verification_email(self):
+        try:
+            # noinspection PyTypeChecker
+            self.search_element((By.CSS_SELECTOR, 'div > div.GNbi9 > div > p'),
+                                timeout=1, type_wait=ec.presence_of_element_located)
+            raise LoginError(LoginErrorMessage.verification_email)
+        except TimeoutException:
+            pass
+
+    # проверяет наличие ошибки "Не получилось залогиниться" (красный шрифт под формой авторизации).
+    def should_be_login_form_error(self):
+        try:
+            # noinspection PyTypeChecker
+            self.search_element((By.CSS_SELECTOR, '#slfErrorAlert'),
+                                timeout=1, type_wait=ec.presence_of_element_located)
+            raise LoginError(LoginErrorMessage.login_form_error)
+        except TimeoutException:
+            pass
+
+    # проверяет, если ли мини-иконка домика вверху страницы (используется для проверки входа в аккаунт)
+    def should_be_login_button(self):
+        try:
+            # noinspection PyTypeChecker
+            self.search_element((By.CSS_SELECTOR, 'div.ctQZg.KtFt3 > div > div:nth-child(1)'), timeout=2,
+                                type_wait=ec.presence_of_element_located)
+
+        except TimeoutException:
+            raise LoginError(LoginErrorMessage.not_login)
+
+    # проверяет наличие "микробана" на подписку/отписку
+    def should_be_subscribe_and_unsubscribe_blocking(self):
+        try:
+            # noinspection PyTypeChecker
+            self.search_element((By.CSS_SELECTOR, 'div._08v79 > h3'), timeout=2,
+                                type_wait=ec.presence_of_element_located)
+            raise ActivBlocking(ErrorMessage.subscribe_unsubscribe_blocking)
+
+        except TimeoutException:
+            pass
+
+    # проверяет наличие "микробана" на активность
+    def should_be_activity_blocking(self):
+        try:
+            # noinspection PyTypeChecker
+            error_message = self.search_element((By.CSS_SELECTOR, 'div > div.error-container > p'), timeout=2,
+                                                type_wait=ec.presence_of_element_located)
+            if 'Подождите несколько минут, прежде чем пытаться снова' in error_message.text:
+                raise ActivBlocking(ErrorMessage.activiti_blocking)
+            else:
+                print('Неизвестное всплывающее окно при вызове "should_be_activity_blocking".')
+        except TimeoutException:
+            pass
+
+    # проверяет, существует ли страница по данной ссылке
+    def should_be_user_page(self):
+        while True:
+            try:
+                # noinspection PyTypeChecker
+                error_message = self.search_element((By.CSS_SELECTOR, 'div > div > h2'), timeout=1,
+                                                    type_wait=ec.presence_of_element_located)
+                if 'К сожалению, эта страница недоступна' in error_message.text:
+                    raise UserPageNotExist(ErrorMessage.page_not_exist)
+                else:
+                    print('Неизвестное окно при вызове "should_be_user_page".')
+                break
+
+            except TimeoutException:
+                break
+
+            except StaleElementReferenceException:
+                continue
+
+    # проверяет, находится ли на странице инстаграм (ищет логотип слева-сверху)
+    def should_be_instagram_page(self):
+        try:
+            # noinspection PyTypeChecker
+            self.search_element((By.CSS_SELECTOR, '[href=\'/\']'), timeout=15,
+                                type_wait=ec.presence_of_element_located)
+
+        except TimeoutException:
+            raise PageLoadingError(ErrorMessage.page_loading_error)
+
+    # проверяет, находится ли на странице логина
+    def should_be_home_page(self):
+        try:
+            # noinspection PyTypeChecker
+            self.search_element((By.NAME, "username"),
+                                timeout=10, type_wait=ec.presence_of_element_located)
+            print(f'Логин с аккаунта - {self.username}', end=' ===> ')
+        except TimeoutException:
+            raise LoginError(LoginErrorMessage.not_login_page)
