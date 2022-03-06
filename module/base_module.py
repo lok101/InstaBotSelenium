@@ -85,7 +85,7 @@ class BaseClass:
                 self.write_file_path = 'non_filtered/subscribers_urls.txt'
 
         elif 'fil' in user_input.split(' ')[0]:
-            self.working_mode = 'filtered'
+            self.set_mode_parameter('filtered')
 
     def cookie_login(self):
         self.browser.delete_all_cookies()
@@ -214,7 +214,7 @@ class BaseClass:
 
     @staticmethod
     def file_read(file_name, value, operating_mode='r'):
-        with open(f'data/{file_name}', operating_mode) as file:
+        with open(f'data/{file_name}', operating_mode, encoding='utf-8') as file:
             if isinstance(value, set):
                 for link in file:
                     value.add(link)
@@ -224,7 +224,7 @@ class BaseClass:
 
     @staticmethod
     def file_write(file_name, value, value2=None, operating_mode='a'):
-        with open(f'data/{file_name}', operating_mode) as file:
+        with open(f'data/{file_name}', operating_mode, encoding='utf-8') as file:
             if value2 is not None:
                 file.write(str(value) + '\n')
                 file.write(str(value2) + '\n \n')
@@ -257,6 +257,9 @@ class BaseClass:
             path = f'logs/{exception_name}.txt'
             self.file_write(path, self.username, self.exception)
 
+        elif not isinstance(self.exception, PageLoadingError):
+            self.file_write('ignore_list.txt', self.user_url)
+
         print(f'{self.exception}')
 
     def bot_filter_out_handling(self):
@@ -280,7 +283,7 @@ class BaseClass:
         if 'CONNECTION_FAILED' in exception_text:
             timeout = StartSettings.err_proxy_timeout
             error_name = exception_text.split('net::')[1].split('\n')[0]
-            print(f'{date} -- {self.mode} >> {error_name}. Запись добавлена в лог. Таймаут {timeout} секунд.')
+            print(f'{date.split(" ")[1]} -- {self.mode} >> {error_name}. Запись добавлена в лог. Таймаут {timeout} секунд.')
             time.sleep(timeout)
             if self.mode == 'authorize':
                 raise ConnectionError
@@ -521,10 +524,7 @@ class BaseClass:
                 if 'К сожалению, эта страница недоступна' in error_message.text:
                     raise UserPageNotExist(ErrorMessage.page_not_exist)
                 elif 'Это закрытый аккаунт' in error_message.text:
-                    if self.mode == 'filtered':
-                        raise EmptyProfile(FilterMessage.profile_closed)
-                    else:
-                        raise BotNotCriticalException(FilterMessage.profile_closed)
+                    raise BotNotCriticalException(FilterMessage.profile_closed)
                 elif 'Вам исполнилось' in error_message.text:
                     raise BotNotCriticalException(ErrorMessage.check_age)
                 else:
