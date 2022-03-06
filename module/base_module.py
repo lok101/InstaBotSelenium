@@ -1,5 +1,5 @@
 from selenium.common.exceptions import TimeoutException, StaleElementReferenceException
-from module.message_text_module import ErrorMessage, LoginErrorMessage
+from module.message_text_module import ErrorMessage, LoginErrorMessage, FilterMessage
 from selenium.webdriver.support import expected_conditions as ec
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.common.keys import Keys
@@ -43,7 +43,6 @@ class BaseClass:
         self.user_url = None
 
         self.exception = None
-        self.exception_name = None
         self.exception_text = None
 
     def browser_parameter(self):
@@ -129,7 +128,8 @@ class BaseClass:
         actual_ip = json.loads(pre)['ip']
         if actual_ip in my_ip:
             raise ConnectionError('При подключении через прокси зафиксирован "родной" IP-адрес.')
-        print(f'Подключение через прокси: {actual_ip}')
+        date = datetime.now().strftime("%H:%M:%S")
+        print(f'{date} Подключение через прокси: {actual_ip}', end=' ===> ')
 
     def get_link(self, locator):
         # noinspection PyTypeChecker
@@ -235,44 +235,31 @@ class BaseClass:
 
     # сохраняет лог исключения в файл и печатает сообщение об исключении в консоль
     def standard_exception_handling(self):
-
         self.save_log_exception()
-
-        if 'CONNECTION_FAILED' in self.exception_text:
-            timeout = StartSettings.err_proxy_timeout
-            error_name = self.exception_text.split('net::')[1].split('\n')[0]
-            print(f'>> {self.mode} >> {error_name}. Запись добавлена в лог. Таймаут {timeout} секунд.')
-            time.sleep(timeout)
-            if self.mode == 'authorize':
-                raise ConnectionError
-        else:
-            print(f'>> {self.mode} >> {self.exception_name}. Запись добавлена в лог.')
-
-    def bot_critical_exception_handling(self):
-        self.save_log_exception()
-        print(f'>> {self.mode} >> {self.exception_name}. Запись добавлена в лог.')
-
-    def bot_exception_handling(self):
-        self.save_log_exception()
-        print(f'>> {self.mode} >> {self.exception_name}. Запись добавлена в лог.')
-
-    def filter_exception_handling(self):
-        self.save_log_exception()
-        print(f'>> {self.mode} >> {self.exception_name}. Запись добавлена в лог.')
 
     def save_log_exception(self):
-        self.exception_name = str(type(self.exception)).split("'")[1].split('.')[-1]
+        exception_name = str(type(self.exception)).split("'")[1].split('.')[-1]
         date = datetime.now().strftime("%d-%m %H:%M:%S")
-        path = f'logs/{self.mode}/{self.exception_name}.txt'
+        path = f'logs/{self.mode}/{exception_name}.txt'
         if isinstance(self.exception, (StopWordException, BadProfileException)):
             # подставляет ссылку, и текст исключения, отбрасывая название исключения
-            self.exception_text = self.user_url + ' ' + str(self.exception).split(f'{self.exception_name}, ')[1]
+            self.exception_text = self.user_url + ' ' + str(self.exception).split(f'{exception_name}, ')[1]
             self.file_write(path, date, self.exception_text)
         elif isinstance(self.exception, FilterException):
             self.exception_text = traceback.format_exc().split('Stacktrace:')[0]
         else:
             self.exception_text = traceback.format_exc().split('Stacktrace:')[0]
             self.file_write(path, date, self.exception_text)
+
+        if 'CONNECTION_FAILED' in self.exception_text:
+            timeout = StartSettings.err_proxy_timeout
+            error_name = self.exception_text.split('net::')[1].split('\n')[0]
+            print(f'{date} -- {self.mode} >> {error_name}. Запись добавлена в лог. Таймаут {timeout} секунд.')
+            time.sleep(timeout)
+            if self.mode == 'authorize':
+                raise ConnectionError
+        else:
+            print(f'{date.split(" ")[1]} ----- logs/{self.mode}/{self.exception}')
 
     # возвращает количество постов, подписчиков, подписок и коэффициент подписки/подписчики
     def return_number_posts_subscribe_and_subscribers(self):
@@ -342,7 +329,7 @@ class BaseClass:
                 iteration_count += 1
                 button.click()
                 time.sleep(random.randrange(self.min_timeout, self.max_timeout))
-                assert self.should_be_subscribe_and_unsubscribe_blocking(), ErrorMessage.subscribe_blocking
+                self.should_be_subscribe_and_unsubscribe_blocking()
                 if self.mode != 'short_subscribe':
                     self.file_write('ignore_list.txt', self.user_url)
                 self.count_iteration += 1
@@ -358,8 +345,9 @@ class BaseClass:
         self.browser.get(self.user_url)
         username = self.user_url.split("/")[-2]
         print(
-          f'{datetime.now().strftime("%H:%M:%S")} - {self.username} - [{self.count_iteration + 1}/{self.count_limit}]',
-          f'Перешёл в профиль: {username}', end=end_str)
+            f'{datetime.now().strftime("%H:%M:%S")} - {self.username} - ',
+            f'[{self.count_iteration + 1}/{self.count_limit}]',
+            f'Перешёл в профиль: {username}', end=end_str)
 
         self.should_be_instagram_page()
         self.should_be_activity_blocking()
@@ -423,8 +411,10 @@ class BaseClass:
     def should_be_login_form_error(self):
         try:
             # noinspection PyTypeChecker
-            self.search_element((By.CSS_SELECTOR, '#slfErrorAlert'),
-                                timeout=1, type_wait=ec.presence_of_element_located)
+            element = self.search_element((By.CSS_SELECTOR, '#slfErrorAlert'),
+                                          timeout=1, type_wait=ec.presence_of_element_located)
+            if 'К сожалению, вы ввели неправильный пароль.' in element.text:
+                raise LoginError(LoginErrorMessage.error_pass)
             raise LoginError(LoginErrorMessage.login_form_error)
         except TimeoutException:
             pass
@@ -472,6 +462,8 @@ class BaseClass:
                                                     type_wait=ec.presence_of_element_located)
                 if 'К сожалению, эта страница недоступна' in error_message.text:
                     raise UserPageNotExist(ErrorMessage.page_not_exist)
+                elif 'Это закрытый аккаунт' in error_message.text:
+                    raise BotException(FilterMessage.profile_closed)
                 else:
                     print('Неизвестное окно при вызове "should_be_user_page".')
                 break
@@ -498,6 +490,6 @@ class BaseClass:
             # noinspection PyTypeChecker
             self.search_element((By.NAME, "username"),
                                 timeout=10, type_wait=ec.presence_of_element_located)
-            print(f'Логин с аккаунта - {self.username}', end=' ===> ')
+            print(f'Логин с аккаунта - {self.username}')
         except TimeoutException:
             raise LoginError(LoginErrorMessage.not_login_page)

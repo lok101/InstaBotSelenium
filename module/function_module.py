@@ -74,12 +74,12 @@ class FunctionClass(FilterClass):
                     self.search_element((By.CSS_SELECTOR, "button.-Cab_")).click()
                     self.should_be_subscribe_and_unsubscribe_blocking()
 
-                    print(f"{datetime.now().strftime('%H:%M:%S')}. Итерация #{count}")
+                    print(f"{datetime.now().strftime('%H:%M:%S')} Итерация #{count}")
                     count -= 1
 
             except BotException as exception:
                 self.exception = exception
-                self.bot_exception_handling()
+                self.standard_exception_handling()
 
             except Exception as exception:
                 self.exception = exception
@@ -96,11 +96,7 @@ class FunctionClass(FilterClass):
             user_list = self.difference_sets('filtered/user_urls_subscribers.txt', 'ignore_list.txt')
             self.go_to_my_profile_page()
 
-        except BotException as exception:
-            self.exception = exception
-            self.bot_exception_handling()
-
-        except Exception as exception:
+        except (Exception, BotException) as exception:
             self.exception = exception
             self.standard_exception_handling()
 
@@ -115,11 +111,7 @@ class FunctionClass(FilterClass):
                           f'Осталось профилей - {len(user_list)}')
                     break
 
-            except BotException as exception:
-                self.exception = exception
-                self.bot_exception_handling()
-
-            except Exception as exception:
+            except (Exception, BotException) as exception:
                 self.exception = exception
                 self.standard_exception_handling()
 
@@ -160,11 +152,7 @@ class FunctionClass(FilterClass):
                     print(f'= = = = Осталось профилей для подписки - {len(user_list)} = = = =')
                     time.sleep(sleep_between_iterations * 60)
 
-            except BotException as exception:
-                self.exception = exception
-                self.bot_exception_handling()
-
-            except Exception as exception:
+            except (Exception, BotException) as exception:
                 self.exception = exception
                 self.standard_exception_handling()
 
@@ -202,15 +190,7 @@ class FunctionClass(FilterClass):
                     count_user_in_session += 1
                     print('Подходит.')
 
-                except FilterException as exception:
-                    self.exception = exception
-                    self.filter_exception_handling()
-
-                except BotException as exception:
-                    self.exception = exception
-                    self.bot_exception_handling()
-
-                except Exception as exception:
+                except (Exception, BotException, FilterException) as exception:
                     self.exception = exception
                     self.standard_exception_handling()
 
@@ -250,7 +230,6 @@ class FunctionClass(FilterClass):
                     size = len(file.readlines())
                     print(f'Успешно. Количество собранных пользователей: {size}.')
 
-            except Exception as exception:
+            except (Exception, BotException) as exception:
                 self.exception = exception
                 self.standard_exception_handling()
-                continue

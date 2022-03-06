@@ -20,7 +20,6 @@ class StartBot(FunctionClass):
             eval(f'self.start_{self.working_mode}()')
 
         finally:
-            print('what')
             if self.browser is not None:
                 self.browser.quit()
 
@@ -34,7 +33,7 @@ class StartBot(FunctionClass):
             self.browser.quit()
         except BotCriticalException as exception:
             self.exception = exception
-            self.bot_critical_exception_handling()
+            self.standard_exception_handling()
 
     def start_subscribe(self):
         account_list = []
@@ -50,7 +49,7 @@ class StartBot(FunctionClass):
                 self.browser.quit()
             except BotCriticalException as exception:
                 self.exception = exception
-                self.bot_critical_exception_handling()
+                self.standard_exception_handling()
 
     def start_short_subscribe(self):
         cycle_count = settings.ShortSubscribe.subscribe_limit_stop // settings.ShortSubscribe.subscribe_in_session
@@ -65,7 +64,7 @@ class StartBot(FunctionClass):
                     self.browser.quit()
                 except BotCriticalException as exception:
                     self.exception = exception
-                    self.bot_critical_exception_handling()
+                    self.standard_exception_handling()
 
     def start_selection(self):
         with open(f'data/{self.read_file_path}', 'r') as file:
@@ -83,7 +82,7 @@ class StartBot(FunctionClass):
                 self.browser.quit()
             except BotCriticalException as exception:
                 self.exception = exception
-                self.bot_critical_exception_handling()
+                self.standard_exception_handling()
 
     def start_filtered(self):
         for i in range(SearchUser.number_restart_filtered):
@@ -98,7 +97,7 @@ class StartBot(FunctionClass):
                 time.sleep(SearchUser.timeout_between_restarts * 60)
             except BotCriticalException as exception:
                 self.exception = exception
-                self.bot_critical_exception_handling()
+                self.standard_exception_handling()
 
 
 if __name__ == '__main__':

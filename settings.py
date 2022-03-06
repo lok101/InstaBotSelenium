@@ -57,7 +57,7 @@ class Subscribe:
 class ShortSubscribe:
     min_timeout = 5
     max_timeout = 15
-    subscribe_in_session = 10
+    subscribe_in_session = 40
     sleep_between_iterations = 5
     subscribe_limit_stop = 40
 
