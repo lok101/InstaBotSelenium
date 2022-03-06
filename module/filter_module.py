@@ -1,10 +1,10 @@
 from selenium.common.exceptions import TimeoutException, StaleElementReferenceException
-from module.exception_module import FilterException, StopWordException, BadProfileException
+from module.exception_module import FilteredOut, StopWord, BadProfile, EmptyProfile
 from selenium.webdriver.support import expected_conditions as ec
 from module.message_text_module import FilterMessage
 from selenium.webdriver.common.by import By
 from module.base_module import BaseClass
-from settings import Subscribe
+from settings import Filtered
 import requests
 import hashlib
 
@@ -17,6 +17,8 @@ class FilterClass(BaseClass):
         self.should_be_subscribe()
         self.should_be_posts()
         self.check_posts_follows_and_subs_amount()
+        self.should_be_stop_word_in_nick_name()
+        self.should_be_stop_word_in_user_name()
         self.should_be_stop_word_in_biography()
 
     # проверяет, подписан ли на пользователя
@@ -26,7 +28,7 @@ class FilterClass(BaseClass):
         """
         try:
             self.search_element((By.CSS_SELECTOR, 'span.vBF20._1OSdk > button > div > span'), timeout=1)
-            raise FilterException(FilterMessage.already_subscribe)
+            raise FilteredOut(FilterMessage.already_subscribe)
         except TimeoutException:
             pass
 
@@ -34,7 +36,7 @@ class FilterClass(BaseClass):
     def should_be_posts(self):
         try:
             self.search_element((By.XPATH, '//article/div[1]/div/div[2]/h1'), timeout=1)
-            raise FilterException(FilterMessage.no_posts)
+            raise EmptyProfile(FilterMessage.no_posts)
         except TimeoutException:
             pass
 
@@ -42,7 +44,7 @@ class FilterClass(BaseClass):
     def should_be_private_profile(self):
         try:
             self.search_element((By.XPATH, '//article/div[1]/div/h2'), timeout=0.5)
-            raise FilterException(FilterMessage.profile_closed)
+            raise EmptyProfile(FilterMessage.profile_closed)
         except TimeoutException:
             pass
         except StaleElementReferenceException:
@@ -64,42 +66,66 @@ class FilterClass(BaseClass):
                 a = hasher.hexdigest()
                 digests.append(a)
         if digests[0] == digests[1]:
-            raise FilterException(FilterMessage.no_avatar)
+            raise EmptyProfile(FilterMessage.no_avatar)
 
-    # проверяет наличие стоп-слов в биографии
-    def should_be_stop_word_in_biography(self):
-        stop_words = Subscribe.stop_word_dict
+    # проверяет наличие стоп-слов в никнейме
+    def should_be_stop_word_in_nick_name(self):
+        stop_words = Filtered.stop_word_in_nick_name_list
+        assert_text = FilterMessage.stop_word_in_nick_name
+        field = self.user_url.split("/")[-2]
+        self.search_stop_word_in_argument(field, stop_words, assert_text)
+
+    # проверяет наличие стоп-слов в имени
+    def should_be_stop_word_in_user_name(self):
+        stop_words = Filtered.stop_word_in_user_name_list
+        assert_text = FilterMessage.stop_word_in_user_name
         try:
-            biography = self.search_element((By.CSS_SELECTOR, 'div.QGPIr > span'), timeout=1,
-                                            type_wait=ec.presence_of_element_located).text
-            for word in stop_words:
-                assert word.lower() not in biography.lower()
-        except AssertionError:
-            raise StopWordException(FilterMessage.stop_word, word)
+            field = self.search_element((By.CSS_SELECTOR, 'div.QGPIr > span'), timeout=1,
+                                        type_wait=ec.presence_of_element_located).text
+            self.search_stop_word_in_argument(field, stop_words, assert_text)
         except TimeoutException:
             pass
 
+    # проверяет наличие стоп-слов в биографии
+    def should_be_stop_word_in_biography(self):
+        stop_words = Filtered.stop_word_in_biography_list
+        assert_text = FilterMessage.stop_word_in_biography
+        try:
+            field = self.search_element((By.CSS_SELECTOR, 'div.QGPIr > div'), timeout=1,
+                                        type_wait=ec.presence_of_element_located).text
+            self.search_stop_word_in_argument(field, stop_words, assert_text)
+        except TimeoutException:
+            pass
+
+    @staticmethod
+    def search_stop_word_in_argument(field, stop_words_list, assert_text):
+        try:
+            for word in stop_words_list:
+                assert word.lower() not in field.lower()
+        except AssertionError:
+            raise StopWord(assert_text, word)
+
     # сверяет количество постов, подписчиков и подписок с лимитами
     def check_posts_follows_and_subs_amount(self):
-        max_coefficient = Subscribe.coefficient_subscribers
-        posts_max = Subscribe.posts_max
-        posts_min = Subscribe.posts_min
-        follow_max = Subscribe.follow_max
-        follow_min = Subscribe.follow_min
-        subs_max = Subscribe.subs_max
-        subs_min = Subscribe.subs_min
-        break_limit = Subscribe.break_limit
+        max_coefficient = Filtered.coefficient_subscribers
+        posts_max = Filtered.posts_max
+        posts_min = Filtered.posts_min
+        follow_max = Filtered.follow_max
+        follow_min = Filtered.follow_min
+        subs_max = Filtered.subs_max
+        subs_min = Filtered.subs_min
+        break_limit = Filtered.break_limit
         data_dict = self.return_number_posts_subscribe_and_subscribers()
         coefficient = data_dict['subs'] / data_dict['follow']
 
         if not posts_max >= data_dict['posts'] >= posts_min:
-            raise FilterException(FilterMessage.filter_posts)
+            raise FilteredOut(FilterMessage.filter_posts)
 
         if not follow_max >= data_dict['follow'] >= follow_min:
-            raise FilterException(FilterMessage.filter_follow)
+            raise FilteredOut(FilterMessage.filter_follow)
 
         if not subs_max >= data_dict['subs'] >= subs_min:
-            raise FilterException(FilterMessage.filter_subs)
+            raise FilteredOut(FilterMessage.filter_subs)
 
         if data_dict['follow'] < break_limit and coefficient <= max_coefficient:
-            raise BadProfileException(FilterMessage.bad_profile)
+            raise BadProfile(FilterMessage.bad_profile)

@@ -36,7 +36,7 @@ class BaseClass:
         self.cycle = None
         self.max_timeout = None
         self.min_timeout = None
-        self.mode = 'authorize'
+        self.mode = None
         self.count_iteration = 0
         self.count_limit = None
         self.subscribe = None
@@ -67,16 +67,16 @@ class BaseClass:
             self.load_strategy = False
 
         if 'short' in user_input.split(' ')[0]:
-            self.working_mode = 'short_subscribe'
+            self.set_mode_parameter('short_subscribe')
 
         elif 'sub' in user_input.split(' ')[0]:
-            self.working_mode = 'subscribe'
+            self.set_mode_parameter('subscribe')
 
         elif 'uns' in user_input.split(' ')[0]:
-            self.working_mode = 'unsubscribe'
+            self.set_mode_parameter('unsubscribe')
 
         elif 'sel' in user_input.split(' ')[0]:
-            self.working_mode = 'selection'
+            self.set_mode_parameter('selection')
             if '-short' in user_input:
                 self.read_file_path = 'url_lists/short_subscribers_urls.txt'
                 self.write_file_path = 'non_filtered/short_subscribers_urls.txt'
@@ -136,6 +136,11 @@ class BaseClass:
         item = self.search_element(locator, type_wait=ec.presence_of_element_located, timeout=10)
         url = item.get_attribute('src')
         return url
+
+    def set_mode_parameter(self, parameter):
+        self.mode = parameter
+        self.working_mode = parameter
+        BotException.mode = parameter
 
     # возвращает элемент с использованием явного ожидания
     def search_element(self, locator, timeout=StartSettings.web_driver_wait, type_wait=ec.element_to_be_clickable):
@@ -231,28 +236,38 @@ class BaseClass:
                     for item in value:
                         file.write(item + '\n')
             else:
-                file.write(str(value))
+                if '\n' in value:
+                    file.write(str(value))
+                else:
+                    file.write(str(value) + '\n')
 
     # сохраняет лог исключения в файл и печатает сообщение об исключении в консоль
     def standard_exception_handling(self):
+
         self.save_log_exception()
         exception_name = str(type(self.exception)).split("'")[1].split('.')[-1]
         if self.mode == 'filtered':
-            raise BotFinishTask(FilterMessage.list_empty, self.mode)
+            raise BotFinishTask(FilterMessage.list_empty)
         print(f'\nЛог: {self.mode}/{exception_name} -- {self.exception}')
 
-    def bot_critical_exception_handling(self):
+    def bot_exception_handling(self):
+
+        if isinstance(self.exception, (VerificationError, LoginError)):
+            exception_name = str(type(self.exception)).split("'")[1].split('.')[-1]
+            path = f'logs/{exception_name}.txt'
+            self.file_write(path, self.username, self.exception)
+
         print(f'{self.exception}')
 
-    def bot_not_critical_exception_handling(self):
-        self.save_log_exception()
-        print(f'{self.exception}')
+    def bot_filter_out_handling(self):
 
-    def bot_final_task_exception_handling(self):
-        self.save_log_exception()
-        print(f'{self.exception}')
+        if not isinstance(self.exception, EmptyProfile):
+            exception_name = str(type(self.exception)).split("'")[1].split('.')[-1]
+            path = f'logs/filtered/filter_out/{exception_name}.txt'
+            message = str(self.user_url.split("\n")[0]) + ' ----- ' + str(self.exception)
+            self.file_write(path, message)
 
-    def bot_filter_exception_handling(self):
+        self.file_write('ignore_list.txt', self.user_url)
         print(f'{self.exception}')
 
     def save_log_exception(self):
@@ -280,25 +295,25 @@ class BaseClass:
             self.standard_exception_handling()
             try:
                 print('BotCriticalException ===> ', end='')
-                raise BotCriticalException('Тестовый запуск.', 'mode')
+                raise BotCriticalException('Тестовый запуск.')
             except BotCriticalException as exception:
                 self.exception = exception
-                self.bot_critical_exception_handling()
+                self.bot_exception_handling()
                 try:
                     print('BotNotCriticalException ===> ', end='')
-                    raise BotNotCriticalException('Тестовый запуск.', 'mode')
+                    raise BotNotCriticalException('Тестовый запуск.')
                 except BotNotCriticalException as exception:
                     self.exception = exception
                     self.bot_not_critical_exception_handling()
                     try:
                         print('FilterException ===> ', end='')
-                        raise FilterException('Тестовый запуск.')
-                    except FilterException as exception:
+                        raise EmptyProfile('Тестовый запуск.')
+                    except EmptyProfile as exception:
                         self.exception = exception
                         self.bot_filter_exception_handling()
                         try:
                             print('BotFinishTask ===> ', end='')
-                            raise BotFinishTask('Тестовый запуск.', 'mode')
+                            raise BotFinishTask('Тестовый запуск.')
                         except BotFinishTask as exception:
                             self.exception = exception
                             self.bot_final_task_exception_handling()
@@ -376,7 +391,7 @@ class BaseClass:
                 if self.mode != 'short_subscribe':
                     self.file_write('ignore_list.txt', self.user_url)
                 self.count_iteration += 1
-                print('Успешно.')
+                print('Успешно подписался.')
                 break
         else:
             print('Кнопка не найдена.')
@@ -414,7 +429,7 @@ class BaseClass:
             # noinspection PyTypeChecker
             self.search_element((By.CSS_SELECTOR, 'div.qF0y9.Igw0E.IwRSH.eGOV_._4EzTm.dQ9Hi > h3'), timeout=1,
                                 type_wait=ec.presence_of_element_located)
-            raise LoginError(LoginErrorMessage.input_phone_number, self.mode)
+            raise VerificationError(LoginErrorMessage.input_phone_number)
 
         except TimeoutException:
             pass
@@ -425,7 +440,7 @@ class BaseClass:
             # noinspection PyTypeChecker
             self.search_element((By.XPATH, '/html/body/div[1]/section/main/div[2]/div/div/div/div[1]/div[1]/span'),
                                 timeout=1, type_wait=ec.presence_of_element_located)
-            raise LoginError(LoginErrorMessage.input_code_from_sms, self.mode)
+            raise VerificationError(LoginErrorMessage.input_code_from_sms)
 
         except TimeoutException:
             pass
@@ -435,7 +450,7 @@ class BaseClass:
         try:
             # noinspection PyTypeChecker
             self.search_element((By.CSS_SELECTOR, 'div.ctQZg.KtFt3 > button > div'), timeout=2)
-            raise LoginError(LoginErrorMessage.verification_form, self.mode)
+            raise VerificationError(LoginErrorMessage.verification_form)
 
         except TimeoutException:
             pass
@@ -446,7 +461,7 @@ class BaseClass:
             # noinspection PyTypeChecker
             self.search_element((By.CSS_SELECTOR, 'div > div.GNbi9 > div > p'),
                                 timeout=1, type_wait=ec.presence_of_element_located)
-            raise LoginError(LoginErrorMessage.verification_email, self.mode)
+            raise VerificationError(LoginErrorMessage.verification_email)
         except TimeoutException:
             pass
 
@@ -457,8 +472,8 @@ class BaseClass:
             element = self.search_element((By.CSS_SELECTOR, '#slfErrorAlert'),
                                           timeout=1, type_wait=ec.presence_of_element_located)
             if 'К сожалению, вы ввели неправильный пароль.' in element.text:
-                raise LoginError(LoginErrorMessage.error_pass, self.mode)
-            raise LoginError(LoginErrorMessage.login_form_error, self.mode)
+                raise LoginError(LoginErrorMessage.error_pass)
+            raise LoginError(LoginErrorMessage.login_form_error)
         except TimeoutException:
             pass
 
@@ -470,7 +485,7 @@ class BaseClass:
                                 type_wait=ec.presence_of_element_located)
 
         except TimeoutException:
-            raise LoginError(LoginErrorMessage.not_login, self.mode)
+            raise LoginError(LoginErrorMessage.not_login)
 
     # проверяет наличие "микробана" на подписку/отписку
     def should_be_subscribe_and_unsubscribe_blocking(self):
@@ -478,7 +493,7 @@ class BaseClass:
             # noinspection PyTypeChecker
             self.search_element((By.CSS_SELECTOR, 'div._08v79 > h3'), timeout=2,
                                 type_wait=ec.presence_of_element_located)
-            raise ActivBlocking(ErrorMessage.subscribe_unsubscribe_blocking, self.mode)
+            raise ActivBlocking(ErrorMessage.subscribe_unsubscribe_blocking)
 
         except TimeoutException:
             pass
@@ -490,7 +505,7 @@ class BaseClass:
             error_message = self.search_element((By.CSS_SELECTOR, 'div > div.error-container > p'), timeout=2,
                                                 type_wait=ec.presence_of_element_located)
             if 'Подождите несколько минут, прежде чем пытаться снова' in error_message.text:
-                raise ActivBlocking(ErrorMessage.activiti_blocking, self.mode)
+                raise ActivBlocking(ErrorMessage.activiti_blocking)
             else:
                 print('Неизвестное всплывающее окно при вызове "should_be_activity_blocking".')
         except TimeoutException:
@@ -504,9 +519,14 @@ class BaseClass:
                 error_message = self.search_element((By.CSS_SELECTOR, 'div > div > h2'), timeout=1,
                                                     type_wait=ec.presence_of_element_located)
                 if 'К сожалению, эта страница недоступна' in error_message.text:
-                    raise UserPageNotExist(ErrorMessage.page_not_exist, self.mode)
+                    raise UserPageNotExist(ErrorMessage.page_not_exist)
                 elif 'Это закрытый аккаунт' in error_message.text:
-                    raise BotNotCriticalException(FilterMessage.profile_closed, self.mode)
+                    if self.mode == 'filtered':
+                        raise EmptyProfile(FilterMessage.profile_closed)
+                    else:
+                        raise BotNotCriticalException(FilterMessage.profile_closed)
+                elif 'Вам исполнилось' in error_message.text:
+                    raise BotNotCriticalException(ErrorMessage.check_age)
                 else:
                     print('Неизвестное окно при вызове "should_be_user_page".')
                 break
@@ -525,7 +545,7 @@ class BaseClass:
                                 type_wait=ec.presence_of_element_located)
 
         except TimeoutException:
-            raise PageLoadingError(ErrorMessage.page_loading_error, self.mode)
+            raise PageLoadingError(ErrorMessage.page_loading_error)
 
     # проверяет, находится ли на странице логина
     def should_be_home_page(self):
@@ -535,4 +555,4 @@ class BaseClass:
                                 timeout=10, type_wait=ec.presence_of_element_located)
             print(f'Логин с аккаунта - {self.username}')
         except TimeoutException:
-            raise LoginError(LoginErrorMessage.not_login_page, self.mode)
+            raise LoginError(LoginErrorMessage.not_login_page)

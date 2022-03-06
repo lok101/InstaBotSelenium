@@ -1,4 +1,4 @@
-﻿from data import stop_word_dict
+﻿from data import stop_word_in_biography, stop_word_in_user_name, stop_word_in_nick_name
 
 
 class StartSettings:
@@ -29,29 +29,34 @@ class Subscribe:
     min_timeout, max_timeout - окно таймаутов между подписками
     subscribe_in_session - количество подписок в одном заходе
     sleep_between_iterations - таймаут на каждые subscribe_in_session подписок
-
-    FILTER
-    limit_subscribes_min, limit_subscribes_max - максимальное и минимальное число подписчиков для профиля
-    limit_posts_min, limit_posts_max - максимальное и минимальное число постов для профиля
-    coefficient_subscribers - подписки делённые на подписчиков (если подписок много, а подписчиков мало - пропуск)
-    subscribe_limit - количество подписок в задаче
-    break_limit - минимальный порог подписчиков, при превышении которого не проверяется coefficient_subscribers
-
     """
     min_timeout = 3
     max_timeout = 10
     subscribe_in_session = 40
     sleep_between_iterations = 15
     subscribe_limit_stop = 240
-    """FILTER"""
-    posts_min, posts_max = 6, 800
+
+
+class Filtered:
+    """
+    limit_subscribes_min, limit_subscribes_max - максимальное и минимальное число подписчиков для профиля
+    limit_posts_min, limit_posts_max - максимальное и минимальное число постов для профиля
+    coefficient_subscribers - подписки делённые на подписчиков (если подписок много, а подписчиков мало - пропуск)
+    subscribe_limit - количество подписок в задаче
+    break_limit - минимальный порог подписчиков, при превышении которого не проверяется coefficient_subscribers
+    """
+    posts_min, posts_max = 6, 2000
     follow_min, follow_max = 50, 7000
     subs_min, subs_max = 15, 7000
     coefficient_subscribers = 6
     min_subscribers = 60
     min_subscriptions = 60
     break_limit = 100
-    stop_word_dict = stop_word_dict
+    stop_word_in_nick_name_list = stop_word_in_nick_name
+    stop_word_in_user_name_list = stop_word_in_user_name
+    stop_word_in_biography_list = stop_word_in_biography
+
+    timeout = 3
 
 
 class ShortSubscribe:

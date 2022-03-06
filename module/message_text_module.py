@@ -5,6 +5,7 @@ class ErrorMessage:
     subscribe_blocking = 'Микробан подписки.'
     unsubscribe_blocking = 'Микробан отписки.'
     page_not_exist = 'Страница не существует.'
+    check_age = 'В профиле ограничение возраста.'
 
 
 class FilterMessage:
@@ -16,7 +17,9 @@ class FilterMessage:
     filter_follow = 'Не прошёл по подписчикам.'
     filter_posts = 'Не прошёл по постам.'
     bad_profile = 'Профиль "помойка".'
-    stop_word = 'Встречено стоп-слово.'
+    stop_word_in_nick_name = 'Встречено стоп-слово в никнейме --'
+    stop_word_in_user_name = 'Встречено стоп-слово в имени --'
+    stop_word_in_biography = 'Встречено стоп-слово в биографии --'
     list_empty = 'В файле нет ссылок, задача завершена.'
 
 

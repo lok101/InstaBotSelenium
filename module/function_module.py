@@ -1,5 +1,5 @@
 from selenium.webdriver.support import expected_conditions as ec
-from module.exception_module import FilterException, BotNotCriticalException
+from module.exception_module import FilteredOut, BotNotCriticalException
 from module.filter_module import FilterClass
 from selenium.webdriver.common.by import By
 from selenium import webdriver
@@ -79,7 +79,7 @@ class FunctionClass(FilterClass):
 
             except BotNotCriticalException as exception:
                 self.exception = exception
-                self.bot_not_critical_exception_handling()
+                self.bot_exception_handling()
 
             except Exception as exception:
                 self.exception = exception
@@ -88,7 +88,6 @@ class FunctionClass(FilterClass):
 
     def short_subscribe(self):
         try:
-            self.mode = 'short_subscribe'
             self.min_timeout = ShortSubscribe.min_timeout
             self.max_timeout = ShortSubscribe.max_timeout
             self.count_iteration = int(str(self.cycle) + str(0))
@@ -113,7 +112,7 @@ class FunctionClass(FilterClass):
 
             except BotNotCriticalException as exception:
                 self.exception = exception
-                self.bot_not_critical_exception_handling()
+                self.bot_exception_handling()
 
             except Exception as exception:
                 self.exception = exception
@@ -126,8 +125,6 @@ class FunctionClass(FilterClass):
         sleep_between_iterations - таймаут на каждые subscribe_in_session подписок.
         self.count_limit - количество подписок в задаче.
         """
-        self.mode = 'subscribe'
-
         subscribe_in_session = Subscribe.subscribe_in_session
         sleep_between_iterations = Subscribe.sleep_between_iterations
         subscribe_limit_stop = Subscribe.subscribe_limit_stop
@@ -158,7 +155,7 @@ class FunctionClass(FilterClass):
 
             except BotNotCriticalException as exception:
                 self.exception = exception
-                self.bot_not_critical_exception_handling()
+                self.bot_exception_handling()
 
             except Exception as exception:
                 self.exception = exception
@@ -167,12 +164,8 @@ class FunctionClass(FilterClass):
     # фильтрует список профилей
     def filter_user_list(self):
 
-        self.mode = 'filtered'
         count_user_in_session = 0
         self.count_limit = 30
-
-        self.file_write('logs/stop_word_log.txt', f'\n{datetime.now().strftime("%d-%m %H:%M:%S")} - старт.\n')
-        self.file_write('logs/bad_profile_log.txt', f'\n{datetime.now().strftime("%d-%m %H:%M:%S")} - старт.\n')
 
         while True:
             user_list = self.difference_sets(
@@ -200,23 +193,24 @@ class FunctionClass(FilterClass):
 
                 except BotNotCriticalException as exception:
                     self.exception = exception
-                    self.bot_not_critical_exception_handling()
+                    self.bot_exception_handling()
 
-                except FilterException as exception:
+                except FilteredOut as exception:
                     self.exception = exception
-                    self.file_write('ignore_list.txt', self.user_url)
-                    self.bot_filter_exception_handling()
+                    self.bot_filter_out_handling()
 
                 except Exception as exception:
                     self.exception = exception
                     self.standard_exception_handling()
+
+                finally:
+                    time.sleep(Filtered.timeout)
 
     # собирает пользователей "по конкуренту" со списка ссылок
     def select_subscribers(self, iter_count):
 
         scroll_number_subscribers_list = SearchUser.scroll_number_subscribers_list
 
-        self.mode = 'selection'
         urls_public = []
         self.file_read(self.read_file_path, urls_public)
         self.count_iteration = iter_count * 10
@@ -249,7 +243,7 @@ class FunctionClass(FilterClass):
 
             except BotNotCriticalException as exception:
                 self.exception = exception
-                self.bot_not_critical_exception_handling()
+                self.bot_exception_handling()
 
             except Exception as exception:
                 self.exception = exception
