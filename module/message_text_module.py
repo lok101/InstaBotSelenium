@@ -17,6 +17,7 @@ class FilterMessage:
     filter_posts = 'Не прошёл по постам.'
     bad_profile = 'Профиль "помойка".'
     stop_word = 'Встречено стоп-слово.'
+    list_empty = 'В файле нет ссылок, задача завершена.'
 
 
 class LoginErrorMessage:

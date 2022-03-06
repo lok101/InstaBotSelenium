@@ -44,9 +44,9 @@ class Subscribe:
     sleep_between_iterations = 15
     subscribe_limit_stop = 240
     """FILTER"""
-    subscribers_min, subscribers_max = 50, 7000
-    subscriptions_min, subscriptions_max = 50, 7000
     posts_min, posts_max = 6, 800
+    follow_min, follow_max = 50, 7000
+    subs_min, subs_max = 15, 7000
     coefficient_subscribers = 6
     min_subscribers = 60
     min_subscriptions = 60

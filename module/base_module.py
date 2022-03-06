@@ -45,7 +45,7 @@ class BaseClass:
         self.exception = None
         self.exception_text = None
 
-    def browser_parameter(self):
+    def browser_parameter_set(self):
         self.chrome_options = webdriver.ChromeOptions()
         self.chrome_options.add_argument('--log-level=3')
         self.chrome_options.add_argument('--ignore-certificate-errors-spki-list')
@@ -57,7 +57,7 @@ class BaseClass:
         if self.load_strategy is True:
             self.chrome_options.page_load_strategy = 'eager'
 
-    def parameter_input(self):
+    def parameter_input_and_set(self):
         user_input = input('Укажите режим работы (-параметры): ')
         if '-p' in user_input:
             self.proxy = False
@@ -236,30 +236,73 @@ class BaseClass:
     # сохраняет лог исключения в файл и печатает сообщение об исключении в консоль
     def standard_exception_handling(self):
         self.save_log_exception()
+        exception_name = str(type(self.exception)).split("'")[1].split('.')[-1]
+        if self.mode == 'filtered':
+            raise BotFinishTask(FilterMessage.list_empty, self.mode)
+        print(f'\nЛог: {self.mode}/{exception_name} -- {self.exception}')
+
+    def bot_critical_exception_handling(self):
+        print(f'{self.exception}')
+
+    def bot_not_critical_exception_handling(self):
+        self.save_log_exception()
+        print(f'{self.exception}')
+
+    def bot_final_task_exception_handling(self):
+        self.save_log_exception()
+        print(f'{self.exception}')
+
+    def bot_filter_exception_handling(self):
+        print(f'{self.exception}')
 
     def save_log_exception(self):
         exception_name = str(type(self.exception)).split("'")[1].split('.')[-1]
         date = datetime.now().strftime("%d-%m %H:%M:%S")
         path = f'logs/{self.mode}/{exception_name}.txt'
-        if isinstance(self.exception, (StopWordException, BadProfileException)):
-            # подставляет ссылку, и текст исключения, отбрасывая название исключения
-            self.exception_text = self.user_url + ' ' + str(self.exception).split(f'{exception_name}, ')[1]
-            self.file_write(path, date, self.exception_text)
-        elif isinstance(self.exception, FilterException):
-            self.exception_text = traceback.format_exc().split('Stacktrace:')[0]
-        else:
-            self.exception_text = traceback.format_exc().split('Stacktrace:')[0]
-            self.file_write(path, date, self.exception_text)
+        exception_text = traceback.format_exc()
+        self.file_write(path, date, exception_text)
 
-        if 'CONNECTION_FAILED' in self.exception_text:
+        if 'CONNECTION_FAILED' in exception_text:
             timeout = StartSettings.err_proxy_timeout
-            error_name = self.exception_text.split('net::')[1].split('\n')[0]
+            error_name = exception_text.split('net::')[1].split('\n')[0]
             print(f'{date} -- {self.mode} >> {error_name}. Запись добавлена в лог. Таймаут {timeout} секунд.')
             time.sleep(timeout)
             if self.mode == 'authorize':
                 raise ConnectionError
-        else:
-            print(f'{date.split(" ")[1]} ----- logs/{self.mode}/{self.exception}')
+
+    def test_log(self):
+        self.mode = 'test'
+        try:
+            print('Exception ===> ', end='')
+            raise Exception('Тестовый запуск.')
+        except Exception as exception:
+            self.exception = exception
+            self.standard_exception_handling()
+            try:
+                print('BotCriticalException ===> ', end='')
+                raise BotCriticalException('Тестовый запуск.', 'mode')
+            except BotCriticalException as exception:
+                self.exception = exception
+                self.bot_critical_exception_handling()
+                try:
+                    print('BotNotCriticalException ===> ', end='')
+                    raise BotNotCriticalException('Тестовый запуск.', 'mode')
+                except BotNotCriticalException as exception:
+                    self.exception = exception
+                    self.bot_not_critical_exception_handling()
+                    try:
+                        print('FilterException ===> ', end='')
+                        raise FilterException('Тестовый запуск.')
+                    except FilterException as exception:
+                        self.exception = exception
+                        self.bot_filter_exception_handling()
+                        try:
+                            print('BotFinishTask ===> ', end='')
+                            raise BotFinishTask('Тестовый запуск.', 'mode')
+                        except BotFinishTask as exception:
+                            self.exception = exception
+                            self.bot_final_task_exception_handling()
+                            self.browser.quit()
 
     # возвращает количество постов, подписчиков, подписок и коэффициент подписки/подписчики
     def return_number_posts_subscribe_and_subscribers(self):
@@ -371,7 +414,7 @@ class BaseClass:
             # noinspection PyTypeChecker
             self.search_element((By.CSS_SELECTOR, 'div.qF0y9.Igw0E.IwRSH.eGOV_._4EzTm.dQ9Hi > h3'), timeout=1,
                                 type_wait=ec.presence_of_element_located)
-            raise LoginError(LoginErrorMessage.input_phone_number)
+            raise LoginError(LoginErrorMessage.input_phone_number, self.mode)
 
         except TimeoutException:
             pass
@@ -382,7 +425,7 @@ class BaseClass:
             # noinspection PyTypeChecker
             self.search_element((By.XPATH, '/html/body/div[1]/section/main/div[2]/div/div/div/div[1]/div[1]/span'),
                                 timeout=1, type_wait=ec.presence_of_element_located)
-            raise LoginError(LoginErrorMessage.input_code_from_sms)
+            raise LoginError(LoginErrorMessage.input_code_from_sms, self.mode)
 
         except TimeoutException:
             pass
@@ -392,7 +435,7 @@ class BaseClass:
         try:
             # noinspection PyTypeChecker
             self.search_element((By.CSS_SELECTOR, 'div.ctQZg.KtFt3 > button > div'), timeout=2)
-            raise LoginError(LoginErrorMessage.verification_form)
+            raise LoginError(LoginErrorMessage.verification_form, self.mode)
 
         except TimeoutException:
             pass
@@ -403,7 +446,7 @@ class BaseClass:
             # noinspection PyTypeChecker
             self.search_element((By.CSS_SELECTOR, 'div > div.GNbi9 > div > p'),
                                 timeout=1, type_wait=ec.presence_of_element_located)
-            raise LoginError(LoginErrorMessage.verification_email)
+            raise LoginError(LoginErrorMessage.verification_email, self.mode)
         except TimeoutException:
             pass
 
@@ -414,8 +457,8 @@ class BaseClass:
             element = self.search_element((By.CSS_SELECTOR, '#slfErrorAlert'),
                                           timeout=1, type_wait=ec.presence_of_element_located)
             if 'К сожалению, вы ввели неправильный пароль.' in element.text:
-                raise LoginError(LoginErrorMessage.error_pass)
-            raise LoginError(LoginErrorMessage.login_form_error)
+                raise LoginError(LoginErrorMessage.error_pass, self.mode)
+            raise LoginError(LoginErrorMessage.login_form_error, self.mode)
         except TimeoutException:
             pass
 
@@ -427,7 +470,7 @@ class BaseClass:
                                 type_wait=ec.presence_of_element_located)
 
         except TimeoutException:
-            raise LoginError(LoginErrorMessage.not_login)
+            raise LoginError(LoginErrorMessage.not_login, self.mode)
 
     # проверяет наличие "микробана" на подписку/отписку
     def should_be_subscribe_and_unsubscribe_blocking(self):
@@ -435,7 +478,7 @@ class BaseClass:
             # noinspection PyTypeChecker
             self.search_element((By.CSS_SELECTOR, 'div._08v79 > h3'), timeout=2,
                                 type_wait=ec.presence_of_element_located)
-            raise ActivBlocking(ErrorMessage.subscribe_unsubscribe_blocking)
+            raise ActivBlocking(ErrorMessage.subscribe_unsubscribe_blocking, self.mode)
 
         except TimeoutException:
             pass
@@ -447,7 +490,7 @@ class BaseClass:
             error_message = self.search_element((By.CSS_SELECTOR, 'div > div.error-container > p'), timeout=2,
                                                 type_wait=ec.presence_of_element_located)
             if 'Подождите несколько минут, прежде чем пытаться снова' in error_message.text:
-                raise ActivBlocking(ErrorMessage.activiti_blocking)
+                raise ActivBlocking(ErrorMessage.activiti_blocking, self.mode)
             else:
                 print('Неизвестное всплывающее окно при вызове "should_be_activity_blocking".')
         except TimeoutException:
@@ -461,9 +504,9 @@ class BaseClass:
                 error_message = self.search_element((By.CSS_SELECTOR, 'div > div > h2'), timeout=1,
                                                     type_wait=ec.presence_of_element_located)
                 if 'К сожалению, эта страница недоступна' in error_message.text:
-                    raise UserPageNotExist(ErrorMessage.page_not_exist)
+                    raise UserPageNotExist(ErrorMessage.page_not_exist, self.mode)
                 elif 'Это закрытый аккаунт' in error_message.text:
-                    raise BotException(FilterMessage.profile_closed)
+                    raise BotNotCriticalException(FilterMessage.profile_closed, self.mode)
                 else:
                     print('Неизвестное окно при вызове "should_be_user_page".')
                 break
@@ -482,7 +525,7 @@ class BaseClass:
                                 type_wait=ec.presence_of_element_located)
 
         except TimeoutException:
-            raise PageLoadingError(ErrorMessage.page_loading_error)
+            raise PageLoadingError(ErrorMessage.page_loading_error, self.mode)
 
     # проверяет, находится ли на странице логина
     def should_be_home_page(self):
@@ -492,4 +535,4 @@ class BaseClass:
                                 timeout=10, type_wait=ec.presence_of_element_located)
             print(f'Логин с аккаунта - {self.username}')
         except TimeoutException:
-            raise LoginError(LoginErrorMessage.not_login_page)
+            raise LoginError(LoginErrorMessage.not_login_page, self.mode)

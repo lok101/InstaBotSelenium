@@ -1,9 +1,18 @@
-class BotCriticalException(BaseException):
-    def __init__(self, message):
+from datetime import datetime
+
+
+class BotException(BaseException):
+    def __init__(self, message, mode):
         self.message = message
+        self.mode = mode
 
     def __str__(self):
-        return f'{self.__class__.__name__} ----- {self.message} '
+        time = datetime.now().strftime("%H:%M:%S")
+        return f'\n{time} {self.mode}. {self.__class__.__name__} ----- {self.message}'
+
+
+class BotCriticalException(BotException):
+    pass
 
 
 class LoginError(BotCriticalException):
@@ -18,20 +27,23 @@ class VerificationError(BotCriticalException):
     pass
 
 
-class BotException(BaseException):
-    def __init__(self, message):
-        self.message = message
-
+class BotNotCriticalException(BotException):
     def __str__(self):
-        return f'{self.__class__.__name__} ----- {self.message} '
+        return f'{self.message} '
 
 
-class UserPageNotExist(BotException):
+class UserPageNotExist(BotNotCriticalException):
     pass
 
 
-class PageLoadingError(BotException):
+class PageLoadingError(BotNotCriticalException):
     pass
+
+
+class BotFinishTask(BotException):
+    def __str__(self):
+        time = datetime.now().strftime("%H:%M:%S")
+        return f'\n{time} <<{self.mode}>> {self.message}'
 
 
 class FilterException(BaseException):
@@ -39,7 +51,7 @@ class FilterException(BaseException):
         self.message = message
 
     def __str__(self):
-        return f'{self.__class__.__name__} ----- {self.message} '
+        return f'{self.message}'
 
 
 class StopWordException(FilterException):
@@ -48,7 +60,7 @@ class StopWordException(FilterException):
         self.stop_word = stop_word
 
     def __str__(self):
-        return f'{self.__class__.__name__} ----- {self.message}. Стоп-слово: {self.stop_word} '
+        return f'{self.message} Стоп-слово: {self.stop_word}'
 
 
 class BadProfileException(FilterException):

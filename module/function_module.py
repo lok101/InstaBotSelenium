@@ -1,5 +1,5 @@
 from selenium.webdriver.support import expected_conditions as ec
-from module.exception_module import BotException, FilterException
+from module.exception_module import FilterException, BotNotCriticalException
 from module.filter_module import FilterClass
 from selenium.webdriver.common.by import By
 from selenium import webdriver
@@ -77,9 +77,9 @@ class FunctionClass(FilterClass):
                     print(f"{datetime.now().strftime('%H:%M:%S')} Итерация #{count}")
                     count -= 1
 
-            except BotException as exception:
+            except BotNotCriticalException as exception:
                 self.exception = exception
-                self.standard_exception_handling()
+                self.bot_not_critical_exception_handling()
 
             except Exception as exception:
                 self.exception = exception
@@ -96,7 +96,7 @@ class FunctionClass(FilterClass):
             user_list = self.difference_sets('filtered/user_urls_subscribers.txt', 'ignore_list.txt')
             self.go_to_my_profile_page()
 
-        except (Exception, BotException) as exception:
+        except Exception as exception:
             self.exception = exception
             self.standard_exception_handling()
 
@@ -111,7 +111,11 @@ class FunctionClass(FilterClass):
                           f'Осталось профилей - {len(user_list)}')
                     break
 
-            except (Exception, BotException) as exception:
+            except BotNotCriticalException as exception:
+                self.exception = exception
+                self.bot_not_critical_exception_handling()
+
+            except Exception as exception:
                 self.exception = exception
                 self.standard_exception_handling()
 
@@ -152,7 +156,11 @@ class FunctionClass(FilterClass):
                     print(f'= = = = Осталось профилей для подписки - {len(user_list)} = = = =')
                     time.sleep(sleep_between_iterations * 60)
 
-            except (Exception, BotException) as exception:
+            except BotNotCriticalException as exception:
+                self.exception = exception
+                self.bot_not_critical_exception_handling()
+
+            except Exception as exception:
                 self.exception = exception
                 self.standard_exception_handling()
 
@@ -168,7 +176,7 @@ class FunctionClass(FilterClass):
 
         while True:
             user_list = self.difference_sets(
-                'non_filtered/user_urls_subscribers.txt',
+                'non_filtered/subscribers_urls.txt',
                 'ignore_list.txt',
                 'filtered/user_urls_subscribers.txt'
             )
@@ -181,16 +189,25 @@ class FunctionClass(FilterClass):
                 f'Отобрано в сессии - {count_user_in_session}.\n')
 
             for i in range(self.count_limit):
-                self.user_url = user_list.pop()
-                self.count_iteration = i
                 try:
+                    self.user_url = user_list.pop()
+                    self.count_iteration = i
                     self.go_to_user_page()
                     self.should_be_compliance_with_limits()
                     self.file_write('filtered/user_urls_subscribers.txt', self.user_url)
                     count_user_in_session += 1
                     print('Подходит.')
 
-                except (Exception, BotException, FilterException) as exception:
+                except BotNotCriticalException as exception:
+                    self.exception = exception
+                    self.bot_not_critical_exception_handling()
+
+                except FilterException as exception:
+                    self.exception = exception
+                    self.file_write('ignore_list.txt', self.user_url)
+                    self.bot_filter_exception_handling()
+
+                except Exception as exception:
                     self.exception = exception
                     self.standard_exception_handling()
 
@@ -230,6 +247,10 @@ class FunctionClass(FilterClass):
                     size = len(file.readlines())
                     print(f'Успешно. Количество собранных пользователей: {size}.')
 
-            except (Exception, BotException) as exception:
+            except BotNotCriticalException as exception:
+                self.exception = exception
+                self.bot_not_critical_exception_handling()
+
+            except Exception as exception:
                 self.exception = exception
                 self.standard_exception_handling()

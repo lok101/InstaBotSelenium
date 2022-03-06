@@ -13,7 +13,7 @@ class FilterClass(BaseClass):
     # комплексный фильтр
     def should_be_compliance_with_limits(self):
         self.should_be_profile_avatar()
-        self.should_be_private_profile()
+        # self.should_be_private_profile()
         self.should_be_subscribe()
         self.should_be_posts()
         self.check_posts_follows_and_subs_amount()
@@ -29,8 +29,6 @@ class FilterClass(BaseClass):
             raise FilterException(FilterMessage.already_subscribe)
         except TimeoutException:
             pass
-        #     exist = True
-        # return exist
 
     # проверяет, есть ли публикации в профиле
     def should_be_posts(self):
@@ -39,8 +37,6 @@ class FilterClass(BaseClass):
             raise FilterException(FilterMessage.no_posts)
         except TimeoutException:
             pass
-        #     exist = True
-        # return exist
 
     # проверяет, не является ли профиль закрытым
     def should_be_private_profile(self):
@@ -88,10 +84,10 @@ class FilterClass(BaseClass):
         max_coefficient = Subscribe.coefficient_subscribers
         posts_max = Subscribe.posts_max
         posts_min = Subscribe.posts_min
-        subscribers_max = Subscribe.subscribers_max
-        subscribers_min = Subscribe.subscribers_min
-        subscriptions_max = Subscribe.subscriptions_max
-        subscriptions_min = Subscribe.subscriptions_min
+        follow_max = Subscribe.follow_max
+        follow_min = Subscribe.follow_min
+        subs_max = Subscribe.subs_max
+        subs_min = Subscribe.subs_min
         break_limit = Subscribe.break_limit
         data_dict = self.return_number_posts_subscribe_and_subscribers()
         coefficient = data_dict['subs'] / data_dict['follow']
@@ -99,10 +95,10 @@ class FilterClass(BaseClass):
         if not posts_max >= data_dict['posts'] >= posts_min:
             raise FilterException(FilterMessage.filter_posts)
 
-        if not subscribers_max >= data_dict['follow'] >= subscribers_min:
+        if not follow_max >= data_dict['follow'] >= follow_min:
             raise FilterException(FilterMessage.filter_follow)
 
-        if not subscriptions_max >= data_dict['subs'] >= subscriptions_min:
+        if not subs_max >= data_dict['subs'] >= subs_min:
             raise FilterException(FilterMessage.filter_subs)
 
         if data_dict['follow'] < break_limit and coefficient <= max_coefficient:
