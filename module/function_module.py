@@ -36,17 +36,6 @@ class FunctionClass(FilterClass):
 
     # отписка от всех
     def unsubscribe(self):
-
-        min_sleep = Unsubscribe.min_sleep
-        max_sleep = Unsubscribe.max_sleep
-        sleep_between_iterations = Unsubscribe.sleep_between_iterations
-        """
-        min_sleep - минимальная задержка между отписками
-        max_sleep - максимальная задержка между отписками
-        sleep_between_iterations - таймаут между итерациями (по 10 отписок за итерацию)
-        """
-        self.mode = 'unsubscribe'
-
         while self.count_iteration < 20:
             try:
                 count = 10
@@ -65,12 +54,12 @@ class FunctionClass(FilterClass):
 
                 for user_unsubscribe in following_users:
                     if not count:
-                        time.sleep(sleep_between_iterations)
+                        time.sleep(Unsubscribe.sleep_between_iterations * 60)
                         break
 
                     unsubscribe_button = user_unsubscribe.find_element(By.TAG_NAME, "button")
                     unsubscribe_button.click()
-                    time.sleep(random.randrange(min_sleep - 2, max_sleep - 2))
+                    time.sleep(random.randrange(Unsubscribe.min_sleep - 2, Unsubscribe.max_sleep - 2))
                     self.search_element((By.CSS_SELECTOR, "button.-Cab_")).click()
                     self.should_be_subscribe_and_unsubscribe_blocking()
 
@@ -88,20 +77,9 @@ class FunctionClass(FilterClass):
 
     # подписывается на юзеров из файла
     def subscribe(self):
-        """
-        subscribe_in_session - количество подписок в одном заходе.
-        sleep_between_iterations - таймаут на каждые subscribe_in_session подписок.
-        self.count_limit - количество подписок в задаче.
-        """
-        subscribe_in_session = Subscribe.subscribe_in_session
-        sleep_between_iterations = Subscribe.sleep_between_iterations
-        subscribe_limit_stop = Subscribe.subscribe_limit_stop
-        self.min_timeout = Subscribe.min_timeout
-        self.max_timeout = Subscribe.max_timeout
-        self.count_iteration = 0
         user_list = self.difference_sets('filtered/user_urls_subscribers.txt', 'ignore_list.txt')
         self.go_to_my_profile_page()
-        self.count_limit = subscribe_limit_stop - self.followers
+        self.count_limit = Subscribe.subscribe_limit_stop - self.followers
 
         for self.user_url in user_list:
             try:
@@ -112,14 +90,15 @@ class FunctionClass(FilterClass):
                     print('= = = = ПОДПИСКА ЗАВЕРШЕНА = = = =')
                     break
 
-                if self.count_iteration % subscribe_in_session == 0 and self.count_iteration != 0:
+                if self.count_iteration % Subscribe.subscribe_in_session == 0 and self.count_iteration != 0:
                     self.go_to_my_profile_page(end_str=' ')
                     print(f'{datetime.now().strftime("%H:%M:%S")} Подписался на очередные',
-                          f'{subscribe_in_session} пользователей. Таймаут {sleep_between_iterations} минут.')
+                          f'{Subscribe.subscribe_in_session} пользователей. ',
+                          f'Таймаут {Subscribe.sleep_between_iterations} минут.')
 
                     user_list = self.difference_sets('filtered/user_urls_subscribers.txt', 'ignore_list.txt')
                     print(f'= = = = Осталось профилей для подписки - {len(user_list)} = = = =')
-                    time.sleep(sleep_between_iterations * 60)
+                    time.sleep(Subscribe.sleep_between_iterations * 60)
 
             except BotNonCriticalException as exception:
                 self.exception = exception

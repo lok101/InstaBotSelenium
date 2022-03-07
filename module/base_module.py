@@ -1,6 +1,4 @@
 from selenium.common.exceptions import TimeoutException, StaleElementReferenceException
-
-import data
 from module.message_text_module import ErrorMessage, LoginErrorMessage, FilterMessage
 from selenium.webdriver.support import expected_conditions as ec
 from selenium.webdriver.support.ui import WebDriverWait
@@ -42,8 +40,6 @@ class BaseClass:
         self.exception = None
         self.exception_text = None
 
-        self.min_timeout = None
-        self.max_timeout = None
         self.count_limit = None
         self.cycle = None
         self.followers = None
@@ -420,7 +416,7 @@ class BaseClass:
             while iteration_count < iteration_limit:
                 iteration_count += 1
                 button.click()
-                time.sleep(random.randrange(self.min_timeout, self.max_timeout))
+                time.sleep(random.randrange(Subscribe.min_timeout, Subscribe.max_timeout))
                 self.should_be_subscribe_and_unsubscribe_blocking()
                 if self.mode != 'short_subscribe':
                     self.file_write('ignore_list.txt', self.user_url)

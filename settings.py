@@ -1,4 +1,4 @@
-﻿from data import stop_word_in_biography, stop_word_in_user_name, stop_word_in_nick_name
+﻿import data
 
 
 class StartSettings:
@@ -18,65 +18,37 @@ class Unsubscribe:
     max_sleep - максимальная задержка при отписке (секунды).
     sleep_between_iterations - задержка между итерациями (секунды).
     """
-    min_sleep = 5
-    max_sleep = 11
-    sleep_between_iterations = 150
+    min_sleep, max_sleep = 5, 11    # окно таймаутов (секунды) между подписками
+    sleep_between_iterations = 3    # таймаут (минуты) между заходами
 
 
 class Subscribe:
-    """
-    Описывает настройки, связанные с подпиской.
-    min_timeout, max_timeout - окно таймаутов между подписками
-    subscribe_in_session - количество подписок в одном заходе
-    sleep_between_iterations - таймаут на каждые subscribe_in_session подписок
-    """
-    min_timeout = 3
-    max_timeout = 10
-    subscribe_in_session = 40
-    sleep_between_iterations = 15
-    subscribe_limit_stop = 100
+
+    """ Настройки для режима подписки. """
+    min_timeout, max_timeout = 3, 10    # окно таймаутов (секунды) между подписками
+    subscribe_in_session = 40           # количество подписок в одном заходе
+    sleep_between_iterations = 15       # таймаут (минуты) между заходами
+    subscribe_limit_stop = 240          # количество подписчиков у аккаунта, при котором остановится задача
 
 
 class Filtered:
-    """
-    limit_subscribes_min, limit_subscribes_max - максимальное и минимальное число подписчиков для профиля
-    limit_posts_min, limit_posts_max - максимальное и минимальное число постов для профиля
-    coefficient_subscribers - подписки делённые на подписчиков (если подписок много, а подписчиков мало - пропуск)
-    subscribe_limit - количество подписок в задаче
-    break_limit - минимальный порог подписчиков, при превышении которого не проверяется coefficient_subscribers
-    """
+
+    """ Лимиты на посты, подписчиков, подписок у аккаунта. Аккаунты, не попавшие в лимиты, заносятся в игнор лист. """
     posts_min, posts_max = 6, 2000
     follow_min, follow_max = 50, 7000
     subs_min, subs_max = 15, 7000
-    coefficient_subscribers = 6
-    min_subscribers = 60
-    min_subscriptions = 60
-    break_limit = 100
-    stop_word_in_nick_name_list = stop_word_in_nick_name
-    stop_word_in_user_name_list = stop_word_in_user_name
-    stop_word_in_biography_list = stop_word_in_biography
+
+    coefficient_subscribers = 6  # подписки делённые на подписчиков (если подписок много, а подписчиков мало - пропуск)
+    break_limit = 100   # минимальный порог подписчиков, при превышении которого не проверяется coefficient_subscribers
+
+    stop_word_in_nick_name_list = data.stop_word_in_nick_name   # стоп-слова для никнейма
+    stop_word_in_user_name_list = data.stop_word_in_user_name   # стоп-слова для имени
+    stop_word_in_biography_list = data.stop_word_in_biography   # стоп-слова для биографии
 
     timeout = 3
 
 
 class SearchUser:
-    """
-    search_depth - количество профилей из меню поиска, попадающих в выборку, при сборе аудитории
-    scroll_number_subscribers_list - число прокруток, при открытии списка подписчиков (больше прокруток - больше юзеров)
 
-    limit_subscribes_min, limit_subscribes_max - максимальное и минимальное число подписчиков для профиля
-    limit_posts_min, limit_posts_max - максимальное и минимальное число постов для профиля
-    coefficient_subscribers - подписки делённые на подписчиков (если подписок много, а подписчиков мало - пропуск)
-    subscribe_limit - количество подписок в задаче
-    break_limit - минимальный порог подписчиков, при превышении которого не проверяется coefficient_subscribers
-    """
-    scroll_number_subscribers_list = 3
-    """FILTER"""
-    coefficient_subscribers = 1
-    posts_max, posts_min = 1000000, 3
-    subscribers_max, subscribers_min = 100000, 1000
-    subscriptions_max, subscriptions_min = 1200, 0
-    break_limit = 1000
-    search_depth = 10
+    scroll_number_subscribers_list = 3  # количество прокруток списка с пользователями во время парсинга
 
-    number_restart_filtered = 10
