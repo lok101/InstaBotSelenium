@@ -30,16 +30,20 @@ class VerificationError(BotCriticalException):
     pass
 
 
-class BotNotCriticalException(BotException):
+class BotNonCriticalException(BotException):
     def __str__(self):
         return f'{self.message} '
 
 
-class UserPageNotExist(BotNotCriticalException):
+class UserPageNotExist(BotNonCriticalException):
     pass
 
 
-class PageLoadingError(BotNotCriticalException):
+class PageLoadingError(BotNonCriticalException):
+    pass
+
+
+class PageNotAvailable(BotNonCriticalException):
     pass
 
 

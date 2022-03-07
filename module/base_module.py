@@ -1,4 +1,6 @@
 from selenium.common.exceptions import TimeoutException, StaleElementReferenceException
+
+import data
 from module.message_text_module import ErrorMessage, LoginErrorMessage, FilterMessage
 from selenium.webdriver.support import expected_conditions as ec
 from selenium.webdriver.support.ui import WebDriverWait
@@ -24,7 +26,6 @@ class BaseClass:
         self.username = None
         self.password = None
         self.browser = None
-        self.working_mode = None
         self.chrome_options = None
         self.read_file_path = None
         self.write_file_path = None
@@ -33,17 +34,20 @@ class BaseClass:
         self.proxy = True
         self.load_strategy = True
 
-        self.cycle = None
-        self.max_timeout = None
-        self.min_timeout = None
         self.mode = None
-        self.count_iteration = 0
-        self.count_limit = None
-        self.subscribe = None
+        self.accounts_key_mask = None
+        self.accounts_key_number = None
         self.user_url = None
 
         self.exception = None
         self.exception_text = None
+
+        self.min_timeout = None
+        self.max_timeout = None
+        self.count_limit = None
+        self.cycle = None
+        self.followers = None
+        self.count_iteration = 0
 
     def browser_parameter_set(self):
         self.chrome_options = webdriver.ChromeOptions()
@@ -59,33 +63,49 @@ class BaseClass:
 
     def parameter_input_and_set(self):
         user_input = input('Укажите режим работы (-параметры): ')
+
+        if 'sub' in user_input.split(' ')[0]:
+            self.set_mode_parameter('subscribe', 'main_account')
+
+        elif 'uns' in user_input.split(' ')[0]:
+            self.set_mode_parameter('unsubscribe', 'main_account')
+
+        elif 'fil' in user_input.split(' ')[0]:
+            self.set_mode_parameter('filter', 'bot_account')
+
+        elif 'sel' in user_input.split(' ')[0]:
+            self.set_mode_parameter('parse', 'bot_account')
+            self.read_file_path = 'url_lists/subscribers_urls.txt'
+            self.write_file_path = 'non_filtered/subscribers_urls.txt'
+            with open(f'data/{self.write_file_path}', 'w'):
+                print(f'Файл: "{self.write_file_path}" - очищен.')
+
         if '-p' in user_input:
             self.proxy = False
         if '-h' in user_input:
             self.headless = False
         if '-e' in user_input:
             self.load_strategy = False
+        if '-bot' in user_input:
+            self.accounts_key_mask = 'bot_account'
+        if '-main' in user_input:
+            self.accounts_key_mask = 'main_account'
 
-        if 'short' in user_input.split(' ')[0]:
-            self.set_mode_parameter('short_subscribe')
+    def accounts_input(self):
 
-        elif 'sub' in user_input.split(' ')[0]:
-            self.set_mode_parameter('subscribe')
+        account_list = []
+        if self.accounts_key_mask == 'main_account':
+            user_input = input('Введите имя аккаунта: ')
+            account_list = user_input.split(' ')
 
-        elif 'uns' in user_input.split(' ')[0]:
-            self.set_mode_parameter('unsubscribe')
+        elif self.accounts_key_mask == 'bot_account':
+            for key in data.user_dict:
+                if 'bot_account' in key:
+                    account_list.append(key.split('-')[1])
+        else:
+            raise BotException('Неизвестная маска аккаунта.')
 
-        elif 'sel' in user_input.split(' ')[0]:
-            self.set_mode_parameter('selection')
-            if '-short' in user_input:
-                self.read_file_path = 'url_lists/short_subscribers_urls.txt'
-                self.write_file_path = 'non_filtered/short_subscribers_urls.txt'
-            else:
-                self.read_file_path = 'url_lists/subscribers_urls.txt'
-                self.write_file_path = 'non_filtered/subscribers_urls.txt'
-
-        elif 'fil' in user_input.split(' ')[0]:
-            self.set_mode_parameter('filtered')
+        self.accounts_key_number = account_list
 
     def cookie_login(self):
         self.browser.delete_all_cookies()
@@ -137,10 +157,10 @@ class BaseClass:
         url = item.get_attribute('src')
         return url
 
-    def set_mode_parameter(self, parameter):
+    def set_mode_parameter(self, parameter, mask):
         self.mode = parameter
-        self.working_mode = parameter
         BotException.mode = parameter
+        self.accounts_key_mask = mask
 
     # возвращает элемент с использованием явного ожидания
     def search_element(self, locator, timeout=StartSettings.web_driver_wait, type_wait=ec.element_to_be_clickable):
@@ -250,15 +270,25 @@ class BaseClass:
             raise BotFinishTask(FilterMessage.list_empty)
         print(f'\nЛог: {self.mode}/{exception_name} -- {self.exception}')
 
-    def bot_exception_handling(self):
+    def catching_critical_bot_exceptions(self):
 
         if isinstance(self.exception, (VerificationError, LoginError)):
             exception_name = str(type(self.exception)).split("'")[1].split('.')[-1]
             path = f'logs/{exception_name}.txt'
             self.file_write(path, self.username, self.exception)
 
-        elif not isinstance(self.exception, PageLoadingError):
+        elif isinstance(self.exception, ActivBlocking):
+            pass
+
+        print(f'{self.exception}')
+
+    def catching_non_critical_bot_exceptions(self):
+
+        if isinstance(self.exception, UserPageNotExist):
             self.file_write('ignore_list.txt', self.user_url)
+
+        elif isinstance(self.exception, (PageLoadingError, PageNotAvailable)):
+            pass
 
         print(f'{self.exception}')
 
@@ -283,7 +313,8 @@ class BaseClass:
         if 'CONNECTION_FAILED' in exception_text:
             timeout = StartSettings.err_proxy_timeout
             error_name = exception_text.split('net::')[1].split('\n')[0]
-            print(f'{date.split(" ")[1]} -- {self.mode} >> {error_name}. Запись добавлена в лог. Таймаут {timeout} секунд.')
+            print(f'{date.split(" ")[1]} -- {self.mode} >> {error_name}. ',
+                  f'Запись добавлена в лог. Таймаут {timeout} секунд.')
             time.sleep(timeout)
             if self.mode == 'authorize':
                 raise ConnectionError
@@ -301,11 +332,11 @@ class BaseClass:
                 raise BotCriticalException('Тестовый запуск.')
             except BotCriticalException as exception:
                 self.exception = exception
-                self.bot_exception_handling()
+                self.catching_critical_bot_exceptions()
                 try:
                     print('BotNotCriticalException ===> ', end='')
-                    raise BotNotCriticalException('Тестовый запуск.')
-                except BotNotCriticalException as exception:
+                    raise BotNonCriticalException('Тестовый запуск.')
+                except BotNonCriticalException as exception:
                     self.exception = exception
                     self.bot_not_critical_exception_handling()
                     try:
@@ -415,7 +446,7 @@ class BaseClass:
         self.should_be_user_page()
         self.should_be_verification_form()
 
-    # переходит на свою страницу, запускает проверки, возвращает количество подписок
+    # переходит на свою страницу, запускает проверки, кладёт количество подписок в переменную
     def go_to_my_profile_page(self, end_str='\n'):
         url = f'https://www.instagram.com/{self.username}/'
         self.browser.get(url)
@@ -423,8 +454,8 @@ class BaseClass:
         self.should_be_activity_blocking()
         self.should_be_verification_form()
 
-        self.subscribe = self.return_number_posts_subscribe_and_subscribers()['subs']
-        print(f"Количество подписок: {self.subscribe}", end=end_str)
+        self.followers = self.return_number_posts_subscribe_and_subscribers()['subs']
+        print(f"Количество подписок: {self.followers}", end=end_str)
 
     # проверяет наличие окна "добавьте номер телефона"
     def should_be_phone_number_input(self):
@@ -524,9 +555,9 @@ class BaseClass:
                 if 'К сожалению, эта страница недоступна' in error_message.text:
                     raise UserPageNotExist(ErrorMessage.page_not_exist)
                 elif 'Это закрытый аккаунт' in error_message.text:
-                    raise BotNotCriticalException(FilterMessage.profile_closed)
+                    raise PageNotAvailable(FilterMessage.profile_closed)
                 elif 'Вам исполнилось' in error_message.text:
-                    raise BotNotCriticalException(ErrorMessage.check_age)
+                    raise PageNotAvailable(ErrorMessage.check_age)
                 else:
                     print('Неизвестное окно при вызове "should_be_user_page".')
                 break

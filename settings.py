@@ -34,7 +34,7 @@ class Subscribe:
     max_timeout = 10
     subscribe_in_session = 40
     sleep_between_iterations = 15
-    subscribe_limit_stop = 240
+    subscribe_limit_stop = 100
 
 
 class Filtered:
@@ -59,14 +59,6 @@ class Filtered:
     timeout = 3
 
 
-class ShortSubscribe:
-    min_timeout = 5
-    max_timeout = 15
-    subscribe_in_session = 40
-    sleep_between_iterations = 5
-    subscribe_limit_stop = 40
-
-
 class SearchUser:
     """
     search_depth - количество профилей из меню поиска, попадающих в выборку, при сборе аудитории
@@ -87,10 +79,4 @@ class SearchUser:
     break_limit = 1000
     search_depth = 10
 
-    timeout_between_restarts = 10
     number_restart_filtered = 10
-
-
-class Like:
-    min_sleep = 10
-    max_sleep = 30

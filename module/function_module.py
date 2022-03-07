@@ -1,5 +1,5 @@
 from selenium.webdriver.support import expected_conditions as ec
-from module.exception_module import FilteredOut, BotNotCriticalException
+from module.exception_module import FilteredOut, BotNonCriticalException
 from module.filter_module import FilterClass
 from selenium.webdriver.common.by import By
 from selenium import webdriver
@@ -35,7 +35,7 @@ class FunctionClass(FilterClass):
                 continue
 
     # отписка от всех
-    def unsubscribe_for_all_users(self):
+    def unsubscribe(self):
 
         min_sleep = Unsubscribe.min_sleep
         max_sleep = Unsubscribe.max_sleep
@@ -52,7 +52,7 @@ class FunctionClass(FilterClass):
                 count = 10
                 self.go_to_my_profile_page()
 
-                if self.subscribe == 0:
+                if self.followers == 0:
                     print('= = = = ОТПИСКА ЗАВЕРШЕНА = = = =')
                     break
 
@@ -77,49 +77,17 @@ class FunctionClass(FilterClass):
                     print(f"{datetime.now().strftime('%H:%M:%S')} Итерация #{count}")
                     count -= 1
 
-            except BotNotCriticalException as exception:
+            except BotNonCriticalException as exception:
                 self.exception = exception
-                self.bot_exception_handling()
+                self.catching_non_critical_bot_exceptions()
 
             except Exception as exception:
                 self.exception = exception
                 self.standard_exception_handling()
                 self.count_iteration += 1
 
-    def short_subscribe(self):
-        try:
-            self.min_timeout = ShortSubscribe.min_timeout
-            self.max_timeout = ShortSubscribe.max_timeout
-            self.count_iteration = int(str(self.cycle) + str(0))
-            self.count_limit = (self.cycle + 1) * ShortSubscribe.subscribe_in_session
-            user_list = self.difference_sets('filtered/user_urls_subscribers.txt', 'ignore_list.txt')
-            self.go_to_my_profile_page()
-
-        except Exception as exception:
-            self.exception = exception
-            self.standard_exception_handling()
-
-        for self.user_url in user_list:
-            try:
-                self.go_to_user_page()
-                self.press_to_button_subscribe()
-
-                if self.count_iteration >= self.count_limit:
-                    user_list = self.difference_sets('filtered/user_urls_subscribers.txt', 'ignore_list.txt')
-                    print(f'Подписался на {self.count_limit} профилей. Перехожу в следующий аккаунт.',
-                          f'Осталось профилей - {len(user_list)}')
-                    break
-
-            except BotNotCriticalException as exception:
-                self.exception = exception
-                self.bot_exception_handling()
-
-            except Exception as exception:
-                self.exception = exception
-                self.standard_exception_handling()
-
     # подписывается на юзеров из файла
-    def subscribe_to_user_list(self):
+    def subscribe(self):
         """
         subscribe_in_session - количество подписок в одном заходе.
         sleep_between_iterations - таймаут на каждые subscribe_in_session подписок.
@@ -133,7 +101,7 @@ class FunctionClass(FilterClass):
         self.count_iteration = 0
         user_list = self.difference_sets('filtered/user_urls_subscribers.txt', 'ignore_list.txt')
         self.go_to_my_profile_page()
-        self.count_limit = subscribe_limit_stop - self.subscribe
+        self.count_limit = subscribe_limit_stop - self.followers
 
         for self.user_url in user_list:
             try:
@@ -153,16 +121,16 @@ class FunctionClass(FilterClass):
                     print(f'= = = = Осталось профилей для подписки - {len(user_list)} = = = =')
                     time.sleep(sleep_between_iterations * 60)
 
-            except BotNotCriticalException as exception:
+            except BotNonCriticalException as exception:
                 self.exception = exception
-                self.bot_exception_handling()
+                self.catching_non_critical_bot_exceptions()
 
             except Exception as exception:
                 self.exception = exception
                 self.standard_exception_handling()
 
     # фильтрует список профилей
-    def filter_user_list(self):
+    def filter(self):
 
         count_user_in_session = 0
         self.count_limit = 30
@@ -191,9 +159,9 @@ class FunctionClass(FilterClass):
                     count_user_in_session += 1
                     print('Подходит.')
 
-                except BotNotCriticalException as exception:
+                except BotNonCriticalException as exception:
                     self.exception = exception
-                    self.bot_exception_handling()
+                    self.catching_non_critical_bot_exceptions()
 
                 except FilteredOut as exception:
                     self.exception = exception
@@ -207,16 +175,13 @@ class FunctionClass(FilterClass):
                     time.sleep(Filtered.timeout)
 
     # собирает пользователей "по конкуренту" со списка ссылок
-    def select_subscribers(self, iter_count):
-
-        scroll_number_subscribers_list = SearchUser.scroll_number_subscribers_list
+    def parce(self):
 
         urls_public = []
         self.file_read(self.read_file_path, urls_public)
-        self.count_iteration = iter_count * 10
         self.count_limit = len(urls_public)
-        print(f'= = = = Итерация сбора {iter_count + 1} из {len(urls_public) // 10}. = = = =')
-        urls_public = urls_public[int(str(iter_count) + '0'):int(str(iter_count + 1) + '0')]
+        urls_public = urls_public[self.count_iteration:-1]
+
         for self.user_url in urls_public:
             try:
                 self.go_to_user_page()
@@ -226,7 +191,7 @@ class FunctionClass(FilterClass):
 
                 subscribes_ul = self.search_element((By.CSS_SELECTOR, 'div.RnEpo.Yx5HN > div > div > div> div.isgrP'),
                                                     type_wait=ec.presence_of_element_located)
-                for i in range(scroll_number_subscribers_list + 1):
+                for i in range(SearchUser.scroll_number_subscribers_list + 1):
                     self.browser.execute_script("arguments[0].scrollTop = arguments[0].scrollHeight", subscribes_ul)
                     self.search_element((By.CSS_SELECTOR, 'li div svg.By4nA'), timeout=10,
                                         type_wait=ec.invisibility_of_element_located)
@@ -241,9 +206,9 @@ class FunctionClass(FilterClass):
                     size = len(file.readlines())
                     print(f'Успешно. Количество собранных пользователей: {size}.')
 
-            except BotNotCriticalException as exception:
+            except BotNonCriticalException as exception:
                 self.exception = exception
-                self.bot_exception_handling()
+                self.catching_non_critical_bot_exceptions()
 
             except Exception as exception:
                 self.exception = exception
