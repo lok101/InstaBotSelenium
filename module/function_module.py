@@ -2,6 +2,7 @@ from module.exception_module import FilteredOut, BotNonCriticalException, BotFin
 from module.message_text_module import InformationMessage
 from module.filter_module import FilterClass
 from selenium.webdriver.common.by import By
+from module.option import BotOption
 from selenium import webdriver
 from settings import *
 import time
@@ -9,28 +10,21 @@ import time
 
 class FunctionClass(FilterClass):
     def login(self):
-        while True:
+        try:
             try:
-                try:
-                    try:
-                        self.browser = webdriver.Chrome(options=self.account_option.chrome_options)
-                        if self.account_option.proxy:
-                            self.check_proxy_ip()
-                        self.browser.get('https://www.instagram.com/')
-                        self.should_be_home_page()
-                        self.cookie_login()
-                        break
+                self.browser = webdriver.Chrome(options=self.account_option.chrome_options)
+                if self.account_option.proxy:
+                    self.check_proxy_ip()
+                self.browser.get('https://www.instagram.com/')
+                self.should_be_home_page()
+                self.cookie_login()
 
-                    except FileNotFoundError:
-                        self.not_cookie_login()
-                        break
+            except FileNotFoundError:
+                self.not_cookie_login()
 
-                except Exception as exception:
-                    self.account_option.exception = exception
-                    self.standard_exception_handling()
-                    break
-            except ConnectionError:
-                continue
+        except Exception as exception:
+            self.account_option.exception = exception
+            self.standard_exception_handling()
 
     def unsubscribe(self):
         while True:
@@ -62,11 +56,10 @@ class FunctionClass(FilterClass):
 
     def subscribe(self):
         self.go_to_my_profile_page_and_set_subscribes_amount()
-        self.count_limit = Subscribe.subscribe_limit_stop - self.subscribes
-
+        self.set_count_limit_for_subscribe()
         while self.count_iteration < self.count_limit:
             try:
-                self.set_user_url_from_file('filtered/user_urls_subscribers.txt', 'ignore_list.txt')
+                self.set_user_url_from_file(BotOption.parameters['filtered_path'])
                 self.go_to_user_page()
                 self.press_to_subscribe_button()
                 self.check_limits_from_subscribe()
@@ -83,19 +76,15 @@ class FunctionClass(FilterClass):
 
     def filter(self):
         self.count_limit = Filter.iteration_for_one_account
-
         for self.count_iteration in range(self.count_limit):
             try:
                 if self.count_iteration % 50 == 0:
-                    self.get_statistics_on_filtration()
+                    self.print_statistics_on_filtration()
 
-                self.set_user_url_from_file(
-                    'non_filtered/subscribers_urls.txt',
-                    'ignore_list.txt',
-                    'filtered/user_urls_subscribers.txt')
+                self.set_user_url_from_file(BotOption.parameters['non_filtered_path'])
                 self.go_to_user_page()
                 self.should_be_compliance_with_limits()
-                self.file_write('filtered/user_urls_subscribers.txt', self.user_url)
+                self.file_write((BotOption.parameters['filtered_path']), self.user_url)
                 self.count += 1
 
             except BotNonCriticalException as exception:
@@ -114,26 +103,15 @@ class FunctionClass(FilterClass):
                 time.sleep(Filter.timeout)
 
     def parce(self):
-
-        urls_public = []
-        self.file_read(self.account_option.parce_read_file_path, urls_public)
-        self.count_limit = len(urls_public)
-        urls_public = urls_public[self.count_iteration:-1]
-
-        for self.user_url in urls_public:
+        url_list = self.get_users_url_for_parce()
+        for self.user_url in url_list:
             try:
                 self.go_to_user_page()
-                self.count_iteration += 1
                 self.search_element((By.CSS_SELECTOR, 'li:nth-child(2) > a')).click()  # открыть список подписчиков
-                self.scrolling_div_block_and_return_list_of_users(
-                    (By.CSS_SELECTOR, 'div.RnEpo.Yx5HN > div > div > div> div.isgrP'),
-                    count=Parce.scroll_number_subscribers_list + 1)
+                self.scrolling_div_block(count=Parce.scroll_number_subscribers_list + 1)
                 user_urls = self.tag_search(ignore=self.account_option.username)
-                self.file_write(self.account_option.parce_write_file_path, user_urls)
-                with open(f'data/{self.account_option.parce_write_file_path}', 'r') as file:
-                    size = len(file.readlines())
-                    print(f'Успешно. Количество собранных пользователей: {size}.')
-
+                self.file_write((BotOption.parameters["non_filtered_path"]), user_urls)
+                self.print_statistics_on_parce()
                 if self.count_iteration % Parce.cycles_for_one_account == 0:
                     break
 

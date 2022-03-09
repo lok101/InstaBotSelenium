@@ -130,12 +130,9 @@ class BaseClass:
                     value.append(link)
 
     @staticmethod
-    def file_write(file_name, value, value2=None, operating_mode='a'):
+    def file_write(file_name, value, operating_mode='a'):
         with open(f'data/{file_name}', operating_mode, encoding='utf-8') as file:
-            if value2 is not None:
-                file.write(str(value) + '\n')
-                file.write(str(value2) + '\n \n')
-            elif isinstance(value, (list, set)):
+            if isinstance(value, (list, set)):
                 if '\n' in value.pop():
                     for item in value:
                         file.write(item)
@@ -153,7 +150,7 @@ class BaseClass:
 
         self.save_log_exception()
         exception_name = str(type(self.account_option.exception)).split("'")[1].split('.')[-1]
-        if BotException.mode == data.parameters['fil'] and isinstance(self.account_option.exception, KeyError):
+        if BotException.mode == BotOption.parameters['fil'] and isinstance(self.account_option.exception, KeyError):
             raise BotFinishTask(FilterMessage.list_empty)
         print(f'\nЛог: {BotException.mode}/{exception_name} -- {self.account_option.exception}')
 
@@ -173,7 +170,7 @@ class BaseClass:
     def catching_non_critical_bot_exceptions(self):
 
         if isinstance(self.account_option.exception, UserPageNotExist):
-            self.file_write('ignore_list.txt', self.user_url)
+            self.file_write((BotOption.parameters["ignore_list_path"]), self.user_url)
 
         elif isinstance(self.account_option.exception, (PageLoadingError, PageNotAvailable)):
             pass
@@ -184,19 +181,22 @@ class BaseClass:
 
         if not isinstance(self.account_option.exception, EmptyProfile):
             exception_name = str(type(self.account_option.exception)).split("'")[1].split('.')[-1]
-            path = f'logs/{data.parameters["fil"]}/filter_out/{exception_name}.txt'
+            path = f'logs/{BotOption.parameters["fil"]}/filter_out/{exception_name}.txt'
             message = str(self.user_url.split("\n")[0]) + ' ----- ' + str(self.account_option.exception)
             self.file_write(path, message)
 
-        self.file_write('ignore_list.txt', self.user_url)
+        self.file_write((BotOption.parameters["ignore_list_path"]), self.user_url)
         print(f'{self.account_option.exception}')
 
     def save_log_exception(self):
         exception_name = str(type(self.account_option.exception)).split("'")[1].split('.')[-1]
-        date = datetime.now().strftime("%d-%m %H:%M:%S")
         path = f'logs/{BotException.mode}/{exception_name}.txt'
+
+        date = datetime.now().strftime("%d-%m %H:%M:%S")
         exception_text = traceback.format_exc()
-        self.file_write(path, date, exception_text)
+        message = f'{date}\n{exception_text}\n\n'
+
+        self.file_write(path, message)
 
         if 'CONNECTION_FAILED' in exception_text:
             timeout = StartSettings.err_proxy_timeout
@@ -206,36 +206,17 @@ class BaseClass:
             time.sleep(timeout)
 
     # прокручивает список, возвращает элементы списка
-    def scrolling_div_block_and_return_list_of_users(self, locator, count=5):
-        scroll_block = self.search_element(locator, type_wait=ec.presence_of_element_located)
-        following_users = []
-
-        if self.account_option.mode == data.parameters['uns']:
-            while self.subscribes - 30 > len(following_users):
-                following_users = self.one_scroll_block_and_return_list_of_users(scroll_block)
-                print(f'Загрузил подписок - [{len(following_users)}/{self.subscribes}]')
-
-        elif self.account_option.mode == data.parameters['par']:
-            for i in range(count):
-                self.one_scroll_block_and_return_list_of_users(scroll_block)
-
-        else:
-            raise BotCriticalException(
-                'Неизвестный режим работы при вызове метода "scrolling_div_block_and_return_list_of_users".')
-
-        return following_users
-
-    def one_scroll_block_and_return_list_of_users(self, scroll_block):
-        self.browser.execute_script("arguments[0].scrollTop = arguments[0].scrollHeight", scroll_block)
-        self.search_element((By.CSS_SELECTOR, 'li div svg.By4nA'), timeout=10,
-                            type_wait=ec.invisibility_of_element_located)
-        time.sleep(0.5)
-        self.search_element((By.CSS_SELECTOR, 'li div svg.By4nA'), timeout=10,
-                            type_wait=ec.invisibility_of_element_located)
-        time.sleep(0.5)
-        following_div_block = self.search_element((By.CSS_SELECTOR, 'div > div > div.isgrP > ul > div'))
-
-        return following_div_block.find_elements(By.TAG_NAME, "li")
+    def scrolling_div_block(self, count):
+        scroll_block = self.search_element((By.CSS_SELECTOR, 'div.RnEpo.Yx5HN > div > div > div> div.isgrP'),
+                                           type_wait=ec.presence_of_element_located)
+        for i in range(count):
+            self.browser.execute_script("arguments[0].scrollTop = arguments[0].scrollHeight", scroll_block)
+            self.search_element((By.CSS_SELECTOR, 'li div svg.By4nA'), timeout=10,
+                                type_wait=ec.invisibility_of_element_located)
+            time.sleep(0.5)
+            self.search_element((By.CSS_SELECTOR, 'li div svg.By4nA'), timeout=10,
+                                type_wait=ec.invisibility_of_element_located)
+            time.sleep(0.5)
 
     # возвращает количество постов, подписчиков, подписок и коэффициент подписки/подписчики
     def return_number_posts_subscribe_and_subscribers(self):
@@ -272,50 +253,36 @@ class BaseClass:
 
         return dict_return
 
-    # возвращает результат вычитания второго и третьего множества из первого
-    def difference_sets(self, item1, item2, item3=None):
-        user_set1, user_set2, user_set3 = set(), set(), set()
-        if item3 is not None:
-            if isinstance(item1, str):
-                self.file_read(item1, user_set1)
-                self.file_read(item2, user_set2)
-                self.file_read(item3, user_set3)
-                final_set = user_set1.difference(user_set2, user_set3)
-            elif isinstance(item1, set):
-                self.file_read(item2, user_set2)
-                self.file_read(item3, user_set3)
-                final_set = item1.difference(user_set2, user_set3)
-        else:
-            if isinstance(item1, str):
-                self.file_read(item1, user_set1)
-                self.file_read(item2, user_set2)
-                final_set = user_set1.difference(user_set2)
-            elif isinstance(item1, set):
-                self.file_read(item2, user_set2)
-                final_set = item1.difference(user_set2)
-        return final_set
+    def difference_sets(self, file_path):
+        account_list, ignore_list = set(), set()
+        self.file_read(file_path, account_list)
+        self.file_read(BotOption.parameters['ignore_list_path'], ignore_list)
+        account_list = account_list.difference(ignore_list)
+        return account_list
 
-    def set_user_url_from_file(self, file_path, ignore_list_path, ignore_list_2_path=None):
-        if ignore_list_2_path is not None:
-            user_list = self.difference_sets(file_path, ignore_list_path, ignore_list_2_path)
-        else:
-            user_list = self.difference_sets(file_path, ignore_list_path)
+    def set_user_url_from_file(self, file_path):
+        user_list = self.difference_sets(file_path)
         self.user_url = user_list.pop()
         self.file_write(file_path, user_list, operating_mode='w')
 
-    def get_statistics_on_filtration(self):
-        user_list = self.difference_sets(
-            'non_filtered/subscribers_urls.txt',
-            'ignore_list.txt',
-            'filtered/user_urls_subscribers.txt'
-        )
-        user_list_count = len(self.difference_sets(
-            'filtered/user_urls_subscribers.txt',
-            'ignore_list.txt'
-        ))
+    def print_statistics_on_filtration(self):
         print(
-            f'\nНе отфильтровано - <<<{len(user_list)}>>>. Готовых - {user_list_count}.',
+            f'\nНе отфильтровано - {len(BotOption.parameters["non_filtered_path"])}. '
+            f'Готовых - {len(BotOption.parameters["filtered_path"])}.',
             f'Отобрано в сессии - {self.count}.\n')
+
+    def print_statistics_on_parce(self):
+        non_filtered = set()
+        self.file_read((BotOption.parameters["non_filtered_path"]), non_filtered)
+        self.count_iteration += 1
+        print(f'Успешно. Количество собранных пользователей: {len(non_filtered)}.')
+
+    def get_users_url_for_parce(self):
+        urls_public = []
+        self.file_read((BotOption.parameters["parce_url_path"]), urls_public)
+        self.count_limit = len(urls_public)
+        urls_public = urls_public[self.count_iteration:-1]
+        return urls_public
 
     # ищет и нажимает кнопку "подписаться"
     def press_to_subscribe_button(self):
@@ -328,13 +295,13 @@ class BaseClass:
                 button.click()
                 time.sleep(random.randrange(Subscribe.min_timeout, Subscribe.max_timeout))
                 self.should_be_subscribe_and_unsubscribe_blocking()
-                self.file_write('ignore_list.txt', self.user_url)
+                self.file_write((BotOption.parameters["ignore_list_path"]), self.user_url)
                 self.count_iteration += 1
                 print('Успешно подписался.')
                 break
         else:
             print('Кнопка не найдена.')
-            self.file_write('ignore_list.txt', self.user_url)
+            self.file_write((BotOption.parameters["ignore_list_path"]), self.user_url)
             time.sleep(random.randrange(Subscribe.min_timeout, Subscribe.max_timeout))
 
     def check_limits_from_subscribe(self):
@@ -343,9 +310,6 @@ class BaseClass:
             print(f'{datetime.now().strftime("%H:%M:%S")} Подписался на очередные',
                   f'{Subscribe.subscribe_in_session} пользователей. ',
                   f'Таймаут {Subscribe.sleep_between_iterations} минут.')
-
-            user_list = self.difference_sets('filtered/user_urls_subscribers.txt', 'ignore_list.txt')
-            print(f'= = = = Осталось профилей для подписки - {len(user_list)} = = = =')
             time.sleep(Subscribe.sleep_between_iterations * 60)
 
     def press_to_unsubscribe_button_and_set_timeouts(self, user):
@@ -382,6 +346,14 @@ class BaseClass:
 
         self.subscribes = self.return_number_posts_subscribe_and_subscribers()['subs']
         print(f"Количество подписок: {self.subscribes}", end=end_str)
+
+    def set_count_limit_for_subscribe(self):
+        if self.account_option.mode == BotOption.parameters['short']:
+            self.count_limit = Subscribe.subscribe_limit_stop
+        elif self.account_option.mode == BotOption.parameters['sub']:
+            self.count_limit = Subscribe.subscribe_limit_stop - self.subscribes
+        else:
+            raise BotCriticalException('Неизвестный режим работы в методе "set_count_limit_for_subscribe".')
 
     # проверяет наличие запроса на верификацию
     def should_be_verification_form(self):

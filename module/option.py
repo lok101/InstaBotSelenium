@@ -1,24 +1,37 @@
 from module.exception_module import BotCriticalException, BotException
 from selenium import webdriver
 from data import *
+import settings
 import random
 
 
 class BotOption:
+    parameters = {
+        'sub': 'subscribe',
+        'uns': 'unsubscribe',
+        'fil': 'filter',
+        'par': 'parce',
+        'short': 'short_subscribe',
+        'ignore_list_path': 'ignore_list.txt',
+        'parce_url_path': 'url_lists/subscribers_urls.txt',
+        'non_filtered_path': 'non_filtered/subscribers_urls.txt',
+        'filtered_path': 'filtered/subscribers_urls.txt',
+    }
+
     def __init__(self):
         self.username = None
         self.password = None
-        self.parce_read_file_path = 'url_lists/subscribers_urls.txt'
-        self.parce_write_file_path = 'non_filtered/subscribers_urls.txt'
-        self.headless = True
-        self.proxy = True
         self.accounts_key_mask = None
         self.accounts_key_number = None
         self.chrome_options = None
-        self.load_strategy = True
         self.mode = None
+
         self.exception = None
         self.exception_text = None
+
+        self.headless = True
+        self.proxy = True
+        self.load_strategy = True
 
     def set_browser_parameters(self):
         self.chrome_options = webdriver.ChromeOptions()
@@ -33,11 +46,10 @@ class BotOption:
             self.chrome_options.page_load_strategy = 'eager'
 
     def set_mode_and_mask_parameters(self, parameter_name: str):
-        self.mode = parameters[parameter_name]
-        self.mode = parameters[parameter_name]
-        if self.mode == parameters['sub'] or self.mode == parameters['uns']:
+        self.mode = BotOption.parameters[parameter_name]
+        if self.mode == BotOption.parameters['sub'] or self.mode == BotOption.parameters['uns']:
             self.accounts_key_mask = 'main_account'
-        elif self.mode == parameters['fil'] or self.mode == parameters['par']:
+        elif self.mode == BotOption.parameters['fil'] or self.mode == BotOption.parameters['par']:
             self.accounts_key_mask = 'bot_account'
         else:
             raise BotCriticalException('Неизвестный режим работы, не могу установить маску аккаунта.')
@@ -55,6 +67,9 @@ class BotOption:
             self.accounts_key_mask = 'bot_account'
         if '-main' in user_input:
             self.accounts_key_mask = 'main_account'
+        if '-sub' in user_input:
+            settings.subscribe_limit_stop = user_input.split('-sub')[1].split(' ')[0]
+            self.mode = BotOption.parameters['short']
 
     def input_account_and_set_accounts_list(self):
         account_list = []

@@ -10,18 +10,15 @@ class StartSettings:
 
 class Unsubscribe:
 
-    """ Настройки для режима отписки. """
-
     min_sleep, max_sleep = 4, 10    # окно таймаутов (секунды) между подписками
     sleep_between_iterations = 3    # таймаут (минуты) между заходами (10 отписок)
 
 
 class Subscribe:
 
-    """ Настройки для режима подписки. """
     min_timeout, max_timeout = 3, 10    # окно таймаутов (секунды) между подписками
-    subscribe_in_session = 40           # количество подписок в одном заходе
-    sleep_between_iterations = 15       # таймаут (минуты) между заходами
+    subscribe_in_session = 30           # количество подписок в одном заходе
+    sleep_between_iterations = 40       # таймаут (минуты) между заходами
     subscribe_limit_stop = 240          # количество подписчиков у аккаунта, при котором остановится задача
 
 
@@ -47,17 +44,3 @@ class Parce:
 
     scroll_number_subscribers_list = 3      # количество прокруток списка с пользователями во время парсинга
     cycles_for_one_account = 20             # количество циклов сбора через один аккаунт
-
-
-# class AccountSettings:
-#     parce_read_file_path = 'url_lists/subscribers_urls.txt'
-#     parce_write_file_path = 'non_filtered/subscribers_urls.txt'
-#     headless = True
-#     proxy = True
-#     accounts_key_mask = None
-#     accounts_key_number = None
-#     chrome_options = None
-#     load_strategy = True
-#     mode = None
-#     exception = None
-#     exception_text = None
