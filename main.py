@@ -1,5 +1,6 @@
 from module.function_module import FunctionClass
 from module.exception_module import BotCriticalException, BotFinishTask
+from settings import AccountSettings
 import data
 
 
@@ -11,16 +12,16 @@ def bot():
 class StartBot(FunctionClass):
     def start(self):
         try:
-            self.parameter_input_and_set()
-            self.browser_parameter_set()
-            self.accounts_input()
+            self.input_operating_mode_and_set_parameters()
+            self.set_browser_parameters()
+            self.input_account_and_set_accounts_list()
 
-            for name in self.accounts_key_number:
+            for name in AccountSettings.accounts_key_number:
                 try:
-                    self.username = data.user_dict[f'{self.accounts_key_mask}-{name}']['login']
-                    self.password = data.user_dict[f'{self.accounts_key_mask}-{name}']['password']
+                    self.username = data.user_dict[f'{AccountSettings.accounts_key_mask}-{name}']['login']
+                    self.password = data.user_dict[f'{AccountSettings.accounts_key_mask}-{name}']['password']
                     self.login()
-                    eval(f'self.{self.mode}()')
+                    eval(f'self.{self.AccountSettings}()')
                     self.browser.quit()
                 except BotCriticalException as exception:
                     self.exception = exception

@@ -8,14 +8,14 @@ class BotException(BaseException):
         self.message = message
 
     def __str__(self):
-        time = datetime.now().strftime("%H:%M:%S")
-        return f'\n{time} {BotException.mode}. {self.__class__.__name__} ----- {self.message}'
+        date = datetime.now().strftime("%d-%m %H:%M:%S")
+        return f'\n{date} {BotException.mode}. {self.__class__.__name__} ----- {self.message}'
 
 
 class BotCriticalException(BotException):
     def __str__(self):
-        time = datetime.now().strftime("%H:%M:%S")
-        return f'\n{time} {self.__class__.__name__} ----- {self.message}'
+        date = datetime.now().strftime("%d-%m %H:%M:%S")
+        return f'\n{date} {self.__class__.__name__} ----- {self.message}'
 
 
 class LoginError(BotCriticalException):
@@ -27,7 +27,9 @@ class ActivBlocking(BotCriticalException):
 
 
 class VerificationError(BotCriticalException):
-    pass
+    def __str__(self):
+        date = datetime.now().strftime("%d-%m %H:%M:%S")
+        return f'\n{date} ----- {self.message}'
 
 
 class BotNonCriticalException(BotException):

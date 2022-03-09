@@ -4,7 +4,7 @@ from selenium.webdriver.support import expected_conditions as ec
 from module.message_text_module import FilterMessage
 from selenium.webdriver.common.by import By
 from module.base_module import BaseClass
-from settings import Filtered
+from settings import Filter
 import requests
 import hashlib
 
@@ -13,13 +13,13 @@ class FilterClass(BaseClass):
     # комплексный фильтр
     def should_be_compliance_with_limits(self):
         self.should_be_profile_avatar()
-        # self.should_be_private_profile()
         self.should_be_subscribe()
         self.should_be_posts()
         self.check_posts_follows_and_subs_amount()
         self.should_be_stop_word_in_nick_name()
         self.should_be_stop_word_in_user_name()
         self.should_be_stop_word_in_biography()
+        print('Подходит.')
 
     # проверяет, подписан ли на пользователя
     def should_be_subscribe(self):
@@ -70,14 +70,14 @@ class FilterClass(BaseClass):
 
     # проверяет наличие стоп-слов в никнейме
     def should_be_stop_word_in_nick_name(self):
-        stop_words = Filtered.stop_word_in_nick_name_list
+        stop_words = Filter.stop_word_in_nick_name_list
         assert_text = FilterMessage.stop_word_in_nick_name
         field = self.user_url.split("/")[-2]
         self.search_stop_word_in_argument(field, stop_words, assert_text)
 
     # проверяет наличие стоп-слов в имени
     def should_be_stop_word_in_user_name(self):
-        stop_words = Filtered.stop_word_in_user_name_list
+        stop_words = Filter.stop_word_in_user_name_list
         assert_text = FilterMessage.stop_word_in_user_name
         try:
             field = self.search_element((By.CSS_SELECTOR, 'div.QGPIr > span'), timeout=1,
@@ -88,7 +88,7 @@ class FilterClass(BaseClass):
 
     # проверяет наличие стоп-слов в биографии
     def should_be_stop_word_in_biography(self):
-        stop_words = Filtered.stop_word_in_biography_list
+        stop_words = Filter.stop_word_in_biography_list
         assert_text = FilterMessage.stop_word_in_biography
         try:
             field = self.search_element((By.CSS_SELECTOR, 'div.QGPIr > div'), timeout=1,
@@ -107,14 +107,14 @@ class FilterClass(BaseClass):
 
     # сверяет количество постов, подписчиков и подписок с лимитами
     def check_posts_follows_and_subs_amount(self):
-        max_coefficient = Filtered.coefficient_subscribers
-        posts_max = Filtered.posts_max
-        posts_min = Filtered.posts_min
-        follow_max = Filtered.follow_max
-        follow_min = Filtered.follow_min
-        subs_max = Filtered.subs_max
-        subs_min = Filtered.subs_min
-        break_limit = Filtered.break_limit
+        max_coefficient = Filter.coefficient_subscribers
+        posts_max = Filter.posts_max
+        posts_min = Filter.posts_min
+        follow_max = Filter.follow_max
+        follow_min = Filter.follow_min
+        subs_max = Filter.subs_max
+        subs_min = Filter.subs_min
+        break_limit = Filter.break_limit
         data_dict = self.return_number_posts_subscribe_and_subscribers()
         coefficient = data_dict['subs'] / data_dict['follow']
 

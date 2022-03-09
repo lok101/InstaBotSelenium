@@ -1,4 +1,4 @@
-class ErrorMessage:
+class InformationMessage:
     page_loading_error = 'Ошибка загрузки страницы.'
     activiti_blocking = 'Микробан активности.'
     subscribe_unsubscribe_blocking = 'Микробан подписки/отписки.'
@@ -6,6 +6,7 @@ class ErrorMessage:
     unsubscribe_blocking = 'Микробан отписки.'
     page_not_exist = 'Страница не существует.'
     check_age = 'В профиле ограничение возраста.'
+    task_finish = 'Задача завершена'
 
 
 class FilterMessage:
