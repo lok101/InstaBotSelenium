@@ -49,15 +49,15 @@ class Parce:
     cycles_for_one_account = 20             # количество циклов сбора через один аккаунт
 
 
-class AccountSettings:
-    parce_read_file_path = 'url_lists/subscribers_urls.txt'
-    parce_write_file_path = 'non_filtered/subscribers_urls.txt'
-    headless = True
-    proxy = True
-    accounts_key_mask = None
-    accounts_key_number = None
-    chrome_options = None
-    load_strategy = True
-    mode = None
-    exception = None
-    exception_text = None
+# class AccountSettings:
+#     parce_read_file_path = 'url_lists/subscribers_urls.txt'
+#     parce_write_file_path = 'non_filtered/subscribers_urls.txt'
+#     headless = True
+#     proxy = True
+#     accounts_key_mask = None
+#     accounts_key_number = None
+#     chrome_options = None
+#     load_strategy = True
+#     mode = None
+#     exception = None
+#     exception_text = None

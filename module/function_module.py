@@ -13,8 +13,8 @@ class FunctionClass(FilterClass):
             try:
                 try:
                     try:
-                        self.browser = webdriver.Chrome(options=AccountSettings.chrome_options)
-                        if AccountSettings.proxy:
+                        self.browser = webdriver.Chrome(options=self.account_option.chrome_options)
+                        if self.account_option.proxy:
                             self.check_proxy_ip()
                         self.browser.get('https://www.instagram.com/')
                         self.should_be_home_page()
@@ -26,7 +26,7 @@ class FunctionClass(FilterClass):
                         break
 
                 except Exception as exception:
-                    AccountSettings.exception = exception
+                    self.account_option.exception = exception
                     self.standard_exception_handling()
                     break
             except ConnectionError:
@@ -52,11 +52,11 @@ class FunctionClass(FilterClass):
                     count -= 1
 
             except BotNonCriticalException as exception:
-                AccountSettings.exception = exception
+                self.account_option.exception = exception
                 self.catching_non_critical_bot_exceptions()
 
             except Exception as exception:
-                AccountSettings.exception = exception
+                self.account_option.exception = exception
                 self.standard_exception_handling()
                 self.count_iteration += 1
 
@@ -72,11 +72,11 @@ class FunctionClass(FilterClass):
                 self.check_limits_from_subscribe()
 
             except BotNonCriticalException as exception:
-                AccountSettings.exception = exception
+                self.account_option.exception = exception
                 self.catching_non_critical_bot_exceptions()
 
             except Exception as exception:
-                AccountSettings.exception = exception
+                self.account_option.exception = exception
                 self.standard_exception_handling()
 
         raise BotFinishTask(InformationMessage.task_finish)
@@ -99,15 +99,15 @@ class FunctionClass(FilterClass):
                 self.count += 1
 
             except BotNonCriticalException as exception:
-                AccountSettings.exception = exception
+                self.account_option.exception = exception
                 self.catching_non_critical_bot_exceptions()
 
             except FilteredOut as exception:
-                AccountSettings.exception = exception
+                self.account_option.exception = exception
                 self.bot_filter_out_handling()
 
             except Exception as exception:
-                AccountSettings.exception = exception
+                self.account_option.exception = exception
                 self.standard_exception_handling()
 
             finally:
@@ -116,7 +116,7 @@ class FunctionClass(FilterClass):
     def parce(self):
 
         urls_public = []
-        self.file_read(AccountSettings.parce_read_file_path, urls_public)
+        self.file_read(self.account_option.parce_read_file_path, urls_public)
         self.count_limit = len(urls_public)
         urls_public = urls_public[self.count_iteration:-1]
 
@@ -128,9 +128,9 @@ class FunctionClass(FilterClass):
                 self.scrolling_div_block_and_return_list_of_users(
                     (By.CSS_SELECTOR, 'div.RnEpo.Yx5HN > div > div > div> div.isgrP'),
                     count=Parce.scroll_number_subscribers_list + 1)
-                user_urls = self.tag_search(ignore=self.username)
-                self.file_write(AccountSettings.parce_write_file_path, user_urls)
-                with open(f'data/{AccountSettings.parce_write_file_path}', 'r') as file:
+                user_urls = self.tag_search(ignore=self.account_option.username)
+                self.file_write(self.account_option.parce_write_file_path, user_urls)
+                with open(f'data/{self.account_option.parce_write_file_path}', 'r') as file:
                     size = len(file.readlines())
                     print(f'Успешно. Количество собранных пользователей: {size}.')
 
@@ -138,11 +138,11 @@ class FunctionClass(FilterClass):
                     break
 
             except BotNonCriticalException as exception:
-                AccountSettings.exception = exception
+                self.account_option.exception = exception
                 self.catching_non_critical_bot_exceptions()
 
             except Exception as exception:
-                AccountSettings.exception = exception
+                self.account_option.exception = exception
                 self.standard_exception_handling()
 
         raise BotFinishTask(InformationMessage.task_finish)

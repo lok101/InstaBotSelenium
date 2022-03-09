@@ -5,7 +5,7 @@ from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.common.by import By
 from module.exception_module import *
-from selenium import webdriver
+from module.option import BotOption
 from datetime import datetime
 from settings import *
 from data import *
@@ -19,9 +19,7 @@ import json
 class BaseClass:
 
     def __init__(self):
-
-        self.username = None
-        self.password = None
+        self.account_option = BotOption()
         self.browser = None
 
         self.user_url = None
@@ -31,51 +29,9 @@ class BaseClass:
         self.count_iteration = 0
         self.count = 0
 
-    def set_browser_parameters(self):
-        AccountSettings.chrome_options = webdriver.ChromeOptions()
-        AccountSettings.chrome_options.add_argument('--log-level=3')
-        AccountSettings.chrome_options.add_argument('--ignore-certificate-errors-spki-list')
-        AccountSettings.chrome_options.add_experimental_option('excludeSwitches', ['enable-logging'])
-        if AccountSettings.headless is True:
-            AccountSettings.chrome_options.add_argument("--headless")
-        if AccountSettings.proxy is True:
-            AccountSettings.chrome_options.add_argument(f'--proxy-server={proxy_list}')
-        if AccountSettings.load_strategy is True:
-            AccountSettings.chrome_options.page_load_strategy = 'eager'
-
-    def input_operating_mode_and_set_parameters(self):
-        user_input = input('Укажите режим работы (-параметры): ')
-        self.set_mode_and_mask_parameters(user_input.split(' ')[0])
-        if '-p' in user_input:
-            AccountSettings.proxy = False
-        if '-h' in user_input:
-            AccountSettings.headless = False
-        if '-e' in user_input:
-            AccountSettings.load_strategy = False
-        if '-bot' in user_input:
-            AccountSettings.accounts_key_mask = 'bot_account'
-        if '-main' in user_input:
-            AccountSettings.accounts_key_mask = 'main_account'
-
-    def input_account_and_set_accounts_list(self):
-        account_list = []
-        if self.accounts_key_mask == 'main_account':
-            user_input = input('Введите имя аккаунта: ')
-            account_list = user_input.split(' ')
-
-        elif self.accounts_key_mask == 'bot_account':
-            for key in data.user_dict:
-                if 'bot_account' in key:
-                    account_list.append(key.split('-')[1])
-            random.shuffle(account_list)
-        else:
-            raise BotException('Неизвестная маска аккаунта.')
-
-        AccountSettings.accounts_key_number = account_list
-
     def cookie_login(self):
         self.browser.delete_all_cookies()
-        for cookie in pickle.load(open(f'data/cookies/{self.username}_cookies', 'rb')):
+        for cookie in pickle.load(open(f'data/cookies/{self.account_option.username}_cookies', 'rb')):
             self.browser.add_cookie(cookie)
         time.sleep(1)
         self.browser.refresh()
@@ -88,11 +44,11 @@ class BaseClass:
 
         username_input = self.search_element((By.NAME, "username"))
         username_input.clear()
-        username_input.send_keys(self.username)
+        username_input.send_keys(self.account_option.username)
 
         password_input = self.search_element((By.NAME, "password"))
         password_input.clear()
-        password_input.send_keys(self.password)
+        password_input.send_keys(self.account_option.password)
 
         password_input.send_keys(Keys.ENTER)
         time.sleep(5)
@@ -104,8 +60,8 @@ class BaseClass:
         self.should_be_login_button()
 
         # сохраняем cookies
-        pickle.dump(self.browser.get_cookies(), open(f'data/cookies/{self.username}_cookies', 'wb'))
-        print(f'Залогинился и создал cookies ===> data/cookies/{self.username}_cookies.')
+        pickle.dump(self.browser.get_cookies(), open(f'data/cookies/{self.account_option.username}_cookies', 'wb'))
+        print(f'Залогинился и создал cookies ===> data/cookies/{self.account_option.username}_cookies.')
 
     def check_proxy_ip(self):
         self.browser.get("https://api.myip.com/")
@@ -123,67 +79,27 @@ class BaseClass:
         url = item.get_attribute('src')
         return url
 
-    def set_mode_and_mask_parameters(self, parameter_name: str):
-        AccountSettings.mode = data.parameters[parameter_name]
-        BotException.mode = data.parameters[parameter_name]
-        if AccountSettings.mode == data.parameters['sub'] or AccountSettings.mode == data.parameters['uns']:
-            AccountSettings.accounts_key_mask = 'main_account'
-        elif AccountSettings.mode == data.parameters['fil'] or AccountSettings.mode == data.parameters['par']:
-            AccountSettings.accounts_key_mask = 'bot_account'
-        else:
-            raise BotCriticalException('Неизвестный режим работы, не могу установить маску аккаунта.')
-
     # возвращает элемент с использованием явного ожидания
     def search_element(self, locator, timeout=StartSettings.web_driver_wait, type_wait=ec.element_to_be_clickable):
         return WebDriverWait(self.browser, timeout).until(type_wait(locator))
 
     # возвращает список по тегу
-    def tag_search(self, parameter=1, ignore=None):
-        """
-        Parameter = 1 - возвращает список ссылок на профили
-        parameter == 1.5 - возвращает список ссылок на профили в выпадающем меню поиска
-        ignore - ключевое слово для игнорирования (сверяется со ссылкой)
-        """
+    def tag_search(self, ignore=None):
         list_urls = set()
         while True:
             try:
-                if parameter == 1:
-                    self.search_element((By.CSS_SELECTOR, 'div.Pkbci > button'))
-                    tags = self.browser.find_elements(By.TAG_NAME, 'a')
-                    for public_block in tags:
-                        profile_url = public_block.get_attribute('href')
-                        len_user_url = len(profile_url.split('/'))  # у ссылки на профиль равен пяти.
-                        if len_user_url == 5 \
-                                and 'www.instagram.com' in profile_url \
-                                and self.username not in profile_url \
-                                and 'explore' not in profile_url \
-                                and ignore not in profile_url:
-                            list_urls.add(profile_url)
-                    return list_urls
-
-                elif parameter == 1.5:
-                    list_urls = []
-                    self.search_element((By.CSS_SELECTOR, 'div > a.-qQT3'))
-                    tags = self.browser.find_elements(By.TAG_NAME, 'a')
-                    for public_block in tags:
-                        profile_url = public_block.get_attribute('href')
-                        len_user_url = len(profile_url.split('/'))  # у ссылки на профиль равен пяти.
-                        if len_user_url == 5 \
-                                and 'www.instagram.com' in profile_url \
-                                and self.username not in profile_url \
-                                and 'explore' not in profile_url \
-                                and ignore not in profile_url:
-                            list_urls.append(profile_url)
-                    return list_urls
-
-                elif parameter == 2:
-                    time.sleep(5)
-                    tags = self.browser.find_elements(By.TAG_NAME, 'a')
-                    for post in tags:
-                        post_url = post.get_attribute('href')
-                        if '/p/' in post_url:
-                            list_urls.add(post_url)
-                    return list_urls
+                self.search_element((By.CSS_SELECTOR, 'div.Pkbci > button'))
+                tags = self.browser.find_elements(By.TAG_NAME, 'a')
+                for public_block in tags:
+                    profile_url = public_block.get_attribute('href')
+                    len_user_url = len(profile_url.split('/'))  # у ссылки на профиль равен пяти.
+                    if len_user_url == 5 \
+                            and 'www.instagram.com' in profile_url \
+                            and self.account_option.username not in profile_url \
+                            and 'explore' not in profile_url \
+                            and ignore not in profile_url:
+                        list_urls.add(profile_url)
+                return list_urls
 
             except StaleElementReferenceException:
                 print(StaleElementReferenceException)
@@ -236,47 +152,47 @@ class BaseClass:
     def standard_exception_handling(self):
 
         self.save_log_exception()
-        exception_name = str(type(AccountSettings.exception)).split("'")[1].split('.')[-1]
-        if BotException.mode == data.parameters['fil'] and isinstance(AccountSettings.exception, KeyError):
+        exception_name = str(type(self.account_option.exception)).split("'")[1].split('.')[-1]
+        if BotException.mode == data.parameters['fil'] and isinstance(self.account_option.exception, KeyError):
             raise BotFinishTask(FilterMessage.list_empty)
-        print(f'\nЛог: {BotException.mode}/{exception_name} -- {AccountSettings.exception}')
+        print(f'\nЛог: {BotException.mode}/{exception_name} -- {self.account_option.exception}')
 
     def catching_critical_bot_exceptions(self):
 
-        if isinstance(AccountSettings.exception, (VerificationError, LoginError)):
-            exception_name = str(type(AccountSettings.exception)).split("'")[1].split('.')[-1]
+        if isinstance(self.account_option.exception, (VerificationError, LoginError)):
+            exception_name = str(type(self.account_option.exception)).split("'")[1].split('.')[-1]
             path = f'logs/{exception_name}.txt'
-            message = self.username.split("\n")[0] + ' ----- ' + str(AccountSettings.exception)
+            message = self.account_option.username.split("\n")[0] + ' ----- ' + str(self.account_option.exception)
             self.file_write(path, message)
 
-        elif isinstance(AccountSettings.exception, ActivBlocking):
+        elif isinstance(self.account_option.exception, ActivBlocking):
             pass
 
-        print(f'{AccountSettings.exception}')
+        print(f'{self.account_option.exception}')
 
     def catching_non_critical_bot_exceptions(self):
 
-        if isinstance(AccountSettings.exception, UserPageNotExist):
+        if isinstance(self.account_option.exception, UserPageNotExist):
             self.file_write('ignore_list.txt', self.user_url)
 
-        elif isinstance(AccountSettings.exception, (PageLoadingError, PageNotAvailable)):
+        elif isinstance(self.account_option.exception, (PageLoadingError, PageNotAvailable)):
             pass
 
-        print(f'{AccountSettings.exception}')
+        print(f'{self.account_option.exception}')
 
     def bot_filter_out_handling(self):
 
-        if not isinstance(AccountSettings.exception, EmptyProfile):
-            exception_name = str(type(AccountSettings.exception)).split("'")[1].split('.')[-1]
+        if not isinstance(self.account_option.exception, EmptyProfile):
+            exception_name = str(type(self.account_option.exception)).split("'")[1].split('.')[-1]
             path = f'logs/{data.parameters["fil"]}/filter_out/{exception_name}.txt'
-            message = str(self.user_url.split("\n")[0]) + ' ----- ' + str(AccountSettings.exception)
+            message = str(self.user_url.split("\n")[0]) + ' ----- ' + str(self.account_option.exception)
             self.file_write(path, message)
 
         self.file_write('ignore_list.txt', self.user_url)
-        print(f'{AccountSettings.exception}')
+        print(f'{self.account_option.exception}')
 
     def save_log_exception(self):
-        exception_name = str(type(AccountSettings.exception)).split("'")[1].split('.')[-1]
+        exception_name = str(type(self.account_option.exception)).split("'")[1].split('.')[-1]
         date = datetime.now().strftime("%d-%m %H:%M:%S")
         path = f'logs/{BotException.mode}/{exception_name}.txt'
         exception_text = traceback.format_exc()
@@ -294,12 +210,12 @@ class BaseClass:
         scroll_block = self.search_element(locator, type_wait=ec.presence_of_element_located)
         following_users = []
 
-        if AccountSettings.mode == data.parameters['uns']:
+        if self.account_option.mode == data.parameters['uns']:
             while self.subscribes - 30 > len(following_users):
                 following_users = self.one_scroll_block_and_return_list_of_users(scroll_block)
                 print(f'Загрузил подписок - [{len(following_users)}/{self.subscribes}]')
 
-        elif AccountSettings.mode == data.parameters['par']:
+        elif self.account_option.mode == data.parameters['par']:
             for i in range(count):
                 self.one_scroll_block_and_return_list_of_users(scroll_block)
 
@@ -439,7 +355,7 @@ class BaseClass:
         self.should_be_subscribe_and_unsubscribe_blocking()
         self.count_iteration += 1
         print(
-            f'{datetime.now().strftime("%H:%M:%S")} - {self.username} - ',
+            f'{datetime.now().strftime("%H:%M:%S")} - {self.account_option.username} - ',
             f'[{self.count_iteration}/10] - Успешно отписался.')
 
     # переходит на страницу по ссылке, запускает проверки на наличие страницы, загрузку страницы и наличие микробана
@@ -447,7 +363,7 @@ class BaseClass:
         self.browser.get(self.user_url)
         username = self.user_url.split("/")[-2]
         print(
-            f'{datetime.now().strftime("%H:%M:%S")} - {self.username} - ',
+            f'{datetime.now().strftime("%H:%M:%S")} - {self.account_option.username} - ',
             f'[{self.count_iteration + 1}/{self.count_limit}]',
             f'Перешёл в профиль: {username}', end=end_str)
 
@@ -458,7 +374,7 @@ class BaseClass:
 
     # переходит на свою страницу, запускает проверки, кладёт количество подписок в переменную
     def go_to_my_profile_page_and_set_subscribes_amount(self, end_str='\n'):
-        url = f'https://www.instagram.com/{self.username}/'
+        url = f'https://www.instagram.com/{self.account_option.username}/'
         self.browser.get(url)
         self.should_be_instagram_page()
         self.should_be_activity_blocking()
@@ -467,28 +383,6 @@ class BaseClass:
         self.subscribes = self.return_number_posts_subscribe_and_subscribers()['subs']
         print(f"Количество подписок: {self.subscribes}", end=end_str)
 
-    # проверяет наличие окна "добавьте номер телефона"
-    def should_be_phone_number_input(self):
-        try:
-            # noinspection PyTypeChecker
-            self.search_element((By.CSS_SELECTOR, 'div.qF0y9.Igw0E.IwRSH.eGOV_._4EzTm.dQ9Hi > h3'), timeout=1,
-                                type_wait=ec.presence_of_element_located)
-            raise VerificationError(LoginErrorMessage.input_phone_number)
-
-        except TimeoutException:
-            pass
-
-    # проверяет наличие окна "подтвердите номер телефона"
-    def should_be_verification_phone_number(self):
-        try:
-            # noinspection PyTypeChecker
-            self.search_element((By.XPATH, '/html/body/div[1]/section/main/div[2]/div/div/div/div[1]/div[1]/span'),
-                                timeout=1, type_wait=ec.presence_of_element_located)
-            raise VerificationError(LoginErrorMessage.input_code_from_sms)
-
-        except TimeoutException:
-            pass
-
     # проверяет наличие запроса на верификацию
     def should_be_verification_form(self):
         try:
@@ -496,16 +390,6 @@ class BaseClass:
             self.search_element((By.CSS_SELECTOR, 'div.ctQZg.KtFt3 > button > div'), timeout=2)
             raise VerificationError(LoginErrorMessage.verification_form)
 
-        except TimeoutException:
-            pass
-
-    # проверяет наличие окна "подтвердите почту"
-    def should_be_verification_email(self):
-        try:
-            # noinspection PyTypeChecker
-            self.search_element((By.CSS_SELECTOR, 'div > div.GNbi9 > div > p'),
-                                timeout=1, type_wait=ec.presence_of_element_located)
-            raise VerificationError(LoginErrorMessage.verification_email)
         except TimeoutException:
             pass
 
@@ -594,6 +478,6 @@ class BaseClass:
             # noinspection PyTypeChecker
             self.search_element((By.NAME, "username"),
                                 timeout=10, type_wait=ec.presence_of_element_located)
-            print(f'Логин с аккаунта - {self.username}')
+            print(f'Логин с аккаунта - {self.account_option.username}')
         except TimeoutException:
             raise LoginError(LoginErrorMessage.not_login_page)
