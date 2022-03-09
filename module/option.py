@@ -1,4 +1,3 @@
-from module.exception_module import BotCriticalException, BotException
 from selenium import webdriver
 from data import *
 import settings
@@ -52,7 +51,7 @@ class BotOption:
         elif self.mode == BotOption.parameters['fil'] or self.mode == BotOption.parameters['par']:
             self.accounts_key_mask = 'bot_account'
         else:
-            raise BotCriticalException('Неизвестный режим работы, не могу установить маску аккаунта.')
+            raise Exception('Неизвестный режим работы, не могу установить маску аккаунта.')
 
     def input_operating_mode_and_set_parameters(self):
         user_input = input('Укажите режим работы (-параметры): ')
@@ -83,6 +82,6 @@ class BotOption:
                     account_list.append(key.split('-')[1])
             random.shuffle(account_list)
         else:
-            raise BotException('Неизвестная маска аккаунта.')
+            raise Exception('Неизвестная маска аккаунта.')
 
         self.accounts_key_number = account_list

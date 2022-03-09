@@ -1,4 +1,4 @@
-from module.exception_module import FilteredOut, BotNonCriticalException, BotFinishTask
+from module.exception_module import FilteredOut, BotNonCriticalException, BotFinishTask, ExceptionHandling
 from module.message_text_module import InformationMessage
 from module.filter_module import FilterClass
 from selenium.webdriver.common.by import By
@@ -24,7 +24,7 @@ class FunctionClass(FilterClass):
 
         except Exception as exception:
             self.account_option.exception = exception
-            self.standard_exception_handling()
+            ExceptionHandling(self.account_option).standard_exception_handling()
 
     def unsubscribe(self):
         while True:
@@ -47,11 +47,11 @@ class FunctionClass(FilterClass):
 
             except BotNonCriticalException as exception:
                 self.account_option.exception = exception
-                self.catching_non_critical_bot_exceptions()
+                ExceptionHandling(self.account_option).catching_non_critical_bot_exceptions()
 
             except Exception as exception:
                 self.account_option.exception = exception
-                self.standard_exception_handling()
+                ExceptionHandling(self.account_option).standard_exception_handling()
                 self.count_iteration += 1
 
     def subscribe(self):
@@ -66,11 +66,11 @@ class FunctionClass(FilterClass):
 
             except BotNonCriticalException as exception:
                 self.account_option.exception = exception
-                self.catching_non_critical_bot_exceptions()
+                ExceptionHandling(self.account_option).catching_non_critical_bot_exceptions()
 
             except Exception as exception:
                 self.account_option.exception = exception
-                self.standard_exception_handling()
+                ExceptionHandling(self.account_option).standard_exception_handling()
 
         raise BotFinishTask(InformationMessage.task_finish)
 
@@ -89,15 +89,15 @@ class FunctionClass(FilterClass):
 
             except BotNonCriticalException as exception:
                 self.account_option.exception = exception
-                self.catching_non_critical_bot_exceptions()
+                ExceptionHandling(self.account_option).catching_non_critical_bot_exceptions()
 
             except FilteredOut as exception:
                 self.account_option.exception = exception
-                self.bot_filter_out_handling()
+                ExceptionHandling(self.account_option).bot_filter_out_handling(self.user_url)
 
             except Exception as exception:
                 self.account_option.exception = exception
-                self.standard_exception_handling()
+                ExceptionHandling(self.account_option).standard_exception_handling()
 
             finally:
                 time.sleep(Filter.timeout)
@@ -117,10 +117,10 @@ class FunctionClass(FilterClass):
 
             except BotNonCriticalException as exception:
                 self.account_option.exception = exception
-                self.catching_non_critical_bot_exceptions()
+                ExceptionHandling(self.account_option).catching_non_critical_bot_exceptions()
 
             except Exception as exception:
                 self.account_option.exception = exception
-                self.standard_exception_handling()
+                ExceptionHandling(self.account_option).standard_exception_handling()
 
         raise BotFinishTask(InformationMessage.task_finish)

@@ -1,11 +1,6 @@
 from module.function_module import FunctionClass
-from module.exception_module import BotCriticalException, BotFinishTask
+from module.exception_module import BotCriticalException, BotFinishTask, ExceptionHandling
 import data
-
-
-def bot():
-    my_bot = StartBot()
-    my_bot.start()
 
 
 class StartBot(FunctionClass):
@@ -26,11 +21,11 @@ class StartBot(FunctionClass):
                     self.browser.quit()
                 except BotCriticalException as exception:
                     self.account_option.exception = exception
-                    self.catching_critical_bot_exceptions()
+                    ExceptionHandling(self.account_option).catching_critical_bot_exceptions()
 
         except BotFinishTask as exception:
             self.account_option.exception = exception
-            self.catching_critical_bot_exceptions()
+            ExceptionHandling(self.account_option).catching_critical_bot_exceptions()
 
         finally:
             if self.browser is not None:
@@ -38,4 +33,5 @@ class StartBot(FunctionClass):
 
 
 if __name__ == '__main__':
-    bot()
+    my_bot = StartBot()
+    my_bot.start()

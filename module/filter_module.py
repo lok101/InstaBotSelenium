@@ -1,7 +1,7 @@
+from module.exception_module import *
 from selenium.common.exceptions import TimeoutException, StaleElementReferenceException
-from module.exception_module import FilteredOut, StopWord, BadProfile, EmptyProfile
 from selenium.webdriver.support import expected_conditions as ec
-from module.message_text_module import FilterMessage
+from module.message_text_module import FilterMessage, InformationMessage, LoginErrorMessage
 from selenium.webdriver.common.by import By
 from module.base_module import BaseClass
 from settings import Filter
@@ -129,3 +129,86 @@ class FilterClass(BaseClass):
 
         if data_dict['follow'] < break_limit and coefficient <= max_coefficient:
             raise BadProfile(FilterMessage.bad_profile)
+
+    def should_be_user_page(self):
+        while True:
+            try:
+                error_message = self.search_element((By.CSS_SELECTOR, 'div > div > h2'), timeout=1,
+                                                    type_wait=ec.presence_of_element_located)
+                if 'К сожалению, эта страница недоступна' in error_message.text:
+                    raise UserPageNotExist(InformationMessage.page_not_exist)
+                elif 'Это закрытый аккаунт' in error_message.text:
+                    raise PageNotAvailable(FilterMessage.profile_closed)
+                elif 'Вам исполнилось' in error_message.text:
+                    raise PageNotAvailable(InformationMessage.check_age)
+                else:
+                    print('Неизвестное окно при вызове "should_be_user_page".')
+                break
+
+            except TimeoutException:
+                break
+
+            except StaleElementReferenceException:
+                continue
+
+    def should_be_home_page(self):
+        try:
+            self.search_element((By.NAME, "username"),
+                                timeout=10, type_wait=ec.presence_of_element_located)
+            print(f'Логин с аккаунта - {self.account_option.username}')
+        except TimeoutException:
+            raise LoginError(LoginErrorMessage.not_login_page)
+
+    def should_be_verification_form(self):
+        try:
+            self.search_element((By.CSS_SELECTOR, 'div.ctQZg.KtFt3 > button > div'), timeout=2)
+            raise VerificationError(LoginErrorMessage.verification_form)
+
+        except TimeoutException:
+            pass
+
+    def should_be_login_form_error(self):
+        try:
+            element = self.search_element((By.CSS_SELECTOR, '#slfErrorAlert'),
+                                          timeout=1, type_wait=ec.presence_of_element_located)
+            if 'К сожалению, вы ввели неправильный пароль.' in element.text:
+                raise LoginError(LoginErrorMessage.error_pass)
+            raise LoginError(LoginErrorMessage.login_form_error)
+        except TimeoutException:
+            pass
+
+    def should_be_login_button(self):
+        try:
+            self.search_element((By.CSS_SELECTOR, 'div.ctQZg.KtFt3 > div > div:nth-child(1)'), timeout=2,
+                                type_wait=ec.presence_of_element_located)
+
+        except TimeoutException:
+            raise LoginError(LoginErrorMessage.not_login)
+
+    def should_be_subscribe_and_unsubscribe_blocking(self):
+        try:
+            self.search_element((By.CSS_SELECTOR, 'div._08v79 > h3'), timeout=2,
+                                type_wait=ec.presence_of_element_located)
+            raise ActivBlocking(InformationMessage.subscribe_unsubscribe_blocking)
+
+        except TimeoutException:
+            pass
+
+    def should_be_activity_blocking(self):
+        try:
+            error_message = self.search_element((By.CSS_SELECTOR, 'div > div.error-container > p'), timeout=2,
+                                                type_wait=ec.presence_of_element_located)
+            if 'Подождите несколько минут, прежде чем пытаться снова' in error_message.text:
+                raise ActivBlocking(InformationMessage.activiti_blocking)
+            else:
+                print('Неизвестное всплывающее окно при вызове "should_be_activity_blocking".')
+        except TimeoutException:
+            pass
+
+    def should_be_instagram_page(self):
+        try:
+            self.search_element((By.CSS_SELECTOR, '[href=\'/\']'), timeout=15,
+                                type_wait=ec.presence_of_element_located)
+
+        except TimeoutException:
+            raise PageLoadingError(InformationMessage.page_loading_error)
