@@ -25,9 +25,6 @@ class FilterMessage:
 
 
 class LoginErrorMessage:
-    input_code_from_sms = 'Требуется код из СМС.'
-    input_phone_number = 'Требуется ввод номера телефона.'
-    verification_email = 'Требуется подтверждение почты.'
     login_form_error = 'Ошибка авторизации.'
     error_pass = 'Неверный пароль.'
     not_login = 'Не получилось залогиниться.'

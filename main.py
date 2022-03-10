@@ -1,5 +1,6 @@
 from module.function_module import FunctionClass
-from module.exception_module import BotCriticalException, BotFinishTask, ExceptionHandling
+from module.exception_module import BotCriticalException, BotFinishTask
+from module.exception_handling import ExceptionHandling
 import data
 
 

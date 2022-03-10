@@ -1,13 +1,15 @@
+from module.exception_module import PageLoadingError, ActivBlocking, LoginError, PageNotAvailable, UserPageNotExist, \
+    VerificationError
+from module.message_text_module import InformationMessage, LoginErrorMessage, FilterMessage
 from selenium.common.exceptions import TimeoutException, StaleElementReferenceException
 from selenium.webdriver.support import expected_conditions as ec
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.common.by import By
-from module.exception_module import *
 from module.option import BotOption
 from datetime import datetime
-from settings import *
-from data import *
+from settings import Subscribe, StartSettings, Unsubscribe
+from data import my_ip
 import pickle
 import random
 import time
@@ -20,7 +22,6 @@ class BaseClass:
         self.account_option = BotOption()
         self.browser = None
 
-        self.user_url = None
         self.count_limit = None
         self.subscribes = None
         self.count_iteration = 0
@@ -52,9 +53,6 @@ class BaseClass:
         time.sleep(5)
         self.should_be_login_form_error()
         self.should_be_verification_form()
-        self.should_be_verification_email()
-        self.should_be_phone_number_input()
-        self.should_be_verification_phone_number()
         self.should_be_login_button()
 
         # сохраняем cookies
@@ -99,32 +97,6 @@ class BaseClass:
                 print(StaleElementReferenceException)
                 continue
 
-    @staticmethod
-    def file_read(file_name, value, operating_mode='r'):
-        with open(f'data/{file_name}', operating_mode, encoding='utf-8') as file:
-            if isinstance(value, set):
-                for link in file:
-                    value.add(link)
-            elif isinstance(value, list):
-                for link in file:
-                    value.append(link)
-
-    @staticmethod
-    def file_write(file_name, value, operating_mode='a'):
-        with open(f'data/{file_name}', operating_mode, encoding='utf-8') as file:
-            if isinstance(value, (list, set)):
-                if '\n' in value.pop():
-                    for item in value:
-                        file.write(item)
-                else:
-                    for item in value:
-                        file.write(item + '\n')
-            else:
-                if '\n' in value:
-                    file.write(str(value))
-                else:
-                    file.write(str(value) + '\n')
-
     def scrolling_div_block(self, count):
         scroll_block = self.search_element((By.CSS_SELECTOR, 'div.RnEpo.Yx5HN > div > div > div> div.isgrP'),
                                            type_wait=ec.presence_of_element_located)
@@ -168,16 +140,9 @@ class BaseClass:
 
         return dict_return
 
-    def difference_sets(self, file_path):
-        account_list, ignore_list = set(), set()
-        self.file_read(file_path, account_list)
-        self.file_read(BotOption.parameters['ignore_list_path'], ignore_list)
-        account_list = account_list.difference(ignore_list)
-        return account_list
-
     def set_user_url_from_file(self, file_path):
         user_list = self.difference_sets(file_path)
-        self.user_url = user_list.pop()
+        self.account_option.user_url = user_list.pop()
         self.file_write(file_path, user_list, operating_mode='w')
 
     def print_statistics_on_filtration(self):
@@ -213,13 +178,13 @@ class BaseClass:
                 button.click()
                 time.sleep(random.randrange(Subscribe.min_timeout, Subscribe.max_timeout))
                 self.should_be_subscribe_and_unsubscribe_blocking()
-                self.file_write((BotOption.parameters["ignore_list_path"]), self.user_url)
+                self.file_write((BotOption.parameters["ignore_list_path"]), self.account_option.user_url)
                 self.count_iteration += 1
                 print('Успешно подписался.')
                 break
         else:
             print('Кнопка не найдена.')
-            self.file_write((BotOption.parameters["ignore_list_path"]), self.user_url)
+            self.file_write((BotOption.parameters["ignore_list_path"]), self.account_option.user_url)
             time.sleep(random.randrange(Subscribe.min_timeout, Subscribe.max_timeout))
 
     def check_limits_from_subscribe(self):
@@ -241,8 +206,8 @@ class BaseClass:
             f'[{self.count_iteration}/10] - Успешно отписался.')
 
     def go_to_user_page(self, end_str=' ===> '):
-        self.browser.get(self.user_url)
-        username = self.user_url.split("/")[-2]
+        self.browser.get(self.account_option.user_url)
+        username = self.account_option.user_url.split("/")[-2]
         print(
             f'{datetime.now().strftime("%H:%M:%S")} - {self.account_option.username} - ',
             f'[{self.count_iteration + 1}/{self.count_limit}]',
@@ -264,9 +229,123 @@ class BaseClass:
         print(f"Количество подписок: {self.subscribes}", end=end_str)
 
     def set_count_limit_for_subscribe(self):
-        if self.account_option.mode == BotOption.parameters['short']:
+        if self.account_option.second_mode == BotOption.parameters['short']:
             self.count_limit = Subscribe.subscribe_limit_stop
-        elif self.account_option.mode == BotOption.parameters['sub']:
-            self.count_limit = Subscribe.subscribe_limit_stop - self.subscribes
         else:
-            raise BotCriticalException('Неизвестный режим работы в методе "set_count_limit_for_subscribe".')
+            self.count_limit = Subscribe.subscribe_limit_stop - self.subscribes
+
+    def should_be_user_page(self):
+        while True:
+            try:
+                error_message = self.search_element((By.CSS_SELECTOR, 'div > div > h2'), timeout=1,
+                                                    type_wait=ec.presence_of_element_located)
+                if 'К сожалению, эта страница недоступна' in error_message.text:
+                    raise UserPageNotExist(InformationMessage.page_not_exist)
+                elif 'Это закрытый аккаунт' in error_message.text:
+                    raise PageNotAvailable(FilterMessage.profile_closed)
+                elif 'Вам исполнилось' in error_message.text:
+                    raise PageNotAvailable(InformationMessage.check_age)
+                else:
+                    print('Неизвестное окно при вызове "should_be_user_page".')
+                break
+
+            except TimeoutException:
+                break
+
+            except StaleElementReferenceException:
+                continue
+
+    def should_be_home_page(self):
+        try:
+            self.search_element((By.NAME, "username"),
+                                timeout=10, type_wait=ec.presence_of_element_located)
+            print(f'Логин с аккаунта - {self.account_option.username}')
+        except TimeoutException:
+            raise LoginError(LoginErrorMessage.not_login_page)
+
+    def should_be_verification_form(self):
+        try:
+            self.search_element((By.CSS_SELECTOR, 'div.ctQZg.KtFt3 > button > div'), timeout=2)
+            raise VerificationError(LoginErrorMessage.verification_form)
+
+        except TimeoutException:
+            pass
+
+    def should_be_login_form_error(self):
+        try:
+            element = self.search_element((By.CSS_SELECTOR, '#slfErrorAlert'),
+                                          timeout=1, type_wait=ec.presence_of_element_located)
+            if 'К сожалению, вы ввели неправильный пароль.' in element.text:
+                raise LoginError(LoginErrorMessage.error_pass)
+            raise LoginError(LoginErrorMessage.login_form_error)
+        except TimeoutException:
+            pass
+
+    def should_be_login_button(self):
+        try:
+            self.search_element((By.CSS_SELECTOR, 'div.ctQZg.KtFt3 > div > div:nth-child(1)'), timeout=2,
+                                type_wait=ec.presence_of_element_located)
+
+        except TimeoutException:
+            raise LoginError(LoginErrorMessage.not_login)
+
+    def should_be_subscribe_and_unsubscribe_blocking(self):
+        try:
+            self.search_element((By.CSS_SELECTOR, 'div._08v79 > h3'), timeout=2,
+                                type_wait=ec.presence_of_element_located)
+            raise ActivBlocking(InformationMessage.subscribe_unsubscribe_blocking)
+
+        except TimeoutException:
+            pass
+
+    def should_be_activity_blocking(self):
+        try:
+            error_message = self.search_element((By.CSS_SELECTOR, 'div > div.error-container > p'), timeout=2,
+                                                type_wait=ec.presence_of_element_located)
+            if 'Подождите несколько минут, прежде чем пытаться снова' in error_message.text:
+                raise ActivBlocking(InformationMessage.activiti_blocking)
+            else:
+                print('Неизвестное всплывающее окно при вызове "should_be_activity_blocking".')
+        except TimeoutException:
+            pass
+
+    def should_be_instagram_page(self):
+        try:
+            self.search_element((By.CSS_SELECTOR, '[href=\'/\']'), timeout=15,
+                                type_wait=ec.presence_of_element_located)
+
+        except TimeoutException:
+            raise PageLoadingError(InformationMessage.page_loading_error)
+
+    @staticmethod
+    def file_read(file_name, value, operating_mode='r'):
+        with open(f'data/{file_name}', operating_mode, encoding='utf-8') as file:
+            if isinstance(value, set):
+                for link in file:
+                    value.add(link)
+            elif isinstance(value, list):
+                for link in file:
+                    value.append(link)
+
+    @staticmethod
+    def file_write(file_name, value, operating_mode='a'):
+        with open(f'data/{file_name}', operating_mode, encoding='utf-8') as file:
+            if isinstance(value, (list, set)):
+                if '\n' in value.pop():
+                    for item in value:
+                        file.write(item)
+                else:
+                    for item in value:
+                        file.write(item + '\n')
+            else:
+                if '\n' in value:
+                    file.write(str(value))
+                else:
+                    file.write(str(value) + '\n')
+
+    def difference_sets(self, file_path):
+        account_list, ignore_list = set(), set()
+        self.file_read(file_path, account_list)
+        self.file_read(BotOption.parameters['ignore_list_path'], ignore_list)
+        account_list = account_list.difference(ignore_list)
+        return account_list

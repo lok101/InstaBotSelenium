@@ -1,6 +1,5 @@
 import tkinter
 from module import tkinter_data
-from main import GUI_start
 
 
 class MyButton(tkinter.Button):
@@ -28,7 +27,7 @@ class InstaBot:
         self.button = []
         for i in range(len(list(tkinter_data.account_dict))):
             btn = MyButton(InstaBot.win, i, text='Старт')
-            btn.config(command=lambda button=btn: self.press_button(button))
+            # btn.config(command=lambda button=btn: self.press_button(button))
             self.button.append(btn)
 
         self.radiobutton = []
@@ -44,9 +43,6 @@ class InstaBot:
                 temp.append(radio)
             self.radiobutton.append(temp)
 
-    @staticmethod
-    def press_button(button: MyButton):
-        GUI_start(button.account_name, 'mode')
 
     @staticmethod
     def select_mode(radio: MyRadio):

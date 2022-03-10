@@ -1,5 +1,5 @@
+from data import proxy_list, user_dict
 from selenium import webdriver
-from data import *
 import settings
 import random
 
@@ -24,6 +24,8 @@ class BotOption:
         self.accounts_key_number = None
         self.chrome_options = None
         self.mode = None
+        self.second_mode = None
+        self.user_url = None
 
         self.exception = None
         self.exception_text = None
@@ -68,7 +70,7 @@ class BotOption:
             self.accounts_key_mask = 'main_account'
         if '-sub' in user_input:
             settings.subscribe_limit_stop = user_input.split('-sub')[1].split(' ')[0]
-            self.mode = BotOption.parameters['short']
+            self.second_mode = BotOption.parameters['short']
 
     def input_account_and_set_accounts_list(self):
         account_list = []

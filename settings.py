@@ -16,9 +16,9 @@ class Unsubscribe:
 
 class Subscribe:
 
-    min_timeout, max_timeout = 3, 10    # окно таймаутов (секунды) между подписками
+    min_timeout, max_timeout = 15, 25    # окно таймаутов (секунды) между подписками
     subscribe_in_session = 30           # количество подписок в одном заходе
-    sleep_between_iterations = 40       # таймаут (минуты) между заходами
+    sleep_between_iterations = 30       # таймаут (минуты) между заходами
     subscribe_limit_stop = 240          # количество подписчиков у аккаунта, при котором остановится задача
 
 

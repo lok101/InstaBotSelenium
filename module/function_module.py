@@ -1,10 +1,11 @@
-from module.exception_module import FilteredOut, BotNonCriticalException, BotFinishTask, ExceptionHandling
+from module.exception_module import FilteredOut, BotNonCriticalException, BotFinishTask
 from module.message_text_module import InformationMessage
+from module.exception_handling import ExceptionHandling
 from module.filter_module import FilterClass
 from selenium.webdriver.common.by import By
 from module.option import BotOption
 from selenium import webdriver
-from settings import *
+from settings import Parce, Unsubscribe, Filter
 import time
 
 
@@ -84,7 +85,7 @@ class FunctionClass(FilterClass):
                 self.set_user_url_from_file(BotOption.parameters['non_filtered_path'])
                 self.go_to_user_page()
                 self.should_be_compliance_with_limits()
-                self.file_write((BotOption.parameters['filtered_path']), self.user_url)
+                self.file_write((BotOption.parameters['filtered_path']), self.account_option.user_url)
                 self.count += 1
 
             except BotNonCriticalException as exception:
@@ -93,7 +94,7 @@ class FunctionClass(FilterClass):
 
             except FilteredOut as exception:
                 self.account_option.exception = exception
-                ExceptionHandling(self.account_option).bot_filter_out_handling(self.user_url)
+                ExceptionHandling(self.account_option).bot_filter_out_handling()
 
             except Exception as exception:
                 self.account_option.exception = exception
@@ -104,7 +105,7 @@ class FunctionClass(FilterClass):
 
     def parce(self):
         url_list = self.get_users_url_for_parce()
-        for self.user_url in url_list:
+        for self.account_option.user_url in url_list:
             try:
                 self.go_to_user_page()
                 self.search_element((By.CSS_SELECTOR, 'li:nth-child(2) > a')).click()  # открыть список подписчиков
