@@ -1,15 +1,17 @@
 from module.exception_module import PageLoadingError, ActivBlocking, LoginError, PageNotAvailable, UserPageNotExist, \
-    VerificationError
+    VerificationError, BotFinishTask
 from module.message_text_module import InformationMessage, LoginErrorMessage, FilterMessage
 from selenium.common.exceptions import TimeoutException, StaleElementReferenceException
 from selenium.webdriver.support import expected_conditions as ec
+from settings import Subscribe, StartSettings, Unsubscribe
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.common.by import By
 from module.option import BotOption
+from module.tools import Tools
 from datetime import datetime
-from settings import Subscribe, StartSettings, Unsubscribe
 from data import my_ip
+import traceback
 import pickle
 import random
 import time
@@ -141,14 +143,14 @@ class BaseClass:
         return dict_return
 
     def set_user_url_from_file(self, file_path):
-        user_list = self.difference_sets(file_path)
+        user_list = Tools.difference_sets(file_path)
         self.account_option.user_url = user_list.pop()
-        self.file_write(file_path, user_list, operating_mode='w')
+        Tools.file_write(file_path, user_list, operating_mode='w')
 
     def print_statistics_on_filtration(self):
         non_filtered, filtered = set(), set()
-        self.file_read((BotOption.parameters["non_filtered_path"]), non_filtered)
-        self.file_read((BotOption.parameters["filtered_path"]), filtered)
+        Tools.file_read((BotOption.parameters["non_filtered_path"]), non_filtered)
+        Tools.file_read((BotOption.parameters["filtered_path"]), filtered)
         print(
             f'\nНе отфильтровано - {len(non_filtered)}.'
             f'\nГотовых - {len(filtered)}.',
@@ -157,13 +159,13 @@ class BaseClass:
 
     def print_statistics_on_parce(self):
         non_filtered = set()
-        self.file_read((BotOption.parameters["non_filtered_path"]), non_filtered)
+        Tools.file_read((BotOption.parameters["non_filtered_path"]), non_filtered)
         self.count_iteration += 1
         print(f'Успешно. Количество собранных пользователей: {len(non_filtered)}.')
 
     def get_users_url_for_parce(self):
         urls_public = []
-        self.file_read((BotOption.parameters["parce_url_path"]), urls_public)
+        Tools.file_read((BotOption.parameters["parce_url_path"]), urls_public)
         self.count_limit = len(urls_public)
         urls_public = urls_public[self.count_iteration:-1]
         return urls_public
@@ -178,13 +180,13 @@ class BaseClass:
                 button.click()
                 time.sleep(random.randrange(Subscribe.min_timeout, Subscribe.max_timeout))
                 self.should_be_subscribe_and_unsubscribe_blocking()
-                self.file_write((BotOption.parameters["ignore_list_path"]), self.account_option.user_url)
+                Tools.file_write((BotOption.parameters["ignore_list_path"]), self.account_option.user_url)
                 self.count_iteration += 1
                 print('Успешно подписался.')
                 break
         else:
             print('Кнопка не найдена.')
-            self.file_write((BotOption.parameters["ignore_list_path"]), self.account_option.user_url)
+            Tools.file_write((BotOption.parameters["ignore_list_path"]), self.account_option.user_url)
             time.sleep(random.randrange(Subscribe.min_timeout, Subscribe.max_timeout))
 
     def check_limits_from_subscribe(self):
@@ -240,11 +242,11 @@ class BaseClass:
                 error_message = self.search_element((By.CSS_SELECTOR, 'div > div > h2'), timeout=1,
                                                     type_wait=ec.presence_of_element_located)
                 if 'К сожалению, эта страница недоступна' in error_message.text:
-                    raise UserPageNotExist(InformationMessage.page_not_exist)
+                    raise UserPageNotExist(self.account_option, InformationMessage.page_not_exist)
                 elif 'Это закрытый аккаунт' in error_message.text:
-                    raise PageNotAvailable(FilterMessage.profile_closed)
+                    raise PageNotAvailable(self.account_option, FilterMessage.profile_closed)
                 elif 'Вам исполнилось' in error_message.text:
-                    raise PageNotAvailable(InformationMessage.check_age)
+                    raise PageNotAvailable(self.account_option, InformationMessage.check_age)
                 else:
                     print('Неизвестное окно при вызове "should_be_user_page".')
                 break
@@ -261,12 +263,12 @@ class BaseClass:
                                 timeout=10, type_wait=ec.presence_of_element_located)
             print(f'Логин с аккаунта - {self.account_option.username}')
         except TimeoutException:
-            raise LoginError(LoginErrorMessage.not_login_page)
+            raise LoginError(self.account_option, LoginErrorMessage.not_login_page)
 
     def should_be_verification_form(self):
         try:
             self.search_element((By.CSS_SELECTOR, 'div.ctQZg.KtFt3 > button > div'), timeout=2)
-            raise VerificationError(LoginErrorMessage.verification_form)
+            raise VerificationError(self.account_option, LoginErrorMessage.verification_form)
 
         except TimeoutException:
             pass
@@ -276,8 +278,8 @@ class BaseClass:
             element = self.search_element((By.CSS_SELECTOR, '#slfErrorAlert'),
                                           timeout=1, type_wait=ec.presence_of_element_located)
             if 'К сожалению, вы ввели неправильный пароль.' in element.text:
-                raise LoginError(LoginErrorMessage.error_pass)
-            raise LoginError(LoginErrorMessage.login_form_error)
+                raise LoginError(self.account_option, LoginErrorMessage.error_pass)
+            raise LoginError(self.account_option, LoginErrorMessage.login_form_error)
         except TimeoutException:
             pass
 
@@ -287,13 +289,13 @@ class BaseClass:
                                 type_wait=ec.presence_of_element_located)
 
         except TimeoutException:
-            raise LoginError(LoginErrorMessage.not_login)
+            raise LoginError(self.account_option, LoginErrorMessage.not_login)
 
     def should_be_subscribe_and_unsubscribe_blocking(self):
         try:
             self.search_element((By.CSS_SELECTOR, 'div._08v79 > h3'), timeout=2,
                                 type_wait=ec.presence_of_element_located)
-            raise ActivBlocking(InformationMessage.subscribe_unsubscribe_blocking)
+            raise ActivBlocking(self.account_option, InformationMessage.subscribe_unsubscribe_blocking)
 
         except TimeoutException:
             pass
@@ -303,7 +305,7 @@ class BaseClass:
             error_message = self.search_element((By.CSS_SELECTOR, 'div > div.error-container > p'), timeout=2,
                                                 type_wait=ec.presence_of_element_located)
             if 'Подождите несколько минут, прежде чем пытаться снова' in error_message.text:
-                raise ActivBlocking(InformationMessage.activiti_blocking)
+                raise ActivBlocking(self.account_option, InformationMessage.activiti_blocking)
             else:
                 print('Неизвестное всплывающее окно при вызове "should_be_activity_blocking".')
         except TimeoutException:
@@ -315,37 +317,30 @@ class BaseClass:
                                 type_wait=ec.presence_of_element_located)
 
         except TimeoutException:
-            raise PageLoadingError(InformationMessage.page_loading_error)
+            raise PageLoadingError(self.account_option, InformationMessage.page_loading_error)
 
-    @staticmethod
-    def file_read(file_name, value, operating_mode='r'):
-        with open(f'data/{file_name}', operating_mode, encoding='utf-8') as file:
-            if isinstance(value, set):
-                for link in file:
-                    value.add(link)
-            elif isinstance(value, list):
-                for link in file:
-                    value.append(link)
+    def standard_exception_handling(self):
 
-    @staticmethod
-    def file_write(file_name, value, operating_mode='a'):
-        with open(f'data/{file_name}', operating_mode, encoding='utf-8') as file:
-            if isinstance(value, (list, set)):
-                if '\n' in value.pop():
-                    for item in value:
-                        file.write(item)
-                else:
-                    for item in value:
-                        file.write(item + '\n')
-            else:
-                if '\n' in value:
-                    file.write(str(value))
-                else:
-                    file.write(str(value) + '\n')
+        self.save_log_exception()
+        exception_name = str(type(self.account_option.exception)).split("'")[1].split('.')[-1]
+        if self.account_option.mode == self.account_option.parameters['fil'] \
+                and isinstance(self.account_option.exception, KeyError):
+            raise BotFinishTask(self.account_option, FilterMessage.list_empty)
+        print(f'\nЛог: {self.account_option.mode}/{exception_name} -- {self.account_option.exception}')
 
-    def difference_sets(self, file_path):
-        account_list, ignore_list = set(), set()
-        self.file_read(file_path, account_list)
-        self.file_read(BotOption.parameters['ignore_list_path'], ignore_list)
-        account_list = account_list.difference(ignore_list)
-        return account_list
+    def save_log_exception(self):
+        exception_name = str(type(self.account_option.exception)).split("'")[1].split('.')[-1]
+        path = f'logs/{self.account_option.mode}/{exception_name}.txt'
+
+        date = datetime.now().strftime("%d-%m %H:%M:%S")
+        exception_text = traceback.format_exc()
+        message = f'{date}\n{exception_text}\n\n'
+
+        Tools.file_write(path, message)
+
+        if 'CONNECTION_FAILED' in exception_text:
+            timeout = StartSettings.err_proxy_timeout
+            error_name = exception_text.split('net::')[1].split('\n')[0]
+            print(f'{date.split(" ")[1]} -- {self.account_option.mode} >> {error_name}. ',
+                  f'Запись добавлена в лог. Таймаут {timeout} секунд.')
+            time.sleep(timeout)

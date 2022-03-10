@@ -28,7 +28,7 @@ class FilterClass(BaseClass):
         """
         try:
             self.search_element((By.CSS_SELECTOR, 'span.vBF20._1OSdk > button > div > span'), timeout=1)
-            raise FilteredOut(FilterMessage.already_subscribe)
+            raise FilteredOut(self.account_option, FilterMessage.already_subscribe)
         except TimeoutException:
             pass
 
@@ -36,7 +36,7 @@ class FilterClass(BaseClass):
     def should_be_posts(self):
         try:
             self.search_element((By.XPATH, '//article/div[1]/div/div[2]/h1'), timeout=1)
-            raise EmptyProfile(FilterMessage.no_posts)
+            raise EmptyProfile(self.account_option, FilterMessage.no_posts)
         except TimeoutException:
             pass
 
@@ -44,7 +44,7 @@ class FilterClass(BaseClass):
     def should_be_private_profile(self):
         try:
             self.search_element((By.XPATH, '//article/div[1]/div/h2'), timeout=0.5)
-            raise EmptyProfile(FilterMessage.profile_closed)
+            raise EmptyProfile(self.account_option, FilterMessage.profile_closed)
         except TimeoutException:
             pass
         except StaleElementReferenceException:
@@ -66,7 +66,7 @@ class FilterClass(BaseClass):
                 a = hasher.hexdigest()
                 digests.append(a)
         if digests[0] == digests[1]:
-            raise EmptyProfile(FilterMessage.no_avatar)
+            raise EmptyProfile(self.account_option, FilterMessage.no_avatar)
 
     # проверяет наличие стоп-слов в никнейме
     def should_be_stop_word_in_nick_name(self):
@@ -97,13 +97,13 @@ class FilterClass(BaseClass):
         except TimeoutException:
             pass
 
-    @staticmethod
-    def search_stop_word_in_argument(field, stop_words_list, assert_text):
+    def search_stop_word_in_argument(self, field, stop_words_list, assert_text):
         try:
             for word in stop_words_list:
                 assert word.lower() not in field.lower()
         except AssertionError:
-            raise StopWord(assert_text, word)
+            exception_text = f'{assert_text} {word}'
+            raise StopWord(self.account_option, exception_text)
 
     # сверяет количество постов, подписчиков и подписок с лимитами
     def check_posts_follows_and_subs_amount(self):
@@ -119,13 +119,13 @@ class FilterClass(BaseClass):
         coefficient = data_dict['subs'] / data_dict['follow']
 
         if not posts_max >= data_dict['posts'] >= posts_min:
-            raise FilteredOut(FilterMessage.filter_posts)
+            raise FilteredOut(self.account_option, FilterMessage.filter_posts)
 
         if not follow_max >= data_dict['follow'] >= follow_min:
-            raise FilteredOut(FilterMessage.filter_follow)
+            raise FilteredOut(self.account_option, FilterMessage.filter_follow)
 
         if not subs_max >= data_dict['subs'] >= subs_min:
-            raise FilteredOut(FilterMessage.filter_subs)
+            raise FilteredOut(self.account_option, FilterMessage.filter_subs)
 
         if data_dict['follow'] < break_limit and coefficient <= max_coefficient:
-            raise BadProfile(FilterMessage.bad_profile)
+            raise BadProfile(self.account_option, FilterMessage.bad_profile)

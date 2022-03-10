@@ -11,6 +11,7 @@ class BotOption:
         'fil': 'filter',
         'par': 'parce',
         'short': 'short_subscribe',
+        'test': 'test',
         'ignore_list_path': 'ignore_list.txt',
         'parce_url_path': 'url_lists/subscribers_urls.txt',
         'non_filtered_path': 'non_filtered/subscribers_urls.txt',
@@ -25,7 +26,7 @@ class BotOption:
         self.chrome_options = None
         self.mode = None
         self.second_mode = None
-        self.user_url = None
+        self.user_url = 'test_url'
 
         self.exception = None
         self.exception_text = None
@@ -48,9 +49,13 @@ class BotOption:
 
     def set_mode_and_mask_parameters(self, parameter_name: str):
         self.mode = BotOption.parameters[parameter_name]
-        if self.mode == BotOption.parameters['sub'] or self.mode == BotOption.parameters['uns']:
+        if self.mode == BotOption.parameters['sub']\
+                or self.mode == BotOption.parameters['uns']\
+                or self.mode == BotOption.parameters['test']:
             self.accounts_key_mask = 'main_account'
-        elif self.mode == BotOption.parameters['fil'] or self.mode == BotOption.parameters['par']:
+
+        elif self.mode == BotOption.parameters['fil']\
+                or self.mode == BotOption.parameters['par']:
             self.accounts_key_mask = 'bot_account'
         else:
             raise Exception('Неизвестный режим работы, не могу установить маску аккаунта.')
