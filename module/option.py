@@ -49,19 +49,22 @@ class BotOption:
 
     def set_mode_and_mask_parameters(self, parameter_name: str):
         self.mode = BotOption.parameters[parameter_name]
-        if self.mode == BotOption.parameters['sub']\
-                or self.mode == BotOption.parameters['uns']\
+        if self.mode == BotOption.parameters['sub'] \
+                or self.mode == BotOption.parameters['uns'] \
                 or self.mode == BotOption.parameters['test']:
             self.accounts_key_mask = 'main_account'
 
-        elif self.mode == BotOption.parameters['fil']\
+        elif self.mode == BotOption.parameters['fil'] \
                 or self.mode == BotOption.parameters['par']:
             self.accounts_key_mask = 'bot_account'
         else:
             raise Exception('Неизвестный режим работы, не могу установить маску аккаунта.')
 
     def input_operating_mode_and_set_parameters(self):
-        user_input = input('Укажите режим работы (-параметры): ')
+        if self.mode == 'Режим не присвоен.':
+            user_input = input('Укажите режим работы (-параметры): ')
+        else:
+            user_input = self.mode
         self.set_mode_and_mask_parameters(user_input.split(' ')[0])
         if '-p' in user_input:
             self.proxy = False
@@ -81,16 +84,19 @@ class BotOption:
 
     def input_account_and_set_accounts_list(self):
         account_list = []
-        if self.accounts_key_mask == 'main_account':
-            user_input = input('Введите имя аккаунта: ')
-            account_list = user_input.split(' ')
-
-        elif self.accounts_key_mask == 'bot_account':
-            for key in user_dict:
-                if 'bot_account' in key:
-                    account_list.append(key.split('-')[1])
-            random.shuffle(account_list)
+        if self.accounts_key_number != 'Номер аккаунта не присвоен.':
+            account_list.append(self.accounts_key_number)
         else:
-            raise Exception('Неизвестная маска аккаунта.')
+            if self.accounts_key_mask == 'main_account':
+                user_input = input('Введите имя аккаунта: ')
+                account_list = user_input.split(' ')
+
+            elif self.accounts_key_mask == 'bot_account':
+                for key in user_dict:
+                    if 'bot_account' in key:
+                        account_list.append(key.split('-')[1])
+                random.shuffle(account_list)
+            else:
+                raise Exception('Неизвестная маска аккаунта.')
 
         self.accounts_key_number = account_list
