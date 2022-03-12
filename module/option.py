@@ -21,12 +21,12 @@ class BotOption:
     def __init__(self):
         self.username = None
         self.password = None
-        self.accounts_key_mask = None
-        self.accounts_key_number = None
+        self.accounts_key_mask = 'Маска не присвоена.'
+        self.accounts_key_number = 'Номер аккаунта не присвоен.'
         self.chrome_options = None
-        self.mode = None
-        self.second_mode = None
-        self.user_url = 'test_url'
+        self.mode = 'Режим не присвоен.'
+        self.second_mode = 'Дополнительный режим не присвоен.'
+        self.user_url = None
 
         self.exception = None
         self.exception_text = None
@@ -76,6 +76,8 @@ class BotOption:
         if '-sub' in user_input:
             settings.subscribe_limit_stop = user_input.split('-sub')[1].split(' ')[0]
             self.second_mode = BotOption.parameters['short']
+        if '-nonfilt' in user_input:
+            self.parameters['filtered_path'] = self.parameters['non_filtered_path']
 
     def input_account_and_set_accounts_list(self):
         account_list = []

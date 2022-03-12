@@ -1,4 +1,5 @@
 from module.option import BotOption
+import random
 
 
 class Tools:
@@ -11,8 +12,8 @@ class Tools:
         return account_list
 
     @staticmethod
-    def file_read(file_name, value, operating_mode='r'):
-        with open(f'data/{file_name}', operating_mode, encoding='utf-8') as file:
+    def file_read(file_path, value, operating_mode='r'):
+        with open(f'data/{file_path}', operating_mode, encoding='utf-8') as file:
             if isinstance(value, set):
                 for link in file:
                     value.add(link)
@@ -21,17 +22,31 @@ class Tools:
                     value.append(link)
 
     @staticmethod
-    def file_write(file_name, value, operating_mode='a'):
-        with open(f'data/{file_name}', operating_mode, encoding='utf-8') as file:
+    def file_write(file_path, value, operating_mode='a'):
+        with open(f'data/{file_path}', operating_mode, encoding='utf-8') as file:
             if isinstance(value, (list, set)):
-                if '\n' in value.pop():
-                    for item in value:
+                for item in value:
+                    if '\n' in item:
                         file.write(item)
-                else:
-                    for item in value:
+                    else:
                         file.write(item + '\n')
             else:
                 if '\n' in value:
                     file.write(str(value))
                 else:
                     file.write(str(value) + '\n')
+
+    @staticmethod
+    def shaffle_file(file_path):
+        file = []
+        Tools.file_read(file_path, file)
+        before = len(file)
+        random.shuffle(file)
+        Tools.file_write(file_path, file, operating_mode='w')
+        file = []
+        Tools.file_read(file_path, file)
+        after = len(file)
+        if before > after:
+            raise Exception('Метод "shaffle_file" вернул меньше строк, чем получил.')
+        elif before < after:
+            raise Exception('Метод "shaffle_file" вернул больше строк, чем получил.')

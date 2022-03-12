@@ -41,8 +41,6 @@ class BaseClass:
         print('Залогинился через cookies.')
 
     def not_cookie_login(self):
-        self.browser.get(self.link)
-
         username_input = self.search_element((By.NAME, "username"))
         username_input.clear()
         username_input.send_keys(self.account_option.username)
@@ -142,13 +140,21 @@ class BaseClass:
 
         return dict_return
 
-    def set_user_url_from_file(self, file_path):
-        user_list = Tools.difference_sets(file_path)
-        self.account_option.user_url = user_list.pop()
-        Tools.file_write(file_path, user_list, operating_mode='w')
+    def set_user_url_from_file(self, file_path, difference_ignore_list=True):
+        try:
+            if difference_ignore_list:
+                user_list = Tools.difference_sets(file_path)
+            else:
+                user_list = []
+                Tools.file_read(file_path, user_list)
+            self.account_option.user_url = user_list.pop()
+            Tools.file_write(file_path, user_list, operating_mode='w')
+        except IndexError:
+            raise BotFinishTask(self.account_option, InformationMessage.task_finish)
 
     def print_statistics_on_filtration(self):
         non_filtered, filtered = set(), set()
+        self.set_user_url_from_file((BotOption.parameters["non_filtered_path"]))    # вычитает из файла игнор лист
         Tools.file_read((BotOption.parameters["non_filtered_path"]), non_filtered)
         Tools.file_read((BotOption.parameters["filtered_path"]), filtered)
         print(
@@ -167,6 +173,8 @@ class BaseClass:
         urls_public = []
         Tools.file_read((BotOption.parameters["parce_url_path"]), urls_public)
         self.count_limit = len(urls_public)
+        if self.count_iteration >= self.count_limit:
+            raise BotFinishTask(self.account_option, InformationMessage.task_finish)
         urls_public = urls_public[self.count_iteration:-1]
         return urls_public
 
@@ -326,7 +334,7 @@ class BaseClass:
         if self.account_option.mode == self.account_option.parameters['fil'] \
                 and isinstance(self.account_option.exception, KeyError):
             raise BotFinishTask(self.account_option, FilterMessage.list_empty)
-        print(f'\nЛог: {self.account_option.mode}/{exception_name} -- {self.account_option.exception}')
+        print(f'\nИсключение обработано и добавлено в лог: {self.account_option.mode}/{exception_name}')
 
     def save_log_exception(self):
         exception_name = str(type(self.account_option.exception)).split("'")[1].split('.')[-1]
@@ -334,9 +342,9 @@ class BaseClass:
 
         date = datetime.now().strftime("%d-%m %H:%M:%S")
         exception_text = traceback.format_exc()
-        message = f'{date}\n{exception_text}\n\n'
+        log_text = f'{date}\n{exception_text}\n\n'
 
-        Tools.file_write(path, message)
+        Tools.file_write(path, log_text)
 
         if 'CONNECTION_FAILED' in exception_text:
             timeout = StartSettings.err_proxy_timeout
@@ -344,3 +352,13 @@ class BaseClass:
             print(f'{date.split(" ")[1]} -- {self.account_option.mode} >> {error_name}. ',
                   f'Запись добавлена в лог. Таймаут {timeout} секунд.')
             time.sleep(timeout)
+
+    def shaffle_file_for_task(self):
+        if self.account_option.mode == BotOption.parameters['par']:
+            Tools.shaffle_file(BotOption.parameters['parce_url_path'])
+            print(f'Файл {BotOption.parameters["parce_url_path"]} - перемешан.')
+        elif self.account_option.mode == BotOption.parameters['fil']:
+            Tools.shaffle_file(BotOption.parameters['non_filtered_path'])
+            print(f'Файл {BotOption.parameters["non_filtered_path"]} - перемешан.')
+        else:
+            raise Exception('Неизвестный режим в методе "shaffle_file_for_task".')

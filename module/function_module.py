@@ -30,7 +30,7 @@ class FunctionClass(FilterClass):
     def unsubscribe(self):
         while True:
             try:
-                count = 10
+                self.count_iteration = 0
                 self.go_to_my_profile_page_and_set_subscribes_amount()
                 if self.subscribes == 0:
                     raise BotFinishTask(self.account_option, InformationMessage.task_finish)
@@ -40,11 +40,10 @@ class FunctionClass(FilterClass):
                 following_users = following_div_block.find_elements(By.TAG_NAME, "li")
 
                 for user in following_users:
-                    if not count:
+                    if self.count_iteration == 10:
                         time.sleep(Unsubscribe.sleep_between_iterations * 60)
                         break
                     self.press_to_unsubscribe_button_and_set_timeouts(user)
-                    count -= 1
 
             except BotNonCriticalException as exception:
                 print(exception)
@@ -59,7 +58,7 @@ class FunctionClass(FilterClass):
         self.set_count_limit_for_subscribe()
         while self.count_iteration < self.count_limit:
             try:
-                self.set_user_url_from_file(BotOption.parameters['filtered_path'])
+                self.set_user_url_from_file(BotOption.parameters['filtered_path'], difference_ignore_list=False)
                 self.go_to_user_page()
                 self.press_to_subscribe_button()
                 self.check_limits_from_subscribe()
@@ -74,6 +73,8 @@ class FunctionClass(FilterClass):
         raise BotFinishTask(self.account_option, InformationMessage.task_finish)
 
     def filter(self):
+        if self.count_iteration == 0:
+            self.shaffle_file_for_task()
         self.count_limit = Filter.iteration_for_one_account
         for self.count_iteration in range(self.count_limit):
             try:
@@ -84,6 +85,7 @@ class FunctionClass(FilterClass):
                 self.go_to_user_page()
                 self.should_be_compliance_with_limits()
                 Tools.file_write((BotOption.parameters['filtered_path']), self.account_option.user_url)
+                Tools.file_write((BotOption.parameters['ignore_list_path']), self.account_option.user_url)
                 self.count += 1
 
             except BotNonCriticalException as exception:
@@ -100,6 +102,8 @@ class FunctionClass(FilterClass):
                 time.sleep(Filter.timeout)
 
     def parce(self):
+        if self.count_iteration == 0:
+            self.shaffle_file_for_task()
         url_list = self.get_users_url_for_parce()
         for self.account_option.user_url in url_list:
             try:
@@ -118,5 +122,3 @@ class FunctionClass(FilterClass):
             except Exception as exception:
                 self.account_option.exception = exception
                 self.standard_exception_handling()
-
-        raise BotFinishTask(self.account_option, InformationMessage.task_finish)

@@ -6,7 +6,7 @@ class InformationMessage:
     unsubscribe_blocking = 'Микробан отписки.'
     page_not_exist = 'Страница не существует.'
     check_age = 'В профиле ограничение возраста.'
-    task_finish = 'Задача завершена'
+    task_finish = 'Задача завершена.'
 
 
 class FilterMessage:
