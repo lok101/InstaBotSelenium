@@ -61,10 +61,7 @@ class BotOption:
             raise Exception('Неизвестный режим работы, не могу установить маску аккаунта.')
 
     def input_operating_mode_and_set_parameters(self):
-        if self.mode == 'Режим не присвоен.':
-            user_input = input('Укажите режим работы (-параметры): ')
-        else:
-            user_input = self.mode
+        user_input = input('Укажите режим работы (-параметры): ')
         self.set_mode_and_mask_parameters(user_input.split(' ')[0])
         if '-p' in user_input:
             self.proxy = False
@@ -84,19 +81,16 @@ class BotOption:
 
     def input_account_and_set_accounts_list(self):
         account_list = []
-        if self.accounts_key_number != 'Номер аккаунта не присвоен.':
-            account_list.append(self.accounts_key_number)
+        if self.accounts_key_mask == 'main_account':
+            user_input = input('Введите имя аккаунта: ')
+            account_list = user_input.split(' ')
+
+        elif self.accounts_key_mask == 'bot_account':
+            for key in user_dict:
+                if 'bot_account' in key:
+                    account_list.append(key.split('-')[1])
+            random.shuffle(account_list)
         else:
-            if self.accounts_key_mask == 'main_account':
-                user_input = input('Введите имя аккаунта: ')
-                account_list = user_input.split(' ')
+            raise Exception('Неизвестная маска аккаунта.')
 
-            elif self.accounts_key_mask == 'bot_account':
-                for key in user_dict:
-                    if 'bot_account' in key:
-                        account_list.append(key.split('-')[1])
-                random.shuffle(account_list)
-            else:
-                raise Exception('Неизвестная маска аккаунта.')
-
-        self.accounts_key_number = account_list
+    self.accounts_key_number = account_list
