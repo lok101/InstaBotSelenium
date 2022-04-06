@@ -1,7 +1,7 @@
-from data import proxy_list, user_dict
 from selenium import webdriver
 import settings
 import random
+import data
 
 
 class BotOption:
@@ -21,6 +21,7 @@ class BotOption:
     def __init__(self):
         self.username = None
         self.password = None
+        self.login_mode = settings.LoginFrom.chrome_profile
         self.accounts_key_mask = 'Маска не присвоена.'
         self.accounts_key_number = 'Номер аккаунта не присвоен.'
         self.chrome_options = None
@@ -43,9 +44,18 @@ class BotOption:
         if self.headless is True:
             self.chrome_options.add_argument("--headless")
         if self.proxy is True:
-            self.chrome_options.add_argument(f'--proxy-server={proxy_list}')
+            self.chrome_options.add_argument(f'--proxy-server={data.proxy_list}')
         if self.load_strategy is True:
             self.chrome_options.page_load_strategy = 'eager'
+
+    def set_account_parameters(self, name):
+        self.username = data.user_dict[
+            f'{self.accounts_key_mask}-{name}']['login']
+        self.password = data.user_dict[
+            f'{self.accounts_key_mask}-{name}']['password']
+        profile_path = f'--user-data-dir=C:\\Users\\loks1\\InstaBotSelenium\\venv\\chrome_profile\\{self.username}'
+        self.chrome_options.add_argument(profile_path)
+        self.chrome_options.add_extension('extension/extension_8_1_0_0.crx')
 
     def set_mode_and_mask_parameters(self, parameter_name: str):
         self.mode = BotOption.parameters[parameter_name]
@@ -62,22 +72,26 @@ class BotOption:
 
     def input_operating_mode_and_set_parameters(self):
         user_input = input('Укажите режим работы (-параметры): ')
+        user_input = f'{user_input} {settings.StartSettings.default_parameters}'
         self.set_mode_and_mask_parameters(user_input.split(' ')[0])
-        if '-p' in user_input:
-            self.proxy = False
-        if '-h' in user_input:
-            self.headless = False
-        if '-e' in user_input:
-            self.load_strategy = False
-        if '-bot' in user_input:
-            self.accounts_key_mask = 'bot_account'
-        if '-main' in user_input:
-            self.accounts_key_mask = 'main_account'
-        if '-sub' in user_input:
-            settings.subscribe_limit_stop = user_input.split('-sub')[1].split(' ')[0]
-            self.second_mode = BotOption.parameters['short']
-        if '-nonfilt' in user_input:
-            self.parameters['filtered_path'] = self.parameters['non_filtered_path']
+        for param in user_input.split(' '):
+            if '-p' in param:
+                self.proxy = not self.proxy
+            elif '-h' in param:
+                self.headless = not self.headless
+            elif '-e' in param:
+                self.load_strategy = not self.load_strategy
+            elif '-login' in param:
+                self.login_mode = settings.LoginFrom.form_login
+            elif '-bot' in user_input:
+                self.accounts_key_mask = 'bot_account'
+            elif '-main' in user_input:
+                self.accounts_key_mask = 'main_account'
+            elif '-sub' in user_input:
+                settings.subscribe_limit_stop = user_input.split('-sub')[1].split(' ')[0]
+                self.second_mode = BotOption.parameters['short']
+            elif '-nonfilt' in user_input:
+                self.parameters['filtered_path'] = self.parameters['non_filtered_path']
 
     def input_account_and_set_accounts_list(self):
         account_list = []
@@ -86,11 +100,11 @@ class BotOption:
             account_list = user_input.split(' ')
 
         elif self.accounts_key_mask == 'bot_account':
-            for key in user_dict:
+            for key in data.user_dict:
                 if 'bot_account' in key:
                     account_list.append(key.split('-')[1])
             random.shuffle(account_list)
         else:
             raise Exception('Неизвестная маска аккаунта.')
 
-    self.accounts_key_number = account_list
+        self.accounts_key_number = account_list

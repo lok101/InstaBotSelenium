@@ -31,3 +31,4 @@ class LoginErrorMessage:
     not_login_cookies = 'Не получилось залогиниться через Cookies.'
     not_login_page = 'Не загрузил домашнюю страницу.'
     verification_form = 'Поступил запрос на верификацию.'
+    wrong_account = 'Авторизованный аккаунт не соответствует выбранному. Произвожу перелогин.'

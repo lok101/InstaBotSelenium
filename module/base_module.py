@@ -1,13 +1,13 @@
-from module.exception_module import PageLoadingError, ActivBlocking, LoginError, PageNotAvailable, UserPageNotExist, \
-    VerificationError, BotFinishTask
-from module.message_text_module import InformationMessage, LoginErrorMessage, FilterMessage
+from module import message_text_module
 from selenium.common.exceptions import TimeoutException, StaleElementReferenceException
 from selenium.webdriver.support import expected_conditions as ec
 from settings import Subscribe, StartSettings, Unsubscribe
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.common.by import By
+from module import exception_module
 from module.option import BotOption
+from selenium import webdriver
 from module.tools import Tools
 from datetime import datetime
 from data import my_ip
@@ -30,7 +30,17 @@ class BaseClass:
         self.count = 0
         self.cycle = 0
 
+    def login_check(self):
+        self.browser = webdriver.Chrome(options=self.account_option.chrome_options)
+        self.browser.get('https://www.instagram.com/')
+        self.should_be_verification_form()
+        self.should_be_login_button()
+        print('Аккаунт залогинен.')
+
     def cookie_login(self):
+        self.browser.delete_all_cookies()
+        self.browser.refresh()
+        self.should_be_home_page()
         self.browser.delete_all_cookies()
         for cookie in pickle.load(open(f'data/cookies/{self.account_option.username}_cookies', 'rb')):
             self.browser.add_cookie(cookie)
@@ -60,7 +70,7 @@ class BaseClass:
         print(f'Залогинился и создал cookies ===> data/cookies/{self.account_option.username}_cookies.')
 
     def check_proxy_ip(self):
-        self.browser.get("https://api.myip.com/")
+        self.browser.get('https://api.myip.com/')
         pre = self.search_element((By.TAG_NAME, "body"), type_wait=ec.presence_of_element_located).text
         actual_ip = json.loads(pre)['ip']
         if actual_ip in my_ip:
@@ -150,7 +160,9 @@ class BaseClass:
             self.account_option.user_url = user_list.pop()
             Tools.file_write(file_path, user_list, operating_mode='w')
         except IndexError:
-            raise BotFinishTask(self.account_option, InformationMessage.task_finish)
+            raise exception_module.BotFinishTask(
+                self.account_option,
+                message_text_module.InformationMessage.task_finish)
 
     def print_statistics_on_filtration(self):
         non_filtered, filtered = set(), set()
@@ -174,7 +186,9 @@ class BaseClass:
         Tools.file_read((BotOption.parameters["parce_url_path"]), urls_public)
         self.count_limit = len(urls_public)
         if self.count_iteration >= self.count_limit:
-            raise BotFinishTask(self.account_option, InformationMessage.task_finish)
+            raise exception_module.BotFinishTask(
+                self.account_option,
+                message_text_module.InformationMessage.task_finish)
         urls_public = urls_public[self.count_iteration:-1]
         return urls_public
 
@@ -228,6 +242,19 @@ class BaseClass:
         self.should_be_user_page()
         self.should_be_verification_form()
 
+    def go_to_my_profile_page_from_click(self):
+        profile_icon = self.search_element((By.CSS_SELECTOR, 'div.ctQZg.KtFt3 > div > div > span'))
+        profile_icon.click()
+        go_to_my_page_button = self.search_element((By.CSS_SELECTOR, 'div._01UL2 > a:nth-child(1)'))
+        go_to_my_page_button.click()
+
+        page_url = self.browser.current_url
+        if self.account_option.username not in page_url:
+            raise exception_module.LoginError(
+                self.account_option,
+                message_text_module.LoginErrorMessage.wrong_account)
+        print(f'Аккаунт {self.account_option.username} - авторизован.')
+
     def go_to_my_profile_page_and_set_subscribes_amount(self, end_str='\n'):
         url = f'https://www.instagram.com/{self.account_option.username}/'
         self.browser.get(url)
@@ -250,11 +277,17 @@ class BaseClass:
                 error_message = self.search_element((By.CSS_SELECTOR, 'div > div > h2'), timeout=1,
                                                     type_wait=ec.presence_of_element_located)
                 if 'К сожалению, эта страница недоступна' in error_message.text:
-                    raise UserPageNotExist(self.account_option, InformationMessage.page_not_exist)
+                    raise exception_module.UserPageNotExist(
+                        self.account_option,
+                        message_text_module.InformationMessage.page_not_exist)
                 elif 'Это закрытый аккаунт' in error_message.text:
-                    raise PageNotAvailable(self.account_option, FilterMessage.profile_closed)
+                    raise exception_module.PageNotAvailable(
+                        self.account_option,
+                        message_text_module.FilterMessage.profile_closed)
                 elif 'Вам исполнилось' in error_message.text:
-                    raise PageNotAvailable(self.account_option, InformationMessage.check_age)
+                    raise exception_module.PageNotAvailable(
+                        self.account_option,
+                        message_text_module.InformationMessage.check_age)
                 else:
                     print('Неизвестное окно при вызове "should_be_user_page".')
                 break
@@ -271,12 +304,16 @@ class BaseClass:
                                 timeout=10, type_wait=ec.presence_of_element_located)
             print(f'Логин с аккаунта - {self.account_option.username}')
         except TimeoutException:
-            raise LoginError(self.account_option, LoginErrorMessage.not_login_page)
+            raise exception_module.LoginError(
+                self.account_option,
+                message_text_module.LoginErrorMessage.not_login_page)
 
     def should_be_verification_form(self):
         try:
             self.search_element((By.CSS_SELECTOR, 'div.ctQZg.KtFt3 > button > div'), timeout=2)
-            raise VerificationError(self.account_option, LoginErrorMessage.verification_form)
+            raise exception_module.VerificationError(
+                self.account_option,
+                message_text_module.LoginErrorMessage.verification_form)
 
         except TimeoutException:
             pass
@@ -286,8 +323,12 @@ class BaseClass:
             element = self.search_element((By.CSS_SELECTOR, '#slfErrorAlert'),
                                           timeout=1, type_wait=ec.presence_of_element_located)
             if 'К сожалению, вы ввели неправильный пароль.' in element.text:
-                raise LoginError(self.account_option, LoginErrorMessage.error_pass)
-            raise LoginError(self.account_option, LoginErrorMessage.login_form_error)
+                raise exception_module.LoginError(
+                    self.account_option,
+                    message_text_module.LoginErrorMessage.error_pass)
+            raise exception_module.LoginError(
+                self.account_option,
+                message_text_module.LoginErrorMessage.login_form_error)
         except TimeoutException:
             pass
 
@@ -297,13 +338,17 @@ class BaseClass:
                                 type_wait=ec.presence_of_element_located)
 
         except TimeoutException:
-            raise LoginError(self.account_option, LoginErrorMessage.not_login)
+            raise exception_module.LoginError(
+                self.account_option,
+                message_text_module.LoginErrorMessage.not_login)
 
     def should_be_subscribe_and_unsubscribe_blocking(self):
         try:
             self.search_element((By.CSS_SELECTOR, 'div._08v79 > h3'), timeout=2,
                                 type_wait=ec.presence_of_element_located)
-            raise ActivBlocking(self.account_option, InformationMessage.subscribe_unsubscribe_blocking)
+            raise exception_module.ActivBlocking(
+                self.account_option,
+                message_text_module.InformationMessage.subscribe_unsubscribe_blocking)
 
         except TimeoutException:
             pass
@@ -313,7 +358,9 @@ class BaseClass:
             error_message = self.search_element((By.CSS_SELECTOR, 'div > div.error-container > p'), timeout=2,
                                                 type_wait=ec.presence_of_element_located)
             if 'Подождите несколько минут, прежде чем пытаться снова' in error_message.text:
-                raise ActivBlocking(self.account_option, InformationMessage.activiti_blocking)
+                raise exception_module.ActivBlocking(
+                    self.account_option,
+                    message_text_module.InformationMessage.activiti_blocking)
             else:
                 print('Неизвестное всплывающее окно при вызове "should_be_activity_blocking".')
         except TimeoutException:
@@ -325,7 +372,9 @@ class BaseClass:
                                 type_wait=ec.presence_of_element_located)
 
         except TimeoutException:
-            raise PageLoadingError(self.account_option, InformationMessage.page_loading_error)
+            raise exception_module.PageLoadingError(
+                self.account_option,
+                message_text_module.InformationMessage.page_loading_error)
 
     def standard_exception_handling(self):
 
@@ -333,7 +382,9 @@ class BaseClass:
         exception_name = str(type(self.account_option.exception)).split("'")[1].split('.')[-1]
         if self.account_option.mode == self.account_option.parameters['fil'] \
                 and isinstance(self.account_option.exception, KeyError):
-            raise BotFinishTask(self.account_option, FilterMessage.list_empty)
+            raise exception_module.BotFinishTask(
+                self.account_option,
+                message_text_module.FilterMessage.list_empty)
         print(f'\nИсключение обработано и добавлено в лог: {self.account_option.mode}/{exception_name}')
 
     def save_log_exception(self):

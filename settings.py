@@ -1,4 +1,5 @@
 ﻿import data
+import enum
 
 
 class StartSettings:
@@ -6,6 +7,7 @@ class StartSettings:
     web_driver_wait = 30
     sleep_page_not_found = 5
     err_proxy_timeout = 40
+    default_parameters = '-p -h'
 
 
 class Unsubscribe:
@@ -44,3 +46,9 @@ class Parce:
 
     scroll_number_subscribers_list = 3      # количество прокруток списка с пользователями во время парсинга
     cycles_for_one_account = 20             # количество циклов сбора через один аккаунт
+
+
+class LoginFrom(enum.Enum):
+    form_login = 0
+    chrome_profile = 1
+

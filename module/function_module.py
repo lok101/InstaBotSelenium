@@ -1,11 +1,10 @@
-from module.exception_module import FilteredOut, BotNonCriticalException, BotFinishTask
+from module import exception_module
 from module.message_text_module import InformationMessage
 from settings import Parce, Unsubscribe, Filter
 from module.filter_module import FilterClass
 from selenium.webdriver.common.by import By
 from module.option import BotOption
 from module.tools import Tools
-from selenium import webdriver
 import time
 
 
@@ -13,11 +12,8 @@ class FunctionClass(FilterClass):
     def login(self):
         try:
             try:
-                self.browser = webdriver.Chrome(options=self.account_option.chrome_options)
                 if self.account_option.proxy:
                     self.check_proxy_ip()
-                self.browser.get('https://www.instagram.com/')
-                self.should_be_home_page()
                 self.cookie_login()
 
             except FileNotFoundError:
@@ -33,7 +29,7 @@ class FunctionClass(FilterClass):
                 self.count_iteration = 0
                 self.go_to_my_profile_page_and_set_subscribes_amount()
                 if self.subscribes == 0:
-                    raise BotFinishTask(self.account_option, InformationMessage.task_finish)
+                    raise exception_module.BotFinishTask(self.account_option, InformationMessage.task_finish)
 
                 self.search_element((By.XPATH, "//li[3]/a")).click()  # открыть список подписок
                 following_div_block = self.search_element((By.CSS_SELECTOR, "div > div > div.isgrP > ul > div"))
@@ -45,7 +41,7 @@ class FunctionClass(FilterClass):
                         break
                     self.press_to_unsubscribe_button_and_set_timeouts(user)
 
-            except BotNonCriticalException as exception:
+            except exception_module.BotNonCriticalException as exception:
                 print(exception)
 
             except Exception as exception:
@@ -63,14 +59,14 @@ class FunctionClass(FilterClass):
                 self.press_to_subscribe_button()
                 self.check_limits_from_subscribe()
 
-            except BotNonCriticalException as exception:
+            except exception_module.BotNonCriticalException as exception:
                 print(exception)
 
             except Exception as exception:
                 self.account_option.exception = exception
                 self.standard_exception_handling()
 
-        raise BotFinishTask(self.account_option, InformationMessage.task_finish)
+        raise exception_module.BotFinishTask(self.account_option, InformationMessage.task_finish)
 
     def filter(self):
         if self.count_iteration == 0:
@@ -88,10 +84,10 @@ class FunctionClass(FilterClass):
                 Tools.file_write((BotOption.parameters['ignore_list_path']), self.account_option.user_url)
                 self.count += 1
 
-            except BotNonCriticalException as exception:
+            except exception_module.BotNonCriticalException as exception:
                 print(exception)
 
-            except FilteredOut as exception:
+            except exception_module.FilteredOut as exception:
                 print(exception)
 
             except Exception as exception:
@@ -116,7 +112,7 @@ class FunctionClass(FilterClass):
                 if self.count_iteration % Parce.cycles_for_one_account == 0:
                     break
 
-            except BotNonCriticalException as exception:
+            except exception_module.BotNonCriticalException as exception:
                 print(exception)
 
             except Exception as exception:

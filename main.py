@@ -1,6 +1,5 @@
-from module.exception_module import BotCriticalException, BotFinishTask
 from module.function_module import FunctionClass
-import data
+from module import exception_module
 
 
 class StartBot(FunctionClass):
@@ -12,17 +11,18 @@ class StartBot(FunctionClass):
 
             for name in self.account_option.accounts_key_number:
                 try:
-                    self.account_option.username = data.user_dict[
-                        f'{self.account_option.accounts_key_mask}-{name}']['login']
-                    self.account_option.password = data.user_dict[
-                        f'{self.account_option.accounts_key_mask}-{name}']['password']
-                    self.login()
+                    self.account_option.set_account_parameters(name)
+                    try:
+                        self.login_check()
+                        self.go_to_my_profile_page_from_click()
+                    except exception_module.LoginError:
+                        self.login()
                     eval(f'self.{self.account_option.mode}()')
                     self.browser.quit()
-                except BotCriticalException as exception:
+                except exception_module.BotCriticalException as exception:
                     print(exception)
 
-        except BotFinishTask as exception:
+        except exception_module.BotFinishTask as exception:
             print(exception)
 
         finally:
