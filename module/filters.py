@@ -1,7 +1,7 @@
 from selenium.common.exceptions import TimeoutException, StaleElementReferenceException
-from module.exception_module import BadProfile, FilteredOut, EmptyProfile, StopWord
+from module.exception import BadProfile, FilteredOut, EmptyProfile, StopWord
 from selenium.webdriver.support import expected_conditions as ec
-from module.message_text_module import FilterMessage
+from module.message_text import FilterMessage
 from selenium.webdriver.common.by import By
 from module.base_module import BaseClass
 from settings import Filter
@@ -115,7 +115,7 @@ class FilterClass(BaseClass):
         subs_max = Filter.subs_max
         subs_min = Filter.subs_min
         break_limit = Filter.break_limit
-        data_dict = self.return_number_posts_subscribe_and_subscribers()
+        data_dict = self.return_amount_posts_subscribes_and_subscribers()
         coefficient = data_dict['subs'] / data_dict['follow']
 
         if not posts_max >= data_dict['posts'] >= posts_min:

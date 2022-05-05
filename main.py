@@ -1,5 +1,5 @@
-from module.function_module import FunctionClass
-from module import exception_module
+from module.functions import FunctionClass
+from module import exception
 
 
 class StartBot(FunctionClass):

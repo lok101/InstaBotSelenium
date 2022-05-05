@@ -1,14 +1,16 @@
-from module import exception_module
-from module.message_text_module import InformationMessage
+from module import exception
+from module import navigation
+from module import login
+from module.message_text import InformationMessage
 from settings import Parce, Unsubscribe, Filter
-from module.filter_module import FilterClass
+from module.filters import FilterClass
 from selenium.webdriver.common.by import By
 from module.option import BotOption
 from module.tools import Tools
 import time
 
 
-class FunctionClass(FilterClass):
+class FunctionClass(FilterClass, login.Login, navigation.Navigation):
     def login(self):
         try:
             try:
@@ -55,7 +57,7 @@ class FunctionClass(FilterClass):
         self.set_count_limit_for_subscribe()
         while self.count_iteration < self.count_limit:
             try:
-                self.set_user_url_from_file(BotOption.parameters['filtered_path'], difference_ignore_list=False)
+                self.get_user_url_from_file(BotOption.parameters['filtered_path'], difference_ignore_list=False)
                 self.go_to_user_page()
                 self.press_to_subscribe_button()
                 self.check_limits_from_subscribe()
@@ -78,7 +80,7 @@ class FunctionClass(FilterClass):
                 if self.count_iteration % 50 == 0:
                     self.print_statistics_on_filtration()
 
-                self.set_user_url_from_file(BotOption.parameters['non_filtered_path'])
+                self.get_user_url_from_file(BotOption.parameters['non_filtered_path'])
                 self.go_to_user_page()
                 self.should_be_compliance_with_limits()
                 Tools.file_write((BotOption.parameters['filtered_path']), self.account_option.user_url)
