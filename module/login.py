@@ -53,5 +53,3 @@ class Login(page_checkup.Checks):
             raise ConnectionError('При подключении через прокси зафиксирован "родной" IP-адрес.')
         date = datetime.now().strftime("%H:%M:%S")
         print(f'{date} Подключение через прокси: {actual_ip}', end=' ===> ')
-
-

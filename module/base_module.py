@@ -75,9 +75,9 @@ class BaseClass:
             self.account_option.user_url = user_list.pop()
             Tools.file_write(file_path, user_list, operating_mode='w')
         except IndexError:
-            raise exception_module.BotFinishTask(
+            raise exception.BotFinishTask(
                 self.account_option,
-                message_text_module.InformationMessage.task_finish)
+                message_text.InformationMessage.task_finish)
 
     def return_amount_posts_subscribes_and_subscribers(self):
         dict_return = dict()
@@ -139,9 +139,9 @@ class BaseClass:
         exception_name = str(type(self.account_option.exception)).split("'")[1].split('.')[-1]
         if self.account_option.mode == self.account_option.parameters['fil'] \
                 and isinstance(self.account_option.exception, KeyError):
-            raise exception_module.BotFinishTask(
+            raise exception.BotFinishTask(
                 self.account_option,
-                message_text_module.FilterMessage.list_empty)
+                message_text.FilterMessage.list_empty)
         print(f'\nИсключение обработано и добавлено в лог: {self.account_option.mode}/{exception_name}')
 
     def save_log_exception(self):

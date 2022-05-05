@@ -22,8 +22,8 @@ class FunctionClass(FilterClass, login.Login, navigation.Navigation):
                 print('Логин через cookie на удался. Попытка логина через login-pass.')
                 self.not_cookie_login()
 
-        except Exception as exception:
-            self.account_option.exception = exception
+        except Exception as ex:
+            self.account_option.exception = ex
             self.standard_exception_handling()
 
     def unsubscribe(self):
@@ -32,7 +32,7 @@ class FunctionClass(FilterClass, login.Login, navigation.Navigation):
                 self.count_iteration = 0
                 self.go_to_my_profile_page_and_set_subscribes_amount()
                 if self.subscribes == 0:
-                    raise exception_module.BotFinishTask(self.account_option, InformationMessage.task_finish)
+                    raise exception.BotFinishTask(self.account_option, InformationMessage.task_finish)
 
                 self.search_element((By.XPATH, "//li[3]/a")).click()  # открыть список подписок
                 following_div_block = self.search_element((By.CSS_SELECTOR, "div > div > div.isgrP > ul > div"))
@@ -44,11 +44,11 @@ class FunctionClass(FilterClass, login.Login, navigation.Navigation):
                         break
                     self.press_to_unsubscribe_button_and_set_timeouts(user)
 
-            except exception_module.BotNonCriticalException as exception:
-                print(exception)
+            except exception.BotNonCriticalException as ex:
+                print(ex)
 
-            except Exception as exception:
-                self.account_option.exception = exception
+            except Exception as ex:
+                self.account_option.exception = ex
                 self.standard_exception_handling()
                 self.count_iteration += 1
 
@@ -62,14 +62,14 @@ class FunctionClass(FilterClass, login.Login, navigation.Navigation):
                 self.press_to_subscribe_button()
                 self.check_limits_from_subscribe()
 
-            except exception_module.BotNonCriticalException as exception:
-                print(exception)
+            except exception.BotNonCriticalException as ex:
+                print(ex)
 
-            except Exception as exception:
-                self.account_option.exception = exception
+            except Exception as ex:
+                self.account_option.exception = ex
                 self.standard_exception_handling()
 
-        raise exception_module.BotFinishTask(self.account_option, InformationMessage.task_finish)
+        raise exception.BotFinishTask(self.account_option, InformationMessage.task_finish)
 
     def filter(self):
         if self.count_iteration == 0:
@@ -87,14 +87,14 @@ class FunctionClass(FilterClass, login.Login, navigation.Navigation):
                 Tools.file_write((BotOption.parameters['ignore_list_path']), self.account_option.user_url)
                 self.count += 1
 
-            except exception_module.BotNonCriticalException as exception:
-                print(exception)
+            except exception.BotNonCriticalException as ex:
+                print(ex)
 
-            except exception_module.FilteredOut as exception:
-                print(exception)
+            except exception.FilteredOut as ex:
+                print(ex)
 
-            except Exception as exception:
-                self.account_option.exception = exception
+            except Exception as ex:
+                self.account_option.exception = ex
                 self.standard_exception_handling()
 
             finally:
@@ -115,9 +115,9 @@ class FunctionClass(FilterClass, login.Login, navigation.Navigation):
                 if self.count_iteration % Parce.cycles_for_one_account == 0:
                     break
 
-            except exception_module.BotNonCriticalException as exception:
-                print(exception)
+            except exception.BotNonCriticalException as ex:
+                print(ex)
 
-            except Exception as exception:
-                self.account_option.exception = exception
+            except Exception as ex:
+                self.account_option.exception = ex
                 self.standard_exception_handling()

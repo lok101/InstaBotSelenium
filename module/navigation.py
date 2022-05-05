@@ -76,10 +76,8 @@ class Navigation(page_checkup.Checks):
         Tools.file_read((BotOption.parameters["parce_url_path"]), urls_public)
         self.count_limit = len(urls_public)
         if self.count_iteration + 1 >= self.count_limit:
-            raise exception_module.BotFinishTask(
+            raise exception.BotFinishTask(
                 self.account_option,
-                message_text_module.InformationMessage.task_finish)
+                message_text.InformationMessage.task_finish)
         urls_public = urls_public[self.count_iteration:-1]
         return urls_public
-
-
