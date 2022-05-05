@@ -7,7 +7,7 @@ class StartSettings:
     web_driver_wait = 30
     sleep_page_not_found = 5
     err_proxy_timeout = 40
-    default_parameters = '-p -h'
+    default_parameters = '-p -login'
 
 
 class Unsubscribe:
@@ -21,7 +21,7 @@ class Subscribe:
     min_timeout, max_timeout = 15, 25    # окно таймаутов (секунды) между подписками
     subscribe_in_session = 30           # количество подписок в одном заходе
     sleep_between_iterations = 30       # таймаут (минуты) между заходами
-    subscribe_limit_stop = 240          # количество подписчиков у аккаунта, при котором остановится задача
+    subscribe_limit_stop = 160          # количество подписчиков у аккаунта, при котором остановится задача
 
 
 class Filter:

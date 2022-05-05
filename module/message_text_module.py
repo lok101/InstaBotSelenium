@@ -26,8 +26,10 @@ class FilterMessage:
 
 class LoginErrorMessage:
     login_form_error = 'Ошибка авторизации.'
+    error_account_name = 'Неверное имя аккаунта. Возможно, аккаунт был переименован.'
     error_pass = 'Неверный пароль.'
     not_login = 'Не получилось залогиниться.'
+    broke_cookie = 'Авторизация через куки не удалась.'
     not_login_cookies = 'Не получилось залогиниться через Cookies.'
     not_login_page = 'Не загрузил домашнюю страницу.'
     verification_form = 'Поступил запрос на верификацию.'

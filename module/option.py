@@ -21,7 +21,6 @@ class BotOption:
     def __init__(self):
         self.username = None
         self.password = None
-        self.login_mode = settings.LoginFrom.chrome_profile
         self.accounts_key_mask = 'Маска не присвоена.'
         self.accounts_key_number = 'Номер аккаунта не присвоен.'
         self.chrome_options = None
@@ -54,8 +53,6 @@ class BotOption:
         self.password = data.user_dict[
             f'{self.accounts_key_mask}-{name}']['password']
         profile_path = f'--user-data-dir=C:\\Users\\loks1\\InstaBotSelenium\\venv\\chrome_profile\\{self.username}'
-        self.chrome_options.add_argument(profile_path)
-        self.chrome_options.add_extension('extension/extension_8_1_0_0.crx')
 
     def set_mode_and_mask_parameters(self, parameter_name: str):
         self.mode = BotOption.parameters[parameter_name]
@@ -81,8 +78,6 @@ class BotOption:
                 self.headless = not self.headless
             elif '-e' in param:
                 self.load_strategy = not self.load_strategy
-            elif '-login' in param:
-                self.login_mode = settings.LoginFrom.form_login
             elif '-bot' in user_input:
                 self.accounts_key_mask = 'bot_account'
             elif '-main' in user_input:

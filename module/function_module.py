@@ -17,6 +17,7 @@ class FunctionClass(FilterClass):
                 self.cookie_login()
 
             except FileNotFoundError:
+                print('Логин через cookie на удался. Попытка логина через login-pass.')
                 self.not_cookie_login()
 
         except Exception as exception:

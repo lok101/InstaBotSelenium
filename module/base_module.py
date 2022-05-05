@@ -30,18 +30,13 @@ class BaseClass:
         self.count = 0
         self.cycle = 0
 
-    def login_check(self):
-        self.browser = webdriver.Chrome(options=self.account_option.chrome_options)
-        self.browser.get('https://www.instagram.com/')
-        self.should_be_verification_form()
-        self.should_be_login_button()
-        print('Аккаунт залогинен.')
-
     def cookie_login(self):
+        self.browser = webdriver.Chrome(options=self.account_option.chrome_options)
+        self.browser.get('https://www.instagram.com/accounts/login/')
         self.browser.delete_all_cookies()
         self.browser.refresh()
+        self.cookie_accept()
         self.should_be_home_page()
-        self.browser.delete_all_cookies()
         for cookie in pickle.load(open(f'data/cookies/{self.account_option.username}_cookies', 'rb')):
             self.browser.add_cookie(cookie)
         time.sleep(1)
@@ -60,7 +55,7 @@ class BaseClass:
         password_input.send_keys(self.account_option.password)
 
         password_input.send_keys(Keys.ENTER)
-        time.sleep(5)
+
         self.should_be_login_form_error()
         self.should_be_verification_form()
         self.should_be_login_button()
@@ -77,6 +72,11 @@ class BaseClass:
             raise ConnectionError('При подключении через прокси зафиксирован "родной" IP-адрес.')
         date = datetime.now().strftime("%H:%M:%S")
         print(f'{date} Подключение через прокси: {actual_ip}', end=' ===> ')
+
+    def cookie_accept(self):
+        accept_button = self.search_element((By.CSS_SELECTOR, 'button.aOOlW.HoLwm'))
+        accept_button.click()
+        time.sleep(2)
 
     def get_link(self, locator):
         item = self.search_element(locator, type_wait=ec.presence_of_element_located, timeout=10)
@@ -179,13 +179,13 @@ class BaseClass:
         non_filtered = set()
         Tools.file_read((BotOption.parameters["non_filtered_path"]), non_filtered)
         self.count_iteration += 1
-        print(f'Успешно. Количество собранных пользователей: {len(non_filtered)}.')
+        print(f'Успешно. В списке: {len(non_filtered)}.')
 
     def get_users_url_for_parce(self):
         urls_public = []
         Tools.file_read((BotOption.parameters["parce_url_path"]), urls_public)
         self.count_limit = len(urls_public)
-        if self.count_iteration >= self.count_limit:
+        if self.count_iteration + 1 >= self.count_limit:
             raise exception_module.BotFinishTask(
                 self.account_option,
                 message_text_module.InformationMessage.task_finish)
@@ -193,23 +193,24 @@ class BaseClass:
         return urls_public
 
     def press_to_subscribe_button(self):
-        button = self.search_element((By.XPATH, '//button'))
-        if 'подписаться' in button.text.lower():
-            iteration_limit = 10
-            iteration_count = 0
-            while iteration_count < iteration_limit:
-                iteration_count += 1
-                button.click()
-                time.sleep(random.randrange(Subscribe.min_timeout, Subscribe.max_timeout))
-                self.should_be_subscribe_and_unsubscribe_blocking()
-                Tools.file_write((BotOption.parameters["ignore_list_path"]), self.account_option.user_url)
-                self.count_iteration += 1
-                print('Успешно подписался.')
-                break
-        else:
-            print('Кнопка не найдена.')
-            Tools.file_write((BotOption.parameters["ignore_list_path"]), self.account_option.user_url)
-            time.sleep(random.randrange(Subscribe.min_timeout, Subscribe.max_timeout))
+        self.search_element((By.CSS_SELECTOR, 'div button'))   # выполняет роль проверки на загрузку
+        buttons = self.browser.find_elements(By.CSS_SELECTOR, 'div button')
+        for button in buttons:
+            if 'подписаться' in button.text.lower():
+                iteration_limit = 10
+                iteration_count = 0
+                while iteration_count < iteration_limit:
+                    iteration_count += 1
+                    button.click()
+                    time.sleep(random.randrange(Subscribe.min_timeout, Subscribe.max_timeout))
+                    self.should_be_subscribe_and_unsubscribe_blocking()
+                    Tools.file_write((BotOption.parameters["ignore_list_path"]), self.account_option.user_url)
+                    self.count_iteration += 1
+                    print('Успешно подписался.')
+                    return
+        print('Кнопка не найдена.')
+        Tools.file_write((BotOption.parameters["ignore_list_path"]), self.account_option.user_url)
+        time.sleep(random.randrange(Subscribe.min_timeout, Subscribe.max_timeout))
 
     def check_limits_from_subscribe(self):
         if self.count_iteration % Subscribe.subscribe_in_session == 0 and self.count_iteration != 0:
@@ -238,22 +239,9 @@ class BaseClass:
             f'Перешёл в профиль: {username}', end=end_str)
 
         self.should_be_instagram_page()
-        self.should_be_activity_blocking()
-        self.should_be_user_page()
         self.should_be_verification_form()
-
-    def go_to_my_profile_page_from_click(self):
-        profile_icon = self.search_element((By.CSS_SELECTOR, 'div.ctQZg.KtFt3 > div > div > span'))
-        profile_icon.click()
-        go_to_my_page_button = self.search_element((By.CSS_SELECTOR, 'div._01UL2 > a:nth-child(1)'))
-        go_to_my_page_button.click()
-
-        page_url = self.browser.current_url
-        if self.account_option.username not in page_url:
-            raise exception_module.LoginError(
-                self.account_option,
-                message_text_module.LoginErrorMessage.wrong_account)
-        print(f'Аккаунт {self.account_option.username} - авторизован.')
+        self.should_be_user_page()
+        self.should_be_activity_blocking()
 
     def go_to_my_profile_page_and_set_subscribes_amount(self, end_str='\n'):
         url = f'https://www.instagram.com/{self.account_option.username}/'
@@ -321,26 +309,32 @@ class BaseClass:
     def should_be_login_form_error(self):
         try:
             element = self.search_element((By.CSS_SELECTOR, '#slfErrorAlert'),
-                                          timeout=1, type_wait=ec.presence_of_element_located)
+                                          timeout=10, type_wait=ec.presence_of_element_located)
             if 'К сожалению, вы ввели неправильный пароль.' in element.text:
                 raise exception_module.LoginError(
                     self.account_option,
                     message_text_module.LoginErrorMessage.error_pass)
+            if 'не принадлежит аккаунту' in element.text:
+                raise exception_module.LoginError(
+                    self.account_option,
+                    message_text_module.LoginErrorMessage.error_account_name)
             raise exception_module.LoginError(
                 self.account_option,
                 message_text_module.LoginErrorMessage.login_form_error)
         except TimeoutException:
             pass
 
-    def should_be_login_button(self):
+    def should_be_login_button(self, mode='login-pass'):
         try:
             self.search_element((By.CSS_SELECTOR, 'div.ctQZg.KtFt3 > div > div:nth-child(1)'), timeout=2,
                                 type_wait=ec.presence_of_element_located)
 
         except TimeoutException:
-            raise exception_module.LoginError(
-                self.account_option,
-                message_text_module.LoginErrorMessage.not_login)
+            if mode == 'cookie':
+                message = message_text_module.LoginErrorMessage.broke_cookie
+            else:
+                message = message_text_module.LoginErrorMessage.not_login
+            raise exception_module.LoginError(self.account_option, message)
 
     def should_be_subscribe_and_unsubscribe_blocking(self):
         try:
@@ -361,6 +355,8 @@ class BaseClass:
                 raise exception_module.ActivBlocking(
                     self.account_option,
                     message_text_module.InformationMessage.activiti_blocking)
+            elif 'cookie' in error_message.text:
+                self.cookie_accept()
             else:
                 print('Неизвестное всплывающее окно при вызове "should_be_activity_blocking".')
         except TimeoutException:
