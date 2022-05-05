@@ -1,7 +1,11 @@
+import pickle
+
 from selenium.common.exceptions import TimeoutException, StaleElementReferenceException
 from selenium.webdriver.support import expected_conditions as ec
+from data import my_ip
 from settings import Subscribe, StartSettings
 from selenium.webdriver.support.ui import WebDriverWait
+from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.common.by import By
 from module import message_text
 from module import exception
@@ -10,6 +14,7 @@ from module.tools import Tools
 from datetime import datetime
 import traceback
 import time
+import json
 
 
 class BaseClass:
@@ -23,11 +28,41 @@ class BaseClass:
         self.count_iteration = 0
         self.count = 0
         self.cycle = 0
+        self.timer = 0
 
     def get_link(self, locator):
         item = self.search_element(locator, type_wait=ec.presence_of_element_located, timeout=10)
         url = item.get_attribute('src')
         return url
+
+    def compare_my_ip_and_base_ip(self):
+        pre = self.search_element((By.TAG_NAME, "body"), type_wait=ec.presence_of_element_located).text
+        actual_ip = json.loads(pre)['ip']
+        if actual_ip in my_ip:
+            raise ConnectionError('При подключении через прокси зафиксирован "родной" IP-адрес.')
+
+    def set_cookie(self):
+        self.browser.delete_all_cookies()
+        self.browser.refresh()
+        self.cookie_accept()
+        self.should_be_home_page()
+        for cookie in pickle.load(open(f'data/cookies/{self.account_option.username}_cookies', 'rb')):
+            self.browser.add_cookie(cookie)
+        time.sleep(1)
+        self.browser.refresh()
+
+    def save_new_cookie(self):
+        pickle.dump(self.browser.get_cookies(), open(f'data/cookies/{self.account_option.username}_cookies', 'wb'))
+
+    def input_username_and_userpass(self):
+        username_input = self.search_element((By.NAME, "username"))
+        username_input.clear()
+        username_input.send_keys(self.account_option.username)
+
+        password_input = self.search_element((By.NAME, "password"))
+        password_input.clear()
+        password_input.send_keys(self.account_option.password)
+        password_input.send_keys(Keys.ENTER)
 
     def search_element(self, locator, timeout=StartSettings.web_driver_wait, type_wait=ec.element_to_be_clickable):
         return WebDriverWait(self.browser, timeout).until(type_wait(locator))
@@ -109,23 +144,6 @@ class BaseClass:
             post_number_field.text.replace(" ", "").replace(',', '').replace('тыс.', '000').replace('млн', '000000'))
 
         return dict_return
-
-    def print_statistics_on_filtration(self):
-        non_filtered, filtered = set(), set()
-        self.get_user_url_from_file((BotOption.parameters["non_filtered_path"]))  # вычитает из файла игнор лист
-        Tools.file_read((BotOption.parameters["non_filtered_path"]), non_filtered)
-        Tools.file_read((BotOption.parameters["filtered_path"]), filtered)
-        print(
-            f'\nНе отфильтровано - {len(non_filtered)}.'
-            f'\nГотовых - {len(filtered)}.',
-            f'\nОтобрано в сессии - [{self.count}/{self.cycle * 50}].\n')
-        self.cycle += 1
-
-    def print_statistics_on_parce(self):
-        non_filtered = set()
-        Tools.file_read((BotOption.parameters["non_filtered_path"]), non_filtered)
-        self.count_iteration += 1
-        print(f'Успешно. В списке: {len(non_filtered)}.')
 
     def set_count_limit_for_subscribe(self):
         if self.account_option.second_mode == BotOption.parameters['short']:

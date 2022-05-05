@@ -1,6 +1,5 @@
 from module import exception, message_text, page_checkup
 from selenium.webdriver.common.by import By
-from datetime import datetime
 import random
 import time
 
@@ -32,10 +31,9 @@ class Navigation(page_checkup.Checks):
 
     def check_limits_from_subscribe(self):
         if self.count_iteration % Subscribe.subscribe_in_session == 0 and self.count_iteration != 0:
-            self.go_to_my_profile_page_and_set_subscribes_amount(end_str=' ')
-            print(f'{datetime.now().strftime("%H:%M:%S")} Подписался на очередные',
-                  f'{Subscribe.subscribe_in_session} пользователей. ',
-                  f'Таймаут {Subscribe.sleep_between_iterations} минут.')
+            self.go_to_my_profile_page_and_set_subscribes_amount()
+            self.print_to_console_current_time_and_account_name(
+                self.print_subscribe_limit_info)
             time.sleep(Subscribe.sleep_between_iterations * 60)
 
     def press_to_unsubscribe_button_and_set_timeouts(self, user):
@@ -44,24 +42,20 @@ class Navigation(page_checkup.Checks):
         self.search_element((By.CSS_SELECTOR, "button.-Cab_")).click()  # нажать кнопку подтверждения
         self.should_be_subscribe_and_unsubscribe_blocking()
         self.count_iteration += 1
-        print(
-            f'{datetime.now().strftime("%H:%M:%S")} - {self.account_option.username} - ',
-            f'[{self.count_iteration}/10] - Успешно отписался.')
+        self.print_to_console_current_time_and_account_name(
+            self.print_unsubscribe_click_info)
 
-    def go_to_user_page(self, end_str=' ===> '):
+    def go_to_user_page(self):
         self.browser.get(self.account_option.user_url)
-        username = self.account_option.user_url.split("/")[-2]
-        print(
-            f'{datetime.now().strftime("%H:%M:%S")} - {self.account_option.username} - ',
-            f'[{self.count_iteration + 1}/{self.count_limit}]',
-            f'Перешёл в профиль: {username}', end=end_str)
+        self.print_to_console_current_time_and_account_name(
+            self.print_profile_page_info)
 
         self.should_be_instagram_page()
         self.should_be_verification_form()
         self.should_be_user_page()
         self.should_be_activity_blocking()
 
-    def go_to_my_profile_page_and_set_subscribes_amount(self, end_str='\n'):
+    def go_to_my_profile_page_and_set_subscribes_amount(self):
         url = f'https://www.instagram.com/{self.account_option.username}/'
         self.browser.get(url)
         self.should_be_instagram_page()
@@ -69,7 +63,8 @@ class Navigation(page_checkup.Checks):
         self.should_be_verification_form()
 
         self.subscribes = self.return_amount_posts_subscribes_and_subscribers()['subs']
-        print(f"Количество подписок: {self.subscribes}", end=end_str)
+        self.print_to_console_current_time_and_account_name(
+            self.print_subscribe_amount)
 
     def get_users_url_for_parce(self):
         urls_public = []
@@ -81,3 +76,8 @@ class Navigation(page_checkup.Checks):
                 message_text.InformationMessage.task_finish)
         urls_public = urls_public[self.count_iteration:-1]
         return urls_public
+
+    def go_timer(self):
+        time.sleep(self.timer * 60)
+        self.print_to_console_current_time_and_account_name(
+            self.print_timer)

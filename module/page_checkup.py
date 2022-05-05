@@ -1,11 +1,11 @@
 from selenium.common.exceptions import TimeoutException, StaleElementReferenceException
-from module import base_module, exception, message_text
+from module import exception, message_text, my_print
 from selenium.webdriver.support import expected_conditions as ec
 from selenium.webdriver.common.by import By
 import time
 
 
-class Checks(base_module.BaseClass):
+class Checks(my_print.Print):
     def should_be_user_page(self):
         while True:
             try:
@@ -37,7 +37,8 @@ class Checks(base_module.BaseClass):
         try:
             self.search_element((By.NAME, "username"),
                                 timeout=10, type_wait=ec.presence_of_element_located)
-            print(f'Логин с аккаунта - {self.account_option.username}')
+            self.print_to_console_current_time_and_account_name(
+                self.print_start_login)
         except TimeoutException:
             raise exception.LoginError(
                 self.account_option,
