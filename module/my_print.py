@@ -43,7 +43,7 @@ class Print(base_module.BaseClass):
               f'Таймаут {Subscribe.sleep_between_iterations} минут.')
 
     def print_timer(self):
-        print(f'Установлен таймер {self.timer} минут.')
+        print(f'Установлен таймер {self.account_option.timer} минут.')
 
     @staticmethod
     def print_proxy_successful_connection():

@@ -27,6 +27,7 @@ class BotOption:
         self.mode = 'Режим не присвоен.'
         self.second_mode = 'Дополнительный режим не присвоен.'
         self.user_url = None
+        self.timer = 0
 
         self.exception = None
         self.exception_text = None
@@ -52,7 +53,6 @@ class BotOption:
             f'{self.accounts_key_mask}-{name}']['login']
         self.password = data.user_dict[
             f'{self.accounts_key_mask}-{name}']['password']
-        profile_path = f'--user-data-dir=C:\\Users\\loks1\\InstaBotSelenium\\venv\\chrome_profile\\{self.username}'
 
     def set_mode_and_mask_parameters(self, parameter_name: str):
         self.mode = BotOption.parameters[parameter_name]
@@ -78,6 +78,8 @@ class BotOption:
                 self.headless = not self.headless
             elif '-e' in param:
                 self.load_strategy = not self.load_strategy
+            elif '-t' in param:
+                self.timer = param.split('-t')[1].split(' ')[0]
             elif '-bot' in user_input:
                 self.accounts_key_mask = 'bot_account'
             elif '-main' in user_input:

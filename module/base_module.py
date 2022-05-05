@@ -1,8 +1,5 @@
-import pickle
-
 from selenium.common.exceptions import TimeoutException, StaleElementReferenceException
 from selenium.webdriver.support import expected_conditions as ec
-from data import my_ip
 from settings import Subscribe, StartSettings
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.common.keys import Keys
@@ -12,7 +9,9 @@ from module import exception
 from module.option import BotOption
 from module.tools import Tools
 from datetime import datetime
+from data import my_ip
 import traceback
+import pickle
 import time
 import json
 
@@ -28,7 +27,6 @@ class BaseClass:
         self.count_iteration = 0
         self.count = 0
         self.cycle = 0
-        self.timer = 0
 
     def get_link(self, locator):
         item = self.search_element(locator, type_wait=ec.presence_of_element_located, timeout=10)
@@ -188,7 +186,3 @@ class BaseClass:
             print(f'Файл {BotOption.parameters["non_filtered_path"]} - перемешан.')
         else:
             raise Exception('Неизвестный режим в методе "shaffle_file_for_task".')
-
-
-
-

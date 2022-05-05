@@ -14,6 +14,7 @@ class FunctionClass(FilterClass, login.Login, navigation.Navigation):
     def login(self):
         try:
             try:
+                self.go_timer()
                 if self.account_option.proxy:
                     self.check_proxy_ip()
                 self.cookie_login()

@@ -15,11 +15,11 @@ class StartBot(FunctionClass):
                     self.login()
                     eval(f'self.{self.account_option.mode}()')
                     self.browser.quit()
-                except exception_module.BotCriticalException as exception:
-                    print(exception)
+                except exception.BotCriticalException as ex:
+                    print(ex)
 
-        except exception_module.BotFinishTask as exception:
-            print(exception)
+        except exception.BotFinishTask as ex:
+            print(ex)
 
         finally:
             if self.browser is not None:

@@ -78,6 +78,7 @@ class Navigation(page_checkup.Checks):
         return urls_public
 
     def go_timer(self):
-        time.sleep(self.timer * 60)
-        self.print_to_console_current_time_and_account_name(
-            self.print_timer)
+        if self.account_option.timer != 0:
+            self.print_to_console_current_time_and_account_name(
+                self.print_timer)
+            time.sleep(int(self.account_option.timer) * 60)
