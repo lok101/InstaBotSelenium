@@ -8,9 +8,7 @@ from module import message_text
 from module import exception
 from module.option import BotOption
 from module.tools import Tools
-from datetime import datetime
 from data import my_ip
-import traceback
 import pickle
 import time
 import json
@@ -82,8 +80,8 @@ class BaseClass:
                         list_urls.add(profile_url)
                 return list_urls
 
-            except StaleElementReferenceException:
-                print(StaleElementReferenceException)
+            except StaleElementReferenceException as ex:
+                print(ex)
                 continue
 
     def scrolling_div_block(self, count):
@@ -149,40 +147,4 @@ class BaseClass:
         else:
             self.count_limit = Subscribe.subscribe_limit_stop - self.subscribes
 
-    def standard_exception_handling(self):
 
-        self.save_log_exception()
-        exception_name = str(type(self.account_option.exception)).split("'")[1].split('.')[-1]
-        if self.account_option.mode == self.account_option.parameters['fil'] \
-                and isinstance(self.account_option.exception, KeyError):
-            raise exception.BotFinishTask(
-                self.account_option,
-                message_text.FilterMessage.list_empty)
-        print(f'\nИсключение обработано и добавлено в лог: {self.account_option.mode}/{exception_name}')
-
-    def save_log_exception(self):
-        exception_name = str(type(self.account_option.exception)).split("'")[1].split('.')[-1]
-        path = f'logs/{self.account_option.mode}/{exception_name}.txt'
-
-        date = datetime.now().strftime("%d-%m %H:%M:%S")
-        exception_text = traceback.format_exc()
-        log_text = f'{date}\n{exception_text}\n\n'
-
-        Tools.file_write(path, log_text)
-
-        if 'CONNECTION_FAILED' in exception_text:
-            timeout = StartSettings.err_proxy_timeout
-            error_name = exception_text.split('net::')[1].split('\n')[0]
-            print(f'{date.split(" ")[1]} -- {self.account_option.mode} >> {error_name}. ',
-                  f'Запись добавлена в лог. Таймаут {timeout} секунд.')
-            time.sleep(timeout)
-
-    def shaffle_file_for_task(self):
-        if self.account_option.mode == BotOption.parameters['par']:
-            Tools.shaffle_file(BotOption.parameters['parce_url_path'])
-            print(f'Файл {BotOption.parameters["parce_url_path"]} - перемешан.')
-        elif self.account_option.mode == BotOption.parameters['fil']:
-            Tools.shaffle_file(BotOption.parameters['non_filtered_path'])
-            print(f'Файл {BotOption.parameters["non_filtered_path"]} - перемешан.')
-        else:
-            raise Exception('Неизвестный режим в методе "shaffle_file_for_task".')

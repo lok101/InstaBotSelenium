@@ -1,5 +1,5 @@
 from module import exception
-from module import navigation
+from module import support
 from module import login
 from module.message_text import InformationMessage
 from settings import Parce, Unsubscribe, Filter
@@ -10,7 +10,7 @@ from module.tools import Tools
 import time
 
 
-class FunctionClass(FilterClass, login.Login, navigation.Navigation):
+class FunctionClass(FilterClass, login.Login, support.Support):
     def login(self):
         try:
             try:

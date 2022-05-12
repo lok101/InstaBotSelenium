@@ -1,14 +1,15 @@
+from settings import Subscribe, Unsubscribe, StartSettings
 from module import exception, message_text, page_checkup
 from selenium.webdriver.common.by import By
+from module.option import BotOption
+from module.tools import Tools
+from datetime import datetime
+import traceback
 import random
 import time
 
-from module.option import BotOption
-from module.tools import Tools
-from settings import Subscribe, Unsubscribe
 
-
-class Navigation(page_checkup.Checks):
+class Support(page_checkup.Checks):
     def press_to_subscribe_button(self):
         self.search_element((By.CSS_SELECTOR, 'div button'))  # выполняет роль проверки на загрузку
         buttons = self.browser.find_elements(By.CSS_SELECTOR, 'div button')
@@ -23,17 +24,21 @@ class Navigation(page_checkup.Checks):
                     self.should_be_subscribe_and_unsubscribe_blocking()
                     Tools.file_write((BotOption.parameters["ignore_list_path"]), self.account_option.user_url)
                     self.count_iteration += 1
-                    print('Успешно подписался.')
+                    self.print_to_console(
+                        self.subscribe_successful)
                     return
-        print('Кнопка не найдена.')
+        self.print_to_console(
+            self.button_not_found)
         Tools.file_write((BotOption.parameters["ignore_list_path"]), self.account_option.user_url)
         time.sleep(random.randrange(Subscribe.min_timeout, Subscribe.max_timeout))
 
     def check_limits_from_subscribe(self):
         if self.count_iteration % Subscribe.subscribe_in_session == 0 and self.count_iteration != 0:
             self.go_to_my_profile_page_and_set_subscribes_amount()
-            self.print_to_console_current_time_and_account_name(
-                self.print_subscribe_limit_info)
+            self.print_to_console(
+                self.current_time,
+                self.account_name,
+                self.subscribe_limit_info)
             time.sleep(Subscribe.sleep_between_iterations * 60)
 
     def press_to_unsubscribe_button_and_set_timeouts(self, user):
@@ -42,13 +47,17 @@ class Navigation(page_checkup.Checks):
         self.search_element((By.CSS_SELECTOR, "button.-Cab_")).click()  # нажать кнопку подтверждения
         self.should_be_subscribe_and_unsubscribe_blocking()
         self.count_iteration += 1
-        self.print_to_console_current_time_and_account_name(
-            self.print_unsubscribe_click_info)
+        self.print_to_console(
+            self.current_time,
+            self.account_name,
+            self.unsubscribe_click_info)
 
     def go_to_user_page(self):
         self.browser.get(self.account_option.user_url)
-        self.print_to_console_current_time_and_account_name(
-            self.print_profile_page_info)
+        self.print_to_console(
+            self.current_time,
+            self.account_name,
+            self.profile_page_info)
 
         self.should_be_instagram_page()
         self.should_be_verification_form()
@@ -63,8 +72,10 @@ class Navigation(page_checkup.Checks):
         self.should_be_verification_form()
 
         self.subscribes = self.return_amount_posts_subscribes_and_subscribers()['subs']
-        self.print_to_console_current_time_and_account_name(
-            self.print_subscribe_amount)
+        self.print_to_console(
+            self.current_time,
+            self.account_name,
+            self.subscribe_amount)
 
     def get_users_url_for_parce(self):
         urls_public = []
@@ -79,6 +90,52 @@ class Navigation(page_checkup.Checks):
 
     def go_timer(self):
         if self.account_option.timer != 0:
-            self.print_to_console_current_time_and_account_name(
+            self.print_to_console(
+                self.current_time,
+                self.account_name,
                 self.print_timer)
             time.sleep(int(self.account_option.timer) * 60)
+
+    def standard_exception_handling(self):
+
+        self.save_log_exception()
+        if self.account_option.mode == self.account_option.parameters['fil'] \
+                and isinstance(self.account_option.exception, KeyError):
+            raise exception.BotFinishTask(
+                self.account_option,
+                message_text.FilterMessage.list_empty)
+        self.print_to_console(
+            self.exception_info)
+
+    def save_log_exception(self):
+        exception_name = str(type(self.account_option.exception)).split("'")[1].split('.')[-1]
+        path = f'logs/{self.account_option.mode}/{exception_name}.txt'
+
+        date = datetime.now().strftime("%d-%m %H:%M:%S")
+        exception_text = traceback.format_exc()
+        log_text = f'{date}\n{exception_text}\n\n'
+
+        Tools.file_write(path, log_text)
+
+        if 'CONNECTION_FAILED' in exception_text:
+            self.print_to_console(
+                self.current_time,
+                self.account_name,
+                self.connection_failed)
+            time.sleep(StartSettings.err_proxy_timeout)
+
+    def shaffle_file_for_task(self):
+        if self.account_option.mode == BotOption.parameters['par']:
+            Tools.shaffle_file(BotOption.parameters['parce_url_path'])
+            self.print_to_console(
+                self.current_time,
+                self.account_name,
+                self.shuffle_parce_file)
+        elif self.account_option.mode == BotOption.parameters['fil']:
+            Tools.shaffle_file(BotOption.parameters['non_filtered_path'])
+            self.print_to_console(
+                self.current_time,
+                self.account_name,
+                self.shuffle_filter_file)
+        else:
+            raise Exception('Неизвестный режим в методе "shaffle_file_for_task".')

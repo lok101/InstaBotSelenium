@@ -37,8 +37,10 @@ class Checks(my_print.Print):
         try:
             self.search_element((By.NAME, "username"),
                                 timeout=10, type_wait=ec.presence_of_element_located)
-            self.print_to_console_current_time_and_account_name(
-                self.print_start_login)
+            self.print_to_console(
+                self.current_time,
+                self.account_name,
+                self.start_login)
         except TimeoutException:
             raise exception.LoginError(
                 self.account_option,
