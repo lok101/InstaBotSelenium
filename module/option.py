@@ -2,6 +2,7 @@ from selenium import webdriver
 import settings
 import random
 import data
+from module import data_base, user_agents
 
 
 class BotOption:
@@ -19,10 +20,9 @@ class BotOption:
     }
 
     def __init__(self):
-        self.username = None
-        self.password = None
-        self.accounts_key_mask = 'Маска не присвоена.'
-        self.accounts_key_number = 'Номер аккаунта не присвоен.'
+        self.account_data = None
+
+        self.accounts_key_number_list = 'Номер аккаунта не присвоен.'
         self.chrome_options = None
         self.mode = 'Режим не присвоен.'
         self.second_mode = 'Дополнительный режим не присвоен.'
@@ -48,29 +48,33 @@ class BotOption:
         if self.load_strategy is True:
             self.chrome_options.page_load_strategy = 'eager'
 
-    def set_account_parameters(self, name):
-        self.username = data.user_dict[
-            f'{self.accounts_key_mask}-{name}']['login']
-        self.password = data.user_dict[
-            f'{self.accounts_key_mask}-{name}']['password']
+    def get_accounts_list(self):
+        user_input_mode = self.input_operating_mode_and_set_parameters()
+        accounts_type = self.set_working_mode_and_type_account(user_input_mode.split(' ')[0])
+        self.input_account_and_set_accounts_list_db(accounts_type)
 
-    def set_mode_and_mask_parameters(self, parameter_name: str):
+    def set_account_parameters_by_db(self, account_id):
+        self.account_data = data_base.get_account_field_data(account_id)
+
+    def set_working_mode_and_type_account(self, parameter_name: str):
         self.mode = BotOption.parameters[parameter_name]
         if self.mode == BotOption.parameters['sub'] \
                 or self.mode == BotOption.parameters['uns'] \
                 or self.mode == BotOption.parameters['test']:
-            self.accounts_key_mask = 'main_account'
+            accounts_type = 'main'
 
         elif self.mode == BotOption.parameters['fil'] \
                 or self.mode == BotOption.parameters['par']:
-            self.accounts_key_mask = 'bot_account'
+            accounts_type = 'bot'
         else:
             raise Exception('Неизвестный режим работы, не могу установить маску аккаунта.')
+
+        return accounts_type
 
     def input_operating_mode_and_set_parameters(self):
         user_input = input('Укажите режим работы (-параметры): ')
         user_input = f'{user_input} {settings.StartSettings.default_parameters}'
-        self.set_mode_and_mask_parameters(user_input.split(' ')[0])
+
         for param in user_input.split(' '):
             if '-p' in param:
                 self.proxy = not self.proxy
@@ -80,28 +84,27 @@ class BotOption:
                 self.load_strategy = not self.load_strategy
             elif '-t' in param:
                 self.timer = param.split('-t')[1].split(' ')[0]
-            elif '-bot' in user_input:
-                self.accounts_key_mask = 'bot_account'
-            elif '-main' in user_input:
-                self.accounts_key_mask = 'main_account'
-            elif '-sub' in user_input:
-                settings.subscribe_limit_stop = user_input.split('-sub')[1].split(' ')[0]
-                self.second_mode = BotOption.parameters['short']
+
             elif '-nonfilt' in user_input:
                 self.parameters['filtered_path'] = self.parameters['non_filtered_path']
 
-    def input_account_and_set_accounts_list(self):
-        account_list = []
-        if self.accounts_key_mask == 'main_account':
-            user_input = input('Введите имя аккаунта: ')
-            account_list = user_input.split(' ')
+        return user_input
 
-        elif self.accounts_key_mask == 'bot_account':
-            for key in data.user_dict:
-                if 'bot_account' in key:
-                    account_list.append(key.split('-')[1])
-            random.shuffle(account_list)
+    def input_account_and_set_accounts_list_db(self, accounts_type):
+        if accounts_type == 'main':
+            self.accounts_key_number_list = input('Введите ID аккаунта: ')
+        elif accounts_type == 'bot':
+            accounts_key_number_list = data_base.get_accounts_id_on_status('bot')
+            random.shuffle(accounts_key_number_list)
+            self.accounts_key_number_list = accounts_key_number_list
+
+    def get_user_agent(self, account_id):
+        user_agent_of_account = self.account_data['user_agent']
+        if user_agent_of_account is not None:
+            user_agent_of_account = f'user-agent={user_agent_of_account}'
         else:
-            raise Exception('Неизвестная маска аккаунта.')
-
-        self.accounts_key_number = account_list
+            new_user_agent = random.choice(user_agents.user_agents)
+            data_base.set_value_user_agent_field(account_id, new_user_agent)
+            user_agent_of_account = f'user-agent={new_user_agent}'
+            print(f'Присвоен новый UserAgent: {new_user_agent}')
+        self.chrome_options.add_argument(user_agent_of_account)

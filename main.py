@@ -1,17 +1,16 @@
 from module.functions import FunctionClass
-from module import exception
+from module import exception, tools
 
 
 class StartBot(FunctionClass):
     def start(self):
         try:
-            self.account_option.input_operating_mode_and_set_parameters()
+            self.account_option.get_accounts_list()
             self.account_option.set_browser_parameters()
-            self.account_option.input_account_and_set_accounts_list()
-
-            for name in self.account_option.accounts_key_number:
+            for account_id in self.account_option.accounts_key_number_list:
                 try:
-                    self.account_option.set_account_parameters(name)
+                    self.account_option.set_account_parameters_by_db(account_id)
+                    self.account_option.get_user_agent(account_id)
                     self.login()
                     eval(f'self.{self.account_option.mode}()')
                     self.browser.quit()
@@ -27,5 +26,6 @@ class StartBot(FunctionClass):
 
 
 if __name__ == '__main__':
+    # tools.Tools.add_accounts_to_data_base()
     my_bot = StartBot()
     my_bot.start()

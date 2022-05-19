@@ -1,3 +1,4 @@
+from module import data_base
 from module.option import BotOption
 import random
 
@@ -50,3 +51,11 @@ class Tools:
             raise Exception('Метод "shaffle_file" вернул меньше строк, чем получил.')
         elif before < after:
             raise Exception('Метод "shaffle_file" вернул больше строк, чем получил.')
+
+    @staticmethod
+    def add_accounts_to_data_base():
+        accounts_list = list()
+        Tools.file_read('accounts', accounts_list)
+        for entry in accounts_list:
+            user_name, user_pass, email_name, email_pass, email_codeword = entry.split(':')
+            data_base.create_entry_db(user_name, user_pass, email_name, email_pass, email_codeword)

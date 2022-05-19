@@ -42,22 +42,24 @@ class BaseClass:
         self.browser.refresh()
         self.cookie_accept()
         self.should_be_home_page()
-        for cookie in pickle.load(open(f'data/cookies/{self.account_option.username}_cookies', 'rb')):
+        for cookie in pickle.load(
+                open(f'data/cookies_and_userAgent/{self.account_option.account_data["user_name"]}_cookies', 'rb')):
             self.browser.add_cookie(cookie)
         time.sleep(1)
         self.browser.refresh()
 
     def save_new_cookie(self):
-        pickle.dump(self.browser.get_cookies(), open(f'data/cookies/{self.account_option.username}_cookies', 'wb'))
+        pickle.dump(self.browser.get_cookies(),
+                    open(f'data/cookies_and_userAgent/{self.account_option.account_data["user_name"]}_cookies', 'wb'))
 
     def input_username_and_userpass(self):
         username_input = self.search_element((By.NAME, "username"))
         username_input.clear()
-        username_input.send_keys(self.account_option.username)
+        username_input.send_keys(self.account_option.account_data["user_name"])
 
         password_input = self.search_element((By.NAME, "password"))
         password_input.clear()
-        password_input.send_keys(self.account_option.password)
+        password_input.send_keys(self.account_option.account_data["user_pass"])
         password_input.send_keys(Keys.ENTER)
 
     def search_element(self, locator, timeout=StartSettings.web_driver_wait, type_wait=ec.element_to_be_clickable):
@@ -74,7 +76,7 @@ class BaseClass:
                     len_user_url = len(profile_url.split('/'))  # у ссылки на профиль равен пяти.
                     if len_user_url == 5 \
                             and 'www.instagram.com' in profile_url \
-                            and self.account_option.username not in profile_url \
+                            and self.account_option.account_data["user_name"] not in profile_url \
                             and 'explore' not in profile_url \
                             and ignore not in profile_url:
                         list_urls.add(profile_url)
@@ -147,4 +149,7 @@ class BaseClass:
         else:
             self.count_limit = Subscribe.subscribe_limit_stop - self.subscribes
 
-
+    def cookie_accept(self):
+        accept_button = self.search_element((By.CSS_SELECTOR, 'button.aOOlW.HoLwm'))
+        accept_button.click()
+        time.sleep(2)

@@ -2,7 +2,6 @@ from selenium.common.exceptions import TimeoutException, StaleElementReferenceEx
 from module import exception, message_text, my_print
 from selenium.webdriver.support import expected_conditions as ec
 from selenium.webdriver.common.by import By
-import time
 
 
 class Checks(my_print.Print):
@@ -122,7 +121,4 @@ class Checks(my_print.Print):
                 self.account_option,
                 message_text.InformationMessage.page_loading_error)
 
-    def cookie_accept(self):
-        accept_button = self.search_element((By.CSS_SELECTOR, 'button.aOOlW.HoLwm'))
-        accept_button.click()
-        time.sleep(2)
+
