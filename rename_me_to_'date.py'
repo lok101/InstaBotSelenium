@@ -1,15 +1,3 @@
-stop_word_in_nick_name = [
-    'your_stop_word_1', 'your_stop_word_2', 'your_stop_letter_1', 'your_stop_letter_2',
-]
-
-stop_word_in_user_name = [
-    'your_stop_word_1', 'your_stop_word_2', 'your_stop_letter_1', 'your_stop_letter_2',
-]
-
-stop_word_in_biography = [
-    'your_stop_word_1', 'your_stop_word_2', 'your_stop_letter_1', 'your_stop_letter_2',
-]
-
 proxy_list = '100.100.100.100:80'
 
 my_ip = '100.100.100.100'
