@@ -61,7 +61,7 @@ class Checks(my_print.Print):
     def search_any_verification_form(self):
         try:
             self.search_element(selectors.Technical.verification_form, timeout=2)
-            raise exception.VerificationError(
+            raise exception.CriticalVerificationError(
                 self.account_option,
                 message_text.LoginErrorMessage.verification_form)
 

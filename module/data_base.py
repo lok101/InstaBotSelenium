@@ -40,6 +40,7 @@ def create_entry_db(user_name, user_pass, email_name, email_pass, email_codeword
 def get_account_field_data(account_id):
     return_dict = dict()
     entry = DataBase.get(DataBase.account_id == account_id)
+    return_dict['account_id'] = entry.account_id
     return_dict['user_name'] = entry.user_name
     return_dict['user_pass'] = entry.user_pass
     return_dict['email_name'] = entry.email_name
@@ -57,7 +58,6 @@ def get_accounts_id_on_status(account_status):
     return return_list
 
 
-def set_value_user_agent_field(account_id, user_agent):
+def delete_entry(account_id):
     entry = DataBase.get(DataBase.account_id == account_id)
-    entry.user_agent = user_agent
-    entry.save()
+    entry.delete_instance()
