@@ -1,6 +1,5 @@
-from settings import Subscribe, Unsubscribe, StartSettings
-from module import exception, message_text, page_checkup
-from selenium.webdriver.common.by import By
+from settings import Subscribe, Unsubscribe, StartSettings, Parce
+from module import exception, message_text, page_checkup, selectors
 from module.option import BotOption
 from module.tools import Tools
 from datetime import datetime
@@ -11,8 +10,8 @@ import time
 
 class Support(page_checkup.Checks):
     def press_to_subscribe_button(self):
-        self.search_element((By.CSS_SELECTOR, 'div button'))  # выполняет роль проверки на загрузку
-        buttons = self.browser.find_elements(By.CSS_SELECTOR, 'div button')
+        self.search_element(selectors.UserPage.all_buttons)  # выполняет роль проверки на загрузку
+        buttons = self.browser.find_elements(selectors.UserPage.all_buttons)
         for button in buttons:
             if 'подписаться' in button.text.lower():
                 iteration_limit = 10
@@ -42,9 +41,9 @@ class Support(page_checkup.Checks):
             time.sleep(Subscribe.sleep_between_iterations * 60)
 
     def press_to_unsubscribe_button_and_set_timeouts(self, user):
-        user.find_element(By.TAG_NAME, "button").click()  # нажать кнопку отписки
+        user.find_element(selectors.UserPage.all_buttons).click()  # нажать кнопку отписки
         time.sleep(random.randrange(Unsubscribe.min_sleep, Unsubscribe.max_sleep))
-        self.search_element((By.CSS_SELECTOR, "button.-Cab_")).click()  # нажать кнопку подтверждения
+        self.search_element(selectors.UserPage.button_confirm_unsubscribe).click()  # нажать кнопку подтверждения
         self.should_be_subscribe_and_unsubscribe_blocking()
         self.count_iteration += 1
         self.print_to_console(
@@ -97,7 +96,6 @@ class Support(page_checkup.Checks):
             time.sleep(int(self.account_option.timer) * 60)
 
     def standard_exception_handling(self):
-
         self.save_log_exception()
         if self.account_option.mode == self.account_option.parameters['fil'] \
                 and isinstance(self.account_option.exception, KeyError):
@@ -139,3 +137,16 @@ class Support(page_checkup.Checks):
                 self.shuffle_filter_file)
         else:
             raise Exception('Неизвестный режим в методе "shaffle_file_for_task".')
+
+    def return_subscriptions_list_for_this_account(self):
+        self.search_element(selectors.UserPage.button_to_open_subscriptions_list).click()  # открыть список подписок
+        subscriptions_div_block = self.search_element(selectors.UserPage.subscriptions_list_div_block)
+        subscriptions_users = subscriptions_div_block.find_elements(selectors.Technical.tag_li)
+        return subscriptions_users
+
+    def save_to_file_accounts_followers(self):
+        self.search_element(selectors.UserPage.button_to_open_followers_list).click()  # открыть список подписчиков
+        self.scrolling_div_block(count=Parce.scroll_number_subscribers_list + 1)
+        user_urls = self.search_elements_on_tag(ignore=self.account_option.account_data["user_name"])
+        Tools.file_write((BotOption.parameters["non_filtered_path"]), user_urls)
+        self.print_statistics_on_parce()

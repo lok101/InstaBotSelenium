@@ -19,7 +19,7 @@ class Print(base_module.BaseClass):
         print(f'{datetime.now().strftime("%H:%M:%S")} - ', end='')
 
     def account_name(self):
-        print(f'{self.account_option.username} - ', end='')
+        print(f'{self.account_option.account_data["user_name"]} - ', end='')
 
     def print_statistics_on_filtration(self):
         non_filtered, filtered = set(), set()
@@ -59,7 +59,8 @@ class Print(base_module.BaseClass):
         print(f'{date} Успешно подключился через прокси.', end=' ===> ')
 
     def login_not_cookie(self):
-        print(f'Залогинился и создал cookie-файл ===> data/cookies/{self.account_option.username}_cookies.')
+        print(f'Залогинился и создал cookie-файл ===> '
+              f'data/cookies/{self.account_option.account_data["user_name"]}_cookies.')
 
     @staticmethod
     def login_from_cookie():

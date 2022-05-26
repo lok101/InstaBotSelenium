@@ -1,15 +1,15 @@
 from selenium.common.exceptions import TimeoutException, StaleElementReferenceException
-from module import exception, message_text, my_print
+from module import exception, message_text, my_print, selectors
 from selenium.webdriver.support import expected_conditions as ec
-from selenium.webdriver.common.by import By
 
 
 class Checks(my_print.Print):
     def should_be_user_page(self):
         while True:
             try:
-                error_message = self.search_element((By.CSS_SELECTOR, 'div > div > h2'), timeout=1,
-                                                    type_wait=ec.presence_of_element_located)
+                error_message = self.search_element(
+                    selectors.Technical.header_on_page_close,
+                    type_wait=ec.presence_of_element_located, timeout=1)
                 if 'К сожалению, эта страница недоступна' in error_message.text:
                     raise exception.UserPageNotExist(
                         self.account_option,
@@ -32,10 +32,9 @@ class Checks(my_print.Print):
             except StaleElementReferenceException:
                 continue
 
-    def should_be_home_page(self):
+    def should_be_login_page(self):
         try:
-            self.search_element((By.NAME, "username"),
-                                timeout=10, type_wait=ec.presence_of_element_located)
+            self.search_element(selectors.Login.username, timeout=10, type_wait=ec.presence_of_element_located)
             self.print_to_console(
                 self.current_time,
                 self.account_name,
@@ -47,7 +46,7 @@ class Checks(my_print.Print):
 
     def should_be_verification_form(self):
         try:
-            self.search_element((By.CSS_SELECTOR, 'div.ctQZg.KtFt3 > button > div'), timeout=2)
+            self.search_element(selectors.Technical.button_exit_from_account_on_verification_query_page, timeout=2)
             raise exception.VerificationError(
                 self.account_option,
                 message_text.LoginErrorMessage.verification_form)
@@ -57,8 +56,10 @@ class Checks(my_print.Print):
 
     def should_be_login_form_error(self):
         try:
-            element = self.search_element((By.CSS_SELECTOR, '#slfErrorAlert'),
-                                          timeout=10, type_wait=ec.presence_of_element_located)
+            element = self.search_element(
+                selectors.Login.label_about_error_under_login_button,
+                timeout=10,
+                type_wait=ec.presence_of_element_located)
             if 'К сожалению, вы ввели неправильный пароль.' in element.text:
                 raise exception.LoginError(
                     self.account_option,
@@ -75,8 +76,7 @@ class Checks(my_print.Print):
 
     def should_be_login_button(self, mode='login-pass'):
         try:
-            self.search_element((By.CSS_SELECTOR, 'div.ctQZg.KtFt3 > div > div:nth-child(1)'), timeout=2,
-                                type_wait=ec.presence_of_element_located)
+            self.search_element(selectors.UserPage.home_button, timeout=10, type_wait=ec.presence_of_element_located)
 
         except TimeoutException:
             if mode == 'cookie':
@@ -87,8 +87,9 @@ class Checks(my_print.Print):
 
     def should_be_subscribe_and_unsubscribe_blocking(self):
         try:
-            self.search_element((By.CSS_SELECTOR, 'div._08v79 > h3'), timeout=2,
-                                type_wait=ec.presence_of_element_located)
+            self.search_element(
+                selectors.Technical.alert_window_activity_blocking,
+                type_wait=ec.presence_of_element_located, timeout=2)
             raise exception.ActivBlocking(
                 self.account_option,
                 message_text.InformationMessage.subscribe_unsubscribe_blocking)
@@ -98,8 +99,9 @@ class Checks(my_print.Print):
 
     def should_be_activity_blocking(self):
         try:
-            error_message = self.search_element((By.CSS_SELECTOR, 'div > div.error-container > p'), timeout=2,
-                                                type_wait=ec.presence_of_element_located)
+            error_message = self.search_element(
+                selectors.Technical.header_on_stop_page,
+                type_wait=ec.presence_of_element_located, timeout=2)
             if 'Подождите несколько минут, прежде чем пытаться снова' in error_message.text:
                 raise exception.ActivBlocking(
                     self.account_option,
@@ -113,12 +115,24 @@ class Checks(my_print.Print):
 
     def should_be_instagram_page(self):
         try:
-            self.search_element((By.CSS_SELECTOR, '[href=\'/\']'), timeout=15,
-                                type_wait=ec.presence_of_element_located)
-
+            self.search_element(
+                selectors.UserPage.instagram_logo,
+                type_wait=ec.presence_of_element_located, timeout=15)
         except TimeoutException:
             raise exception.PageLoadingError(
                 self.account_option,
                 message_text.InformationMessage.page_loading_error)
 
+    def check_cookie_accept_window(self):
+        try:
+            self.search_element(
+                selectors.Technical.cookie_accept_window,
+                type_wait=ec.presence_of_element_located, timeout=2)
 
+            accept_button = self.search_element(
+                selectors.Technical.cookie_accept_window,
+                type_wait=ec.presence_of_element_located)
+            accept_button.click()
+
+        except TimeoutException:
+            pass

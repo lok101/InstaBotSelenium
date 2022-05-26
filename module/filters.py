@@ -2,8 +2,8 @@ from selenium.common.exceptions import TimeoutException, StaleElementReferenceEx
 from module.exception import BadProfile, FilteredOut, EmptyProfile, StopWord
 from selenium.webdriver.support import expected_conditions as ec
 from module.message_text import FilterMessage
-from selenium.webdriver.common.by import By
 from module.base_module import BaseClass
+from module import selectors
 from settings import Filter
 import requests
 import hashlib
@@ -14,7 +14,6 @@ class FilterClass(BaseClass):
     def should_be_compliance_with_limits(self):
         self.should_be_profile_avatar()
         self.should_be_subscribe()
-        self.should_be_posts()
         self.check_posts_follows_and_subs_amount()
         self.should_be_stop_word_in_nick_name()
         self.should_be_stop_word_in_user_name()
@@ -23,27 +22,16 @@ class FilterClass(BaseClass):
 
     # проверяет, подписан ли на пользователя
     def should_be_subscribe(self):
-        """
-        вернёт False если если подписка уже есть
-        """
         try:
-            self.search_element((By.CSS_SELECTOR, 'span.vBF20._1OSdk > button > div > span'), timeout=1)
+            self.search_element(selectors.UserPage.button_unsubscribe, timeout=1)
             raise FilteredOut(self.account_option, FilterMessage.already_subscribe)
-        except TimeoutException:
-            pass
-
-    # проверяет, есть ли публикации в профиле
-    def should_be_posts(self):
-        try:
-            self.search_element((By.XPATH, '//article/div[1]/div/div[2]/h1'), timeout=1)
-            raise EmptyProfile(self.account_option, FilterMessage.no_posts)
         except TimeoutException:
             pass
 
     # проверяет, не является ли профиль закрытым
     def should_be_private_profile(self):
         try:
-            self.search_element((By.XPATH, '//article/div[1]/div/h2'), timeout=0.5)
+            self.search_element(selectors.UserPage.label_this_close_account, timeout=0.5)
             raise EmptyProfile(self.account_option, FilterMessage.profile_closed)
         except TimeoutException:
             pass
@@ -54,7 +42,7 @@ class FilterClass(BaseClass):
     # проверяет наличие аватара
     def should_be_profile_avatar(self):
         digests = []
-        url = self.get_link((By.CSS_SELECTOR, 'div.eC4Dz img'))
+        url = self.get_link(selectors.UserPage.account_photo)
         get_img = requests.get(url)
         with open('data/profile_avatar.jpg', 'wb') as img_file:
             img_file.write(get_img.content)
@@ -80,7 +68,7 @@ class FilterClass(BaseClass):
         stop_words = Filter.stop_word_in_user_name_list
         assert_text = FilterMessage.stop_word_in_user_name
         try:
-            field = self.search_element((By.CSS_SELECTOR, 'div.QGPIr > span'), timeout=1,
+            field = self.search_element(selectors.UserPage.user_name, timeout=1,
                                         type_wait=ec.presence_of_element_located).text
             self.search_stop_word_in_argument(field, stop_words, assert_text)
         except TimeoutException:
@@ -91,7 +79,7 @@ class FilterClass(BaseClass):
         stop_words = Filter.stop_word_in_biography_list
         assert_text = FilterMessage.stop_word_in_biography
         try:
-            field = self.search_element((By.CSS_SELECTOR, 'div.QGPIr > div'), timeout=1,
+            field = self.search_element(selectors.UserPage.user_biography, timeout=1,
                                         type_wait=ec.presence_of_element_located).text
             self.search_stop_word_in_argument(field, stop_words, assert_text)
         except TimeoutException:

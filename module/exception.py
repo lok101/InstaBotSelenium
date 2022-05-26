@@ -25,7 +25,7 @@ class BotCriticalException(BotException):
     def __init__(self, account_option, message):
         super(BotCriticalException, self).__init__(account_option, message)
         self.path = f'logs/{self.__class__.__name__}.txt'
-        self.log_text = self.date + ' -- ' + self.account_option.username.split("\n")[0] + ' -- ' + str(self.message)
+        self.log_text = self.date + ' -- ' + self.account_option.account_data["user_name"].split("\n")[0] + ' -- ' + str(self.message)
 
     def __str__(self):
         return f'\n{self.date} {self.__class__.__name__} ----- {self.message}\n'

@@ -4,7 +4,6 @@ from module import login
 from module.message_text import InformationMessage
 from settings import Parce, Unsubscribe, Filter
 from module.filters import FilterClass
-from selenium.webdriver.common.by import By
 from module.option import BotOption
 from module.tools import Tools
 import time
@@ -34,11 +33,7 @@ class FunctionClass(FilterClass, login.Login, support.Support):
                 self.go_to_my_profile_page_and_set_subscribes_amount()
                 if self.subscribes == 0:
                     raise exception.BotFinishTask(self.account_option, InformationMessage.task_finish)
-
-                self.search_element((By.XPATH, "//li[3]/a")).click()  # открыть список подписок
-                following_div_block = self.search_element((By.CSS_SELECTOR, "div > div > div.isgrP > ul > div"))
-                following_users = following_div_block.find_elements(By.TAG_NAME, "li")
-
+                following_users = self.return_subscriptions_list_for_this_account()
                 for user in following_users:
                     if self.count_iteration == 10:
                         time.sleep(Unsubscribe.sleep_between_iterations * 60)
@@ -108,11 +103,7 @@ class FunctionClass(FilterClass, login.Login, support.Support):
         for self.account_option.user_url in url_list:
             try:
                 self.go_to_user_page()
-                self.search_element((By.CSS_SELECTOR, 'li:nth-child(2) > a')).click()  # открыть список подписчиков
-                self.scrolling_div_block(count=Parce.scroll_number_subscribers_list + 1)
-                user_urls = self.tag_search(ignore=self.account_option.username)
-                Tools.file_write((BotOption.parameters["non_filtered_path"]), user_urls)
-                self.print_statistics_on_parce()
+                self.save_to_file_accounts_followers()
                 if self.count_iteration % Parce.cycles_for_one_account == 0:
                     break
 
