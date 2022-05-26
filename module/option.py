@@ -38,6 +38,7 @@ class BotOption:
 
     def set_browser_parameters(self):
         self.chrome_options = webdriver.ChromeOptions()
+        self.chrome_options.add_argument("--disable-blink-features=AutomationControlled")   # -webdriver mode
         self.chrome_options.add_argument('--log-level=3')
         self.chrome_options.add_argument('--ignore-certificate-errors-spki-list')
         self.chrome_options.add_experimental_option('excludeSwitches', ['enable-logging'])

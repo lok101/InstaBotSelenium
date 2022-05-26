@@ -41,5 +41,6 @@ class Technical:
     header_on_stop_page = (By.CSS_SELECTOR, 'div > div.error-container > p')
     header_on_page_close = (By.CSS_SELECTOR, 'div > div > h2')   # ссылка устарела, аккаунт закрыт, ограничение возраст
     alert_window_activity_blocking = (By.CSS_SELECTOR, 'div._08v79 > h3')
-    button_exit_from_account_on_verification_query_page = (By.CSS_SELECTOR, 'section > div > div > div.erQwt > a')
+    red_label_danger_login = (By.CSS_SELECTOR, 'section > div > div > div.GNbi9 > div > p')
     cookie_accept_window = (By.CSS_SELECTOR, 'div:nth-child(1) > div:nth-child(2) > div:nth-child(1) > div > span')
+    verification_form = (By.CSS_SELECTOR, 'main > div.qF0y9.Igw0E.IwRSH.YBx95.acqo5.vwCYk.lKyay.i0EQd > div > div')

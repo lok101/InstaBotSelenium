@@ -32,5 +32,6 @@ class LoginErrorMessage:
     broke_cookie = 'Авторизация через куки не удалась.'
     not_login_cookies = 'Не получилось залогиниться через Cookies.'
     not_login_page = 'Не загрузил домашнюю страницу.'
-    verification_form = 'Поступил запрос на верификацию.'
+    verification_email_form = 'Поступил запрос на верификацию через Email.'
+    verification_form = 'Поступил запрос на полную верификацию.'
     wrong_account = 'Авторизованный аккаунт не соответствует выбранному. Произвожу перелогин.'

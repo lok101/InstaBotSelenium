@@ -71,8 +71,13 @@ class BaseClass:
             try:
                 self.search_element(selectors.Technical.button_subscribe_into_followers_list_div_block)
                 tags = self.browser.find_elements(*selectors.Technical.tag_a)
+                print('============================')
+                print(tags)
+                print('============================')
                 for public_block in tags:
                     profile_url = public_block.get_attribute('href')
+                    print(f'public_block: {public_block}')
+                    print(f'profile_url: {profile_url}')
                     len_user_url = len(profile_url.split('/'))  # у ссылки на профиль равен пяти.
                     if len_user_url == 5 \
                             and 'www.instagram.com' in profile_url \

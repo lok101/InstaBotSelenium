@@ -58,14 +58,14 @@ class FilterClass(BaseClass):
 
     # проверяет наличие стоп-слов в никнейме
     def should_be_stop_word_in_nick_name(self):
-        stop_words = Filter.stop_word_in_nick_name_list
+        stop_words = StopWords.stop_word_in_nick_name
         assert_text = FilterMessage.stop_word_in_nick_name
         field = self.account_option.user_url.split("/")[-2]
         self.search_stop_word_in_argument(field, stop_words, assert_text)
 
     # проверяет наличие стоп-слов в имени
     def should_be_stop_word_in_user_name(self):
-        stop_words = Filter.stop_word_in_user_name_list
+        stop_words = StopWords.stop_word_in_user_name
         assert_text = FilterMessage.stop_word_in_user_name
         try:
             field = self.search_element(selectors.UserPage.user_name, timeout=1,
@@ -76,7 +76,7 @@ class FilterClass(BaseClass):
 
     # проверяет наличие стоп-слов в биографии
     def should_be_stop_word_in_biography(self):
-        stop_words = Filter.stop_word_in_biography_list
+        stop_words = StopWords.stop_word_in_biography
         assert_text = FilterMessage.stop_word_in_biography
         try:
             field = self.search_element(selectors.UserPage.user_biography, timeout=1,
@@ -117,3 +117,29 @@ class FilterClass(BaseClass):
 
         if data_dict['follow'] < break_limit and coefficient <= max_coefficient:
             raise BadProfile(self.account_option, FilterMessage.bad_profile)
+
+
+class StopWords:
+    stop_word_in_nick_name = [
+        'giv', 'darom', 'salon'
+    ]
+
+    stop_word_in_user_name = [
+        'á', 'ç', 'ك', 'ا', 'ل', 'س', 'ل', 'ا', 'م', 'Č', 'Š', 'Ě', 'і', 'і', 'ї', 'қ', 'ү', 'Í', 'перманент', 'бров',
+        'макияж'
+    ]
+
+    stop_word_in_biography = [
+        'привет', 'цена', 'цены', 'предоплат', 'доставк', 'отправк', 'изготов', 'психолог', 'кератин', 'ботокс',
+        'мастер',
+        'специалист', 'директ', 'direct', 'заказ', 'зарабатывать', 'адрес', 'y.o', 'лет', 'товар', 'розыгрыш',
+        'юридическ',
+        'фирма', 'связи', 'менеджер', 'изделия', 'телефон', 'амбасадор', 'услуг', 'украин', 'холост', 'массаж',
+        'магазин',
+        'маникюр', 'педикюр', 'информационный', 'портал', 'леденцы', 'запись', 'тел:', 'реклама', 'бесплатно', '8(',
+        '7(',
+        'дарим', 'оплата', 'коран', 'новости', 'консультант', 'результат', 'под ключ', 'скидк', 'ссылк', 'режим работы',
+        'á', 'ç', 'ك', 'ا', 'ل', 'س', 'ل', 'ا', 'م', 'Č', 'Š', 'Ě', 'і', 'і', 'ї', 'қ', 'ү', 'Í', 'акци', 'перманент'
+                                                                                                          'формата',
+        'сбор', 'волонт', 'бров', 'съёмк', 'киев', 'тел.', '₽'
+    ]

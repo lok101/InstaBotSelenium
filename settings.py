@@ -1,5 +1,4 @@
-﻿import data
-import enum
+﻿import enum
 
 
 class StartSettings:
@@ -33,10 +32,6 @@ class Filter:
 
     coefficient_subscribers = 6  # подписки делённые на подписчиков (если подписок много, а подписчиков мало - пропуск)
     break_limit = 100   # минимальный порог подписчиков, при превышении которого не проверяется coefficient_subscribers
-
-    stop_word_in_nick_name_list = data.stop_word_in_nick_name   # стоп-слова для никнейма
-    stop_word_in_user_name_list = data.stop_word_in_user_name   # стоп-слова для имени
-    stop_word_in_biography_list = data.stop_word_in_biography   # стоп-слова для биографии
 
     timeout = 3
     iteration_for_one_account = 300

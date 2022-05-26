@@ -59,7 +59,7 @@ class Support(page_checkup.Checks):
             self.profile_page_info)
 
         self.should_be_instagram_page()
-        self.should_be_verification_form()
+        self.should_be_verification_forms()
         self.should_be_user_page()
         self.should_be_activity_blocking()
 
@@ -68,7 +68,7 @@ class Support(page_checkup.Checks):
         self.browser.get(url)
         self.should_be_instagram_page()
         self.should_be_activity_blocking()
-        self.should_be_verification_form()
+        self.should_be_verification_forms()
 
         self.subscribes = self.return_amount_posts_subscribes_and_subscribers()['subs']
         self.print_to_console(

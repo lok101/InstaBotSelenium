@@ -7,7 +7,7 @@ class Login(page_checkup.Checks):
         self.browser = webdriver.Chrome(options=self.account_option.chrome_options)
         self.browser.get('https://www.instagram.com/accounts/login/')
         self.set_cookie()
-        self.should_be_verification_form()
+        self.should_be_verification_forms()
         self.should_be_login_button()
         self.print_to_console(
             self.current_time,
@@ -17,7 +17,7 @@ class Login(page_checkup.Checks):
     def not_cookie_login(self):
         self.input_username_and_userpass()
         self.should_be_login_form_error()
-        self.should_be_verification_form()
+        self.should_be_verification_forms()
         self.should_be_login_button()
         self.save_new_cookie()
         self.print_to_console(

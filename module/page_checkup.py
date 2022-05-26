@@ -44,9 +44,23 @@ class Checks(my_print.Print):
                 self.account_option,
                 message_text.LoginErrorMessage.not_login_page)
 
-    def should_be_verification_form(self):
+    def should_be_verification_forms(self):
+        self.search_verification_for_email_form()
+        self.search_any_verification_form()
+
+    def search_verification_for_email_form(self):
         try:
-            self.search_element(selectors.Technical.button_exit_from_account_on_verification_query_page, timeout=2)
+            self.search_element(selectors.Technical.red_label_danger_login, timeout=2)
+            raise exception.VerificationError(
+                self.account_option,
+                message_text.LoginErrorMessage.verification_email_form)
+
+        except TimeoutException:
+            pass
+
+    def search_any_verification_form(self):
+        try:
+            self.search_element(selectors.Technical.verification_form, timeout=2)
             raise exception.VerificationError(
                 self.account_option,
                 message_text.LoginErrorMessage.verification_form)
