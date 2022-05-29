@@ -1,38 +1,43 @@
 from selenium.common.exceptions import TimeoutException, StaleElementReferenceException
-from module.exception import BadProfile, FilteredOut, EmptyProfile, StopWord
 from selenium.webdriver.support import expected_conditions as ec
-from module.message_text import FilterMessage
-from module.base_module import BaseClass
-from module import selectors
-from settings import Filter
+
 import requests
 import hashlib
 
+from module.exception import BadProfile, FilteredOut, EmptyProfile, StopWord
+from module.message_text import FilterMessage
+from settings import FilterLimits
+from module import selectors
 
-class FilterClass(BaseClass):
-    # комплексный фильтр
-    def should_be_compliance_with_limits(self):
-        self.should_be_profile_avatar()
-        self.should_be_subscribe()
-        self.check_posts_follows_and_subs_amount()
-        self.should_be_stop_word_in_nick_name()
-        self.should_be_stop_word_in_user_name()
-        self.should_be_stop_word_in_biography()
+from module.base_module import BaseClass
+
+
+class Filter:
+    @staticmethod
+    def should_be_compliance_with_limits(bot):
+        Filter.should_be_profile_avatar(bot)
+        Filter.should_be_subscribe(bot)
+        Filter.check_posts_follows_and_subs_amount(bot)
+        Filter.should_be_stop_word_in_nick_name(bot)
+        Filter.should_be_stop_word_in_user_name(bot)
+        Filter.should_be_stop_word_in_biography(bot)
         print('Подходит.')
 
     # проверяет, подписан ли на пользователя
-    def should_be_subscribe(self):
+    @staticmethod
+    def should_be_subscribe(bot):
         try:
-            self.search_element(selectors.UserPage.button_unsubscribe, timeout=1)
-            raise FilteredOut(self.account_option, FilterMessage.already_subscribe)
+            BaseClass.search_element(bot, selectors.UserPage.button_unsubscribe, timeout=1)
+            raise FilteredOut(bot.account_option, FilterMessage.already_subscribe)
         except TimeoutException:
             pass
 
     # проверяет, не является ли профиль закрытым
-    def should_be_private_profile(self):
+    @staticmethod
+    def should_be_private_profile(bot):
         try:
-            self.search_element(selectors.UserPage.label_this_close_account, timeout=0.5)
-            raise EmptyProfile(self.account_option, FilterMessage.profile_closed)
+            BaseClass.search_element(bot, selectors.UserPage.label_this_close_account, timeout=0.5)
+            raise EmptyProfile(bot.account_option, FilterMessage.profile_closed)
         except TimeoutException:
             pass
         except StaleElementReferenceException:
@@ -40,9 +45,10 @@ class FilterClass(BaseClass):
         # return exist
 
     # проверяет наличие аватара
-    def should_be_profile_avatar(self):
+    @staticmethod
+    def should_be_profile_avatar(bot):
         digests = []
-        url = self.get_link(selectors.UserPage.account_photo)
+        url = BaseClass.get_link(bot, selectors.UserPage.account_photo)
         get_img = requests.get(url)
         with open('data/profile_avatar.jpg', 'wb') as img_file:
             img_file.write(get_img.content)
@@ -54,69 +60,119 @@ class FilterClass(BaseClass):
                 a = hasher.hexdigest()
                 digests.append(a)
         if digests[0] == digests[1]:
-            raise EmptyProfile(self.account_option, FilterMessage.no_avatar)
+            raise EmptyProfile(bot.account_option, FilterMessage.no_avatar)
 
     # проверяет наличие стоп-слов в никнейме
-    def should_be_stop_word_in_nick_name(self):
+    @staticmethod
+    def should_be_stop_word_in_nick_name(bot):
         stop_words = StopWords.stop_word_in_nick_name
         assert_text = FilterMessage.stop_word_in_nick_name
-        field = self.account_option.user_url.split("/")[-2]
-        self.search_stop_word_in_argument(field, stop_words, assert_text)
+        field = bot.account_option.user_url.split("/")[-2]
+        Filter.search_stop_word_in_argument(bot, field, stop_words, assert_text)
 
     # проверяет наличие стоп-слов в имени
-    def should_be_stop_word_in_user_name(self):
+    @staticmethod
+    def should_be_stop_word_in_user_name(bot):
         stop_words = StopWords.stop_word_in_user_name
         assert_text = FilterMessage.stop_word_in_user_name
         try:
-            field = self.search_element(selectors.UserPage.user_name, timeout=1,
-                                        type_wait=ec.presence_of_element_located).text
-            self.search_stop_word_in_argument(field, stop_words, assert_text)
+            field = BaseClass.search_element(
+                bot, selectors.UserPage.user_name,
+                type_wait=ec.presence_of_element_located,
+                timeout=1,
+            ).text
+            Filter.search_stop_word_in_argument(bot, field, stop_words, assert_text)
         except TimeoutException:
             pass
 
     # проверяет наличие стоп-слов в биографии
-    def should_be_stop_word_in_biography(self):
+    @staticmethod
+    def should_be_stop_word_in_biography(bot):
         stop_words = StopWords.stop_word_in_biography
         assert_text = FilterMessage.stop_word_in_biography
         try:
-            field = self.search_element(selectors.UserPage.user_biography, timeout=1,
-                                        type_wait=ec.presence_of_element_located).text
-            self.search_stop_word_in_argument(field, stop_words, assert_text)
+            field = BaseClass.search_element(
+                bot, selectors.UserPage.user_biography,
+                type_wait=ec.presence_of_element_located,
+                timeout=1,
+            ).text
+            Filter.search_stop_word_in_argument(bot, field, stop_words, assert_text)
         except TimeoutException:
             pass
 
-    def search_stop_word_in_argument(self, field, stop_words_list, assert_text):
+    @staticmethod
+    def search_stop_word_in_argument(bot, field, stop_words_list, assert_text):
         try:
             for word in stop_words_list:
                 assert word.lower() not in field.lower()
         except AssertionError:
             exception_text = f'{assert_text} {word}'
-            raise StopWord(self.account_option, exception_text)
+            raise StopWord(bot.account_option, exception_text)
 
     # сверяет количество постов, подписчиков и подписок с лимитами
-    def check_posts_follows_and_subs_amount(self):
-        max_coefficient = Filter.coefficient_subscribers
-        posts_max = Filter.posts_max
-        posts_min = Filter.posts_min
-        follow_max = Filter.follow_max
-        follow_min = Filter.follow_min
-        subs_max = Filter.subs_max
-        subs_min = Filter.subs_min
-        break_limit = Filter.break_limit
-        data_dict = self.return_amount_posts_subscribes_and_subscribers()
+    @staticmethod
+    def check_posts_follows_and_subs_amount(bot):
+        max_coefficient = FilterLimits.coefficient_subscribers
+        posts_max = FilterLimits.posts_max
+        posts_min = FilterLimits.posts_min
+        follow_max = FilterLimits.follow_max
+        follow_min = FilterLimits.follow_min
+        subs_max = FilterLimits.subs_max
+        subs_min = FilterLimits.subs_min
+        break_limit = FilterLimits.break_limit
+        data_dict = BaseClass.return_amount_posts_subscribes_and_subscribers(bot)
         coefficient = data_dict['subs'] / data_dict['follow']
 
         if not posts_max >= data_dict['posts'] >= posts_min:
-            raise FilteredOut(self.account_option, FilterMessage.filter_posts)
+            raise FilteredOut(bot.account_option, FilterMessage.filter_posts)
 
         if not follow_max >= data_dict['follow'] >= follow_min:
-            raise FilteredOut(self.account_option, FilterMessage.filter_follow)
+            raise FilteredOut(bot.account_option, FilterMessage.filter_follow)
 
         if not subs_max >= data_dict['subs'] >= subs_min:
-            raise FilteredOut(self.account_option, FilterMessage.filter_subs)
+            raise FilteredOut(bot.account_option, FilterMessage.filter_subs)
 
         if data_dict['follow'] < break_limit and coefficient <= max_coefficient:
-            raise BadProfile(self.account_option, FilterMessage.bad_profile)
+            raise BadProfile(bot.account_option, FilterMessage.bad_profile)
+
+    @staticmethod
+    def return_amount_posts_subscribes_and_subscribers(bot):
+        dict_return = dict()
+        try:
+            subscriptions_field = BaseClass.search_element(
+                bot, selectors.UserPage.subscriptions,
+                type_wait=ec.presence_of_element_located,
+                timeout=3
+            )
+            dict_return['subs'] = int(
+                subscriptions_field.text.replace(" ", "").replace(',', ''))
+        except TimeoutException:
+            dict_return['subs'] = 0
+
+        try:
+            followers_field = BaseClass.search_element(
+                bot, selectors.UserPage.followers,
+                type_wait=ec.presence_of_element_located,
+                timeout=3
+            )
+            if ',' in followers_field.text:
+                dict_return['follow'] = int(
+                    followers_field.text.replace(" ", "").replace(',', '').replace('тыс.', '00').replace('млн',
+                                                                                                         '00000'))
+            else:
+                dict_return['follow'] = int(
+                    followers_field.text.replace(" ", "").replace('тыс.', '000').replace('млн', '000000'))
+        except TimeoutException:
+            dict_return['follow'] = 1
+
+        post_number_field = BaseClass.search_element(
+            bot, selectors.UserPage.posts,
+            type_wait=ec.presence_of_element_located
+        )
+        dict_return['posts'] = int(
+            post_number_field.text.replace(" ", "").replace(',', '').replace('тыс.', '000').replace('млн', '000000'))
+
+        return dict_return
 
 
 class StopWords:

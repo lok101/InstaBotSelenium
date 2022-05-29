@@ -1,5 +1,4 @@
 from datetime import datetime
-
 import peewee
 from peewee import *
 

@@ -1,8 +1,8 @@
-from module.functions import FunctionClass
-from module import exception, tools
+from module.functions import Function
+from module import exception
 
 
-class StartBot(FunctionClass):
+class StartBot(Function):
     def start(self):
         try:
             self.account_option.get_accounts_list()

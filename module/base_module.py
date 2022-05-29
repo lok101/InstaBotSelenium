@@ -1,13 +1,13 @@
-from selenium.common.exceptions import TimeoutException, StaleElementReferenceException
+from selenium.common.exceptions import StaleElementReferenceException
 from selenium.webdriver.support import expected_conditions as ec
-from module import message_text, exception, selectors
-from settings import Subscribe, StartSettings
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.common.keys import Keys
+
+from module import selectors
+from settings import Subscribe, StartSettings
 from module.option import BotOption
-from module.tools import Tools
 from data import my_ip
-import pickle
+
 import time
 import json
 
@@ -36,21 +36,6 @@ class BaseClass:
         actual_ip = json.loads(pre)['ip']
         if actual_ip in my_ip:
             raise ConnectionError('При подключении через прокси зафиксирован "родной" IP-адрес.')
-
-    def set_cookie(self):
-        self.browser.delete_all_cookies()
-        self.browser.refresh()
-        self.cookie_accept()
-        self.should_be_login_page()
-        for cookie in pickle.load(
-                open(f'data/cookies_and_userAgent/{self.account_option.account_data["user_name"]}_cookies', 'rb')):
-            self.browser.add_cookie(cookie)
-        time.sleep(1)
-        self.browser.refresh()
-
-    def save_new_cookie(self):
-        pickle.dump(self.browser.get_cookies(),
-                    open(f'data/cookies_and_userAgent/{self.account_option.account_data["user_name"]}_cookies', 'wb'))
 
     def input_username_and_userpass(self):
         username_input = self.search_element(selectors.Login.username)
@@ -100,59 +85,8 @@ class BaseClass:
                                     timeout=10)
                 time.sleep(0.5)
 
-    def get_user_url_from_file(self, file_path, difference_ignore_list=True):
-        try:
-            if difference_ignore_list:
-                user_list = Tools.difference_sets(file_path)
-            else:
-                user_list = []
-                Tools.file_read(file_path, user_list)
-            self.account_option.user_url = user_list.pop()
-            Tools.file_write(file_path, user_list, operating_mode='w')
-        except IndexError:
-            raise exception.BotFinishTask(
-                self.account_option,
-                message_text.InformationMessage.task_finish)
-
-    def return_amount_posts_subscribes_and_subscribers(self):
-        dict_return = dict()
-        try:
-            subscriptions_field = self.search_element(selectors.UserPage.subscriptions,
-                                                      type_wait=ec.presence_of_element_located,
-                                                      timeout=3)
-
-            dict_return['subs'] = int(
-                subscriptions_field.text.replace(" ", "").replace(',', ''))
-        except TimeoutException:
-            dict_return['subs'] = 0
-
-        try:
-            followers_field = self.search_element(selectors.UserPage.followers,
-                                                  type_wait=ec.presence_of_element_located,
-                                                  timeout=3)
-            if ',' in followers_field.text:
-                dict_return['follow'] = int(
-                    followers_field.text.replace(" ", "").replace(',', '').replace('тыс.', '00').replace('млн',
-                                                                                                         '00000'))
-            else:
-                dict_return['follow'] = int(
-                    followers_field.text.replace(" ", "").replace('тыс.', '000').replace('млн', '000000'))
-        except TimeoutException:
-            dict_return['follow'] = 1
-
-        post_number_field = self.search_element(selectors.UserPage.posts, type_wait=ec.presence_of_element_located)
-        dict_return['posts'] = int(
-            post_number_field.text.replace(" ", "").replace(',', '').replace('тыс.', '000').replace('млн', '000000'))
-
-        return dict_return
-
     def set_count_limit_for_subscribe(self):
         if self.account_option.second_mode == BotOption.parameters['short']:
             self.count_limit = Subscribe.subscribe_limit_stop
         else:
             self.count_limit = Subscribe.subscribe_limit_stop - self.subscribes
-
-    def cookie_accept(self):
-        button_cookie_accept = self.search_element(selectors.Login.button_cookie_accept)
-        button_cookie_accept.click()
-        time.sleep(2)
