@@ -6,7 +6,6 @@ import random
 
 from module import exception, message_text, selectors
 from settings import Subscribe, StartSettings
-from module.option import BotOption
 from module import data_base
 
 from module.base_module import BaseClass
@@ -22,16 +21,13 @@ class Check:
                     type_wait=ec.presence_of_element_located, timeout=1)
                 if 'К сожалению, эта страница недоступна' in error_message.text:
                     raise exception.UserPageNotExist(
-                        bot.account_option,
-                        message_text.InformationMessage.page_not_exist)
+                        bot, message_text.InformationMessage.page_not_exist)
                 elif 'Это закрытый аккаунт' in error_message.text:
                     raise exception.PageNotAvailable(
-                        bot.account_option,
-                        message_text.FilterMessage.profile_closed)
+                        bot, message_text.FilterMessage.profile_closed)
                 elif 'Вам исполнилось' in error_message.text:
                     raise exception.PageNotAvailable(
-                        bot.account_option,
-                        message_text.InformationMessage.check_age)
+                        bot, message_text.InformationMessage.check_age)
                 else:
                     print('Неизвестное окно при вызове "should_be_user_page".')
                 break
@@ -55,8 +51,7 @@ class Check:
             )
         except TimeoutException:
             raise exception.LoginError(
-                bot.account_option,
-                message_text.LoginErrorMessage.not_login_page)
+                bot, message_text.LoginErrorMessage.not_login_page)
 
     @staticmethod
     def should_be_verification_forms(bot):
@@ -68,8 +63,7 @@ class Check:
         try:
             BaseClass.search_element(bot, selectors.Technical.red_label_danger_login, timeout=2)
             raise exception.VerificationError(
-                bot.account_option,
-                message_text.LoginErrorMessage.verification_email_form)
+                bot, message_text.LoginErrorMessage.verification_email_form)
 
         except TimeoutException:
             pass
@@ -79,8 +73,7 @@ class Check:
         try:
             BaseClass.search_element(bot, selectors.Technical.verification_form, timeout=2)
             raise exception.CriticalVerificationError(
-                bot.account_option,
-                message_text.LoginErrorMessage.verification_form)
+                bot, message_text.LoginErrorMessage.verification_form)
 
         except TimeoutException:
             pass
@@ -94,15 +87,12 @@ class Check:
                 type_wait=ec.presence_of_element_located)
             if 'К сожалению, вы ввели неправильный пароль.' in element.text:
                 raise exception.LoginError(
-                    bot.account_option,
-                    message_text.LoginErrorMessage.error_pass)
+                    bot, message_text.LoginErrorMessage.error_pass)
             if 'не принадлежит аккаунту' in element.text:
                 raise exception.LoginError(
-                    bot.account_option,
-                    message_text.LoginErrorMessage.error_account_name)
+                    bot, message_text.LoginErrorMessage.error_account_name)
             raise exception.LoginError(
-                bot.account_option,
-                message_text.LoginErrorMessage.login_form_error)
+                bot, message_text.LoginErrorMessage.login_form_error)
         except TimeoutException:
             pass
 
@@ -118,7 +108,7 @@ class Check:
                 message = message_text.LoginErrorMessage.broke_cookie
             else:
                 message = message_text.LoginErrorMessage.not_login
-            raise exception.LoginError(bot.account_option, message)
+            raise exception.LoginError(bot, message)
 
     @staticmethod
     def should_be_subscribe_and_unsubscribe_blocking(bot):
@@ -127,8 +117,7 @@ class Check:
                 bot, selectors.Technical.alert_window_activity_blocking,
                 type_wait=ec.presence_of_element_located, timeout=2)
             raise exception.ActivBlocking(
-                bot.account_option,
-                message_text.InformationMessage.subscribe_unsubscribe_blocking)
+                bot, message_text.InformationMessage.subscribe_unsubscribe_blocking)
 
         except TimeoutException:
             pass
@@ -141,8 +130,7 @@ class Check:
                 type_wait=ec.presence_of_element_located, timeout=2)
             if 'Подождите несколько минут, прежде чем пытаться снова' in error_message.text:
                 raise exception.ActivBlocking(
-                    bot.account_option,
-                    message_text.InformationMessage.activiti_blocking)
+                    bot, message_text.InformationMessage.activiti_blocking)
             elif 'cookie' in error_message.text:
                 BaseClass.cookie_accept(bot)
             else:
@@ -158,8 +146,7 @@ class Check:
                 type_wait=ec.presence_of_element_located, timeout=15)
         except TimeoutException:
             raise exception.PageLoadingError(
-                bot.account_option,
-                message_text.InformationMessage.page_loading_error)
+                bot, message_text.InformationMessage.page_loading_error)
 
     @staticmethod
     def check_cookie_accept_window(bot):
@@ -173,8 +160,7 @@ class Check:
                 type_wait=ec.presence_of_element_located)
             accept_button.click()
             Print.print_to_console(
-                bot,
-                Print.cookie_accept
+                bot, Print.cookie_accept
             )
 
         except TimeoutException:
@@ -206,14 +192,14 @@ class Print:
 
     @staticmethod
     def account_name(bot):
-        print(f'{bot.account_option.account_data["user_name"]} - ', end='')
+        print(f'{bot.account_data["user_name"]} - ', end='')
 
     @staticmethod
     def print_statistics_on_filtration(bot):
         non_filtered, filtered = set(), set()
-        Tools.get_user_url_from_file(bot, (BotOption.parameters["non_filtered_path"]))  # вычитает из файла игнор лист
-        Tools.file_read((BotOption.parameters["non_filtered_path"]), non_filtered)
-        Tools.file_read((BotOption.parameters["filtered_path"]), filtered)
+        Tools.get_user_url_from_file(bot, (BaseClass.parameters["non_filtered_path"]))  # вычитает из файла игнор лист
+        Tools.file_read((BaseClass.parameters["non_filtered_path"]), non_filtered)
+        Tools.file_read((BaseClass.parameters["filtered_path"]), filtered)
         print(
             f'\nНе отфильтровано - {len(non_filtered)}.'
             f'\nГотовых - {len(filtered)}.',
@@ -223,13 +209,13 @@ class Print:
     @staticmethod
     def print_statistics_on_parce(bot):
         non_filtered = set()
-        Tools.file_read((BotOption.parameters["non_filtered_path"]), non_filtered)
+        Tools.file_read((BaseClass.parameters["non_filtered_path"]), non_filtered)
         bot.count_iteration += 1
         print(f'Успешно. В списке: {len(non_filtered)}.')
 
     @staticmethod
     def profile_page_info(bot):
-        username = bot.account_option.user_url.split("/")[-2]
+        username = bot.account_data['account_url'].split("/")[-2]
         print(f'[{bot.count_iteration + 1}/{bot.count_limit}] Перешёл в профиль: {username}', end=' ===> ')
 
     @staticmethod
@@ -243,7 +229,7 @@ class Print:
 
     @staticmethod
     def print_timer(bot):
-        print(f'Установлен таймер {bot.account_option.timer} минут.')
+        print(f'Установлен таймер {bot.account_data["timer"]} минут.')
 
     @staticmethod
     def proxy_successful_connection(bot):
@@ -253,7 +239,7 @@ class Print:
     @staticmethod
     def login_not_cookie(bot):
         print(f'Залогинился и создал cookie-файл ===> '
-              f'data/cookies/{bot.account_option.account_data["user_name"]}_cookies.')
+              f'data/cookies/{bot.account_data["user_name"]}_cookies.')
 
     @staticmethod
     def login_from_cookie(bot):
@@ -278,20 +264,20 @@ class Print:
     @staticmethod
     def connection_failed(bot):
         timeout = StartSettings.err_proxy_timeout
-        print(f'{bot.account_option.mode} >> CONNECTION_FAILED. Запись добавлена в лог. Таймаут {timeout} секунд.')
+        print(f'{bot.account_data["WORK_MODE"]} >> CONNECTION_FAILED. Запись добавлена в лог. Таймаут {timeout} секунд.')
 
     @staticmethod
     def exception_info(bot):
-        exception_name = str(type(bot.account_option.exception)).split("'")[1].split('.')[-1]
-        print(f'\nИсключение обработано и добавлено в лог: {bot.account_option.mode}/{exception_name}')
+        exception_name = str(type(bot.account_data['exception'])).split("'")[1].split('.')[-1]
+        print(f'\nИсключение обработано и добавлено в лог: {bot.account_data["WORK_MODE"]}/{exception_name}')
 
     @staticmethod
     def shuffle_parce_file(bot):
-        print(f'Файл {BotOption.parameters["parce_url_path"]} - перемешан.')
+        print(f'Файл {BaseClass.parameters["parce_url_path"]} - перемешан.')
 
     @staticmethod
     def shuffle_filter_file(bot):
-        print(f'Файл {BotOption.parameters["non_filtered_path"]} - перемешан.')
+        print(f'Файл {BaseClass.parameters["non_filtered_path"]} - перемешан.')
 
     @staticmethod
     def cookie_accept(bot):
@@ -303,7 +289,7 @@ class Tools:
     def difference_sets(file_path):
         account_list, ignore_list = set(), set()
         Tools.file_read(file_path, account_list)
-        Tools.file_read(BotOption.parameters['ignore_list_path'], ignore_list)
+        Tools.file_read(BaseClass.parameters['ignore_list_path'], ignore_list)
         account_list = account_list.difference(ignore_list)
         return account_list
 
@@ -363,9 +349,8 @@ class Tools:
             else:
                 user_list = []
                 Tools.file_read(file_path, user_list)
-            bot.account_option.user_url = user_list.pop()
+            bot.account_data['account_url'] = user_list.pop()
             Tools.file_write(file_path, user_list, operating_mode='w')
         except IndexError:
             raise exception.BotFinishTask(
-                bot.account_option,
-                message_text.InformationMessage.task_finish)
+                bot, message_text.InformationMessage.task_finish)

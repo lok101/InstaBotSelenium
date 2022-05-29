@@ -1,6 +1,5 @@
 from module import exception, message_text
 from settings import Parce, Unsubscribe, FilterLimits
-from module.option import BotOption
 
 from module.service import Check, Tools, Print
 from module.base_module import BaseClass
@@ -16,7 +15,7 @@ class Function(BaseClass):
         try:
             try:
                 Support.go_timer(self)
-                if self.account_option.proxy:
+                if self.account_data['proxy']:
                     Check.check_proxy_ip(self)
                 Login.cookie_login(self)
 
@@ -25,7 +24,7 @@ class Function(BaseClass):
                 Login.not_cookie_login(self)
 
         except Exception as ex:
-            self.account_option.exception = ex
+            self.account_data['exception'] = ex
             Support.standard_exception_handling(self)
 
     def unsubscribe(self):
@@ -34,7 +33,7 @@ class Function(BaseClass):
                 self.count_iteration = 0
                 Support.go_to_my_profile_page_and_set_subscribes_amount(self)
                 if self.subscribes == 40:
-                    raise exception.BotFinishTask(self.account_option, message_text.InformationMessage.task_finish)
+                    raise exception.BotFinishTask(self, message_text.InformationMessage.task_finish)
                 following_users = Support.return_subscriptions_list_for_this_account(self)
                 for user in following_users:
                     if self.count_iteration == 10:
@@ -46,7 +45,7 @@ class Function(BaseClass):
                 print(ex)
 
             except Exception as ex:
-                self.account_option.exception = ex
+                self.account_data['exception'] = ex
                 Support.standard_exception_handling(self)
                 self.count_iteration += 1
 
@@ -55,7 +54,7 @@ class Function(BaseClass):
         self.set_count_limit_for_subscribe()
         while self.count_iteration < self.count_limit:
             try:
-                Tools.get_user_url_from_file(self, BotOption.parameters['filtered_path'], difference_ignore_list=False)
+                Tools.get_user_url_from_file(self, self.parameters['filtered_path'], difference_ignore_list=False)
                 Support.go_to_user_page(self)
                 Support.press_to_subscribe_button(self)
                 Support.check_limits_from_subscribe(self)
@@ -64,10 +63,10 @@ class Function(BaseClass):
                 print(ex)
 
             except Exception as ex:
-                self.account_option.exception = ex
+                self.account_data['exception'] = ex
                 Support.standard_exception_handling(self)
 
-        raise exception.BotFinishTask(self.account_option, message_text.InformationMessage.task_finish)
+        raise exception.BotFinishTask(self, message_text.InformationMessage.task_finish)
 
     def filter(self):
         if self.count_iteration == 0:
@@ -78,11 +77,17 @@ class Function(BaseClass):
                 if self.count_iteration % 50 == 0:
                     Print.print_statistics_on_filtration(self)
 
-                Tools.get_user_url_from_file(self, BotOption.parameters['non_filtered_path'])
+                Tools.get_user_url_from_file(self, self.parameters['non_filtered_path'])
                 Support.go_to_user_page(self)
                 Filter.should_be_compliance_with_limits(self)
-                Tools.file_write((BotOption.parameters['filtered_path']), self.account_option.user_url)
-                Tools.file_write((BotOption.parameters['ignore_list_path']), self.account_option.user_url)
+                Tools.file_write(
+                    (self.parameters['filtered_path']),
+                    self.account_data['account_url']
+                )
+                Tools.file_write(
+                    (self.parameters['ignore_list_path']),
+                    self.account_data['account_url']
+                )
                 self.count += 1
 
             except exception.BotNonCriticalException as ex:
@@ -92,7 +97,7 @@ class Function(BaseClass):
                 print(ex)
 
             except Exception as ex:
-                self.account_option.exception = ex
+                self.account_data['exception'] = ex
                 Support.standard_exception_handling(self)
 
             finally:
@@ -102,7 +107,7 @@ class Function(BaseClass):
         if self.count_iteration == 0:
             Support.shaffle_file_for_task(self)
         url_list = Support.get_users_url_for_parce(self)
-        for self.account_option.user_url in url_list:
+        for self.account_data['account_url'] in url_list:
             try:
                 Support.go_to_user_page(self)
                 Support.save_to_file_accounts_followers(self)
@@ -113,5 +118,5 @@ class Function(BaseClass):
                 print(ex)
 
             except Exception as ex:
-                self.account_option.exception = ex
+                self.account_data['exception'] = ex
                 Support.standard_exception_handling(self)

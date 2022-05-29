@@ -11,7 +11,7 @@ from module.service import Check, Print
 class Login:
     @staticmethod
     def cookie_login(bot):
-        bot.browser = webdriver.Chrome(options=bot.account_option.chrome_options)
+        bot.browser = webdriver.Chrome(options=bot.account_data['chrome_option'])
         bot.browser.get('https://www.instagram.com/accounts/login/')
         Login.set_cookie(bot)
         Check.should_be_verification_forms(bot)
@@ -54,7 +54,7 @@ class Login:
         time.sleep(2)
         Check.should_be_login_page(bot)
         for cookie in pickle.load(
-                open(f'data/cookies_and_userAgent/{bot.account_option.account_data["user_name"]}_cookies', 'rb')):
+                open(f'data/cookies_and_userAgent/{bot.account_data["user_name"]}_cookies', 'rb')):
             bot.browser.add_cookie(cookie)
         time.sleep(1)
         bot.browser.refresh()
@@ -62,4 +62,4 @@ class Login:
     @staticmethod
     def save_new_cookie(bot):
         pickle.dump(bot.browser.get_cookies(),
-                    open(f'data/cookies_and_userAgent/{bot.account_option.account_data["user_name"]}_cookies', 'wb'))
+                    open(f'data/cookies_and_userAgent/{bot.account_data["user_name"]}_cookies', 'wb'))

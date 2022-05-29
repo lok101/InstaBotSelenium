@@ -28,7 +28,7 @@ class Filter:
     def should_be_subscribe(bot):
         try:
             BaseClass.search_element(bot, selectors.UserPage.button_unsubscribe, timeout=1)
-            raise FilteredOut(bot.account_option, FilterMessage.already_subscribe)
+            raise FilteredOut(bot, FilterMessage.already_subscribe)
         except TimeoutException:
             pass
 
@@ -37,7 +37,7 @@ class Filter:
     def should_be_private_profile(bot):
         try:
             BaseClass.search_element(bot, selectors.UserPage.label_this_close_account, timeout=0.5)
-            raise EmptyProfile(bot.account_option, FilterMessage.profile_closed)
+            raise EmptyProfile(bot, FilterMessage.profile_closed)
         except TimeoutException:
             pass
         except StaleElementReferenceException:
@@ -60,14 +60,14 @@ class Filter:
                 a = hasher.hexdigest()
                 digests.append(a)
         if digests[0] == digests[1]:
-            raise EmptyProfile(bot.account_option, FilterMessage.no_avatar)
+            raise EmptyProfile(bot, FilterMessage.no_avatar)
 
     # проверяет наличие стоп-слов в никнейме
     @staticmethod
     def should_be_stop_word_in_nick_name(bot):
         stop_words = StopWords.stop_word_in_nick_name
         assert_text = FilterMessage.stop_word_in_nick_name
-        field = bot.account_option.user_url.split("/")[-2]
+        field = bot.account_data['account_url'].split("/")[-2]
         Filter.search_stop_word_in_argument(bot, field, stop_words, assert_text)
 
     # проверяет наличие стоп-слов в имени
@@ -107,7 +107,7 @@ class Filter:
                 assert word.lower() not in field.lower()
         except AssertionError:
             exception_text = f'{assert_text} {word}'
-            raise StopWord(bot.account_option, exception_text)
+            raise StopWord(bot, exception_text)
 
     # сверяет количество постов, подписчиков и подписок с лимитами
     @staticmethod
@@ -124,16 +124,16 @@ class Filter:
         coefficient = data_dict['subs'] / data_dict['follow']
 
         if not posts_max >= data_dict['posts'] >= posts_min:
-            raise FilteredOut(bot.account_option, FilterMessage.filter_posts)
+            raise FilteredOut(bot, FilterMessage.filter_posts)
 
         if not follow_max >= data_dict['follow'] >= follow_min:
-            raise FilteredOut(bot.account_option, FilterMessage.filter_follow)
+            raise FilteredOut(bot, FilterMessage.filter_follow)
 
         if not subs_max >= data_dict['subs'] >= subs_min:
-            raise FilteredOut(bot.account_option, FilterMessage.filter_subs)
+            raise FilteredOut(bot, FilterMessage.filter_subs)
 
         if data_dict['follow'] < break_limit and coefficient <= max_coefficient:
-            raise BadProfile(bot.account_option, FilterMessage.bad_profile)
+            raise BadProfile(bot, FilterMessage.bad_profile)
 
     @staticmethod
     def return_amount_posts_subscribes_and_subscribers(bot):

@@ -60,3 +60,9 @@ def get_accounts_id_on_status(account_status):
 def delete_entry(account_id):
     entry = DataBase.get(DataBase.account_id == account_id)
     entry.delete_instance()
+
+
+def set_value_user_agent_field(account_id, new_user_agent):
+    entry = DataBase.get(DataBase.account_id == account_id)
+    entry.user_agent = new_user_agent
+    entry.save()
