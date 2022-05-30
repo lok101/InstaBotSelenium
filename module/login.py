@@ -5,7 +5,7 @@ import time
 
 from module import selectors
 from module.base_module import BaseClass
-from module.service import Check, Print
+from module.service import Check, Text, Print
 
 
 class Login:
@@ -16,11 +16,11 @@ class Login:
         Login.set_cookie(bot)
         Check.should_be_verification_forms(bot)
         Check.should_be_login_button(bot)
-        Print.print_to_console(
-            bot,
-            Print.current_time,
-            Print.account_name,
-            Print.login_from_cookie)
+        Print.to_console(
+            Text(bot).current_time(),
+            Text(bot).account_name(),
+            Text(bot).login_from_cookie()
+        )
 
     @staticmethod
     def not_cookie_login(bot):
@@ -29,21 +29,21 @@ class Login:
         Check.should_be_verification_forms(bot)
         Check.should_be_login_button(bot)
         Login.save_new_cookie(bot)
-        Print.print_to_console(
-            bot,
-            Print.current_time,
-            Print.account_name,
-            Print.login_not_cookie)
+        Print.to_console(
+            Text(bot).current_time(),
+            Text(bot).account_name(),
+            Text(bot).login_not_cookie()
+        )
 
     @staticmethod
     def check_proxy_ip(bot):
         bot.browser.get('https://api.myip.com/')
         BaseClass.compare_my_ip_and_base_ip(bot)
-        Print.print_to_console(
-            bot,
-            Print.current_time,
-            Print.account_name,
-            Print.proxy_successful_connection)
+        Print.to_console(
+            Text(bot).current_time(),
+            Text(bot).account_name(),
+            Text(bot).proxy_successful_connection()
+        )
 
     @staticmethod
     def set_cookie(bot):

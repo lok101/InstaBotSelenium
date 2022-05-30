@@ -43,11 +43,10 @@ class Check:
         try:
             BaseClass.search_element(bot, selectors.Login.username, timeout=10,
                                      type_wait=ec.presence_of_element_located)
-            Print.print_to_console(
-                bot,
-                Print.current_time,
-                Print.account_name,
-                Print.start_login,
+            Print.to_console(
+                Text(bot).current_time(),
+                Text(bot).account_name(),
+                Text(bot).start_login(),
             )
         except TimeoutException:
             raise exception.LoginError(
@@ -159,8 +158,8 @@ class Check:
                 bot, selectors.Technical.cookie_accept_window,
                 type_wait=ec.presence_of_element_located)
             accept_button.click()
-            Print.print_to_console(
-                bot, Print.cookie_accept
+            Print.to_console(
+                Text(bot).cookie_accept()
             )
 
         except TimeoutException:
@@ -170,117 +169,116 @@ class Check:
     def check_proxy_ip(bot):
         bot.browser.get('https://api.myip.com/')
         BaseClass.compare_my_ip_and_base_ip(bot)
-        Print.print_to_console(
-            bot,
-            Print.current_time,
-            Print.account_name,
-            Print.proxy_successful_connection)
+        Print.to_console(
+            Text(bot).current_time(),
+            Text(bot).account_name(),
+            Text(bot).proxy_successful_connection()
+        )
 
 
 class Print:
     @staticmethod
-    def print_to_console(bot, *args):
+    def to_console(*args):
         def inner(bot):
             for function in args:
                 function(bot)
 
-        return inner(bot)
+        return inner
 
-    @staticmethod
-    def current_time(bot):
-        print(f'{datetime.now().strftime("%H:%M:%S")} - ', end='')
 
-    @staticmethod
-    def account_name(bot):
-        print(f'{bot.account_data["user_name"]} - ', end='')
+class Text:
+    def __init__(self, bot):
+        self.bot = bot
 
-    @staticmethod
-    def print_statistics_on_filtration(bot):
+    def account_name(self):
+        print(f'{self.bot.account_data["user_name"]} - ', end='')
+
+    def print_statistics_on_filtration(self):
         non_filtered, filtered = set(), set()
-        Tools.get_user_url_from_file(bot, (BaseClass.parameters["non_filtered_path"]))  # вычитает из файла игнор лист
+        Tools.get_user_url_from_file(self.bot,
+                                     (BaseClass.parameters["non_filtered_path"]))  # вычитает из файла игнор лист
         Tools.file_read((BaseClass.parameters["non_filtered_path"]), non_filtered)
         Tools.file_read((BaseClass.parameters["filtered_path"]), filtered)
         print(
             f'\nНе отфильтровано - {len(non_filtered)}.'
             f'\nГотовых - {len(filtered)}.',
-            f'\nОтобрано в сессии - [{bot.count}/{bot.cycle * 50}].\n')
-        bot.cycle += 1
+            f'\nОтобрано в сессии - [{self.bot.count}/{self.bot.cycle * 50}].\n')
+        self.bot.cycle += 1
 
-    @staticmethod
-    def print_statistics_on_parce(bot):
+    def print_statistics_on_parce(self):
         non_filtered = set()
         Tools.file_read((BaseClass.parameters["non_filtered_path"]), non_filtered)
-        bot.count_iteration += 1
+        self.bot.count_iteration += 1
         print(f'Успешно. В списке: {len(non_filtered)}.')
 
-    @staticmethod
-    def profile_page_info(bot):
-        username = bot.account_data['account_url'].split("/")[-2]
-        print(f'[{bot.count_iteration + 1}/{bot.count_limit}] Перешёл в профиль: {username}', end=' ===> ')
+    def profile_page_info(self):
+        username = self.bot.account_data['account_url'].split("/")[-2]
+        print(f'[{self.bot.count_iteration + 1}/{self.bot.count_limit}] Перешёл в профиль: {username}', end=' ===> ')
+
+    def unsubscribe_click_info(self):
+        print(f'[{self.bot.count_iteration}/10] - Успешно отписался.')
+
+    def subscribe_amount(self):
+        print(f'Количество подписок в текущем профиле: {self.bot.subscribes}')
+
+    def connection_failed(self):
+        timeout = StartSettings.err_proxy_timeout
+        print(
+            f'{self.bot.account_data["WORK_MODE"]} >> '
+            f'CONNECTION_FAILED. Запись добавлена в лог. Таймаут {timeout} секунд.'
+        )
+
+    def exception_info(self):
+        exception_name = str(type(self.bot.account_data['exception'])).split("'")[1].split('.')[-1]
+        print(f'\nИсключение обработано и добавлено в лог: {self.bot.account_data["WORK_MODE"]}/{exception_name}')
+
+    def login_not_cookie(self):
+        print(f'Залогинился и создал cookie-файл ===> '
+              f'data/cookies/{self.bot.account_data["user_name"]}_cookies.')
+
+    def print_timer(self):
+        print(f'Установлен таймер {self.bot.account_data["timer"]} минут.')
 
     @staticmethod
-    def unsubscribe_click_info(bot):
-        print(f'[{bot.count_iteration}/10] - Успешно отписался.')
-
-    @staticmethod
-    def subscribe_limit_info(bot):
+    def subscribe_limit_info():
         print(f'Подписался на очередные {Subscribe.subscribe_in_session} пользователей. ',
               f'Таймаут {Subscribe.sleep_between_iterations} минут.')
 
     @staticmethod
-    def print_timer(bot):
-        print(f'Установлен таймер {bot.account_data["timer"]} минут.')
-
-    @staticmethod
-    def proxy_successful_connection(bot):
+    def proxy_successful_connection():
         date = datetime.now().strftime("%H:%M:%S")
         print(f'{date} Успешно подключился через прокси.', end=' ===> ')
 
     @staticmethod
-    def login_not_cookie(bot):
-        print(f'Залогинился и создал cookie-файл ===> '
-              f'data/cookies/{bot.account_data["user_name"]}_cookies.')
-
-    @staticmethod
-    def login_from_cookie(bot):
+    def login_from_cookie():
         print('Залогинился через cookie-файл.')
 
     @staticmethod
-    def subscribe_amount(bot):
-        print(f'Количество подписок в текущем профиле: {bot.subscribes}')
-
-    @staticmethod
-    def start_login(bot):
+    def start_login():
         print(f'Попытка логина.')
 
     @staticmethod
-    def subscribe_successful(bot):
+    def subscribe_successful():
         print('Успешно подписался.')
 
     @staticmethod
-    def button_not_found(bot):
+    def button_not_found():
         print('Кнопка не найдена.')
 
     @staticmethod
-    def connection_failed(bot):
-        timeout = StartSettings.err_proxy_timeout
-        print(f'{bot.account_data["WORK_MODE"]} >> CONNECTION_FAILED. Запись добавлена в лог. Таймаут {timeout} секунд.')
+    def current_time():
+        print(f'{datetime.now().strftime("%H:%M:%S")} - ', end='')
 
     @staticmethod
-    def exception_info(bot):
-        exception_name = str(type(bot.account_data['exception'])).split("'")[1].split('.')[-1]
-        print(f'\nИсключение обработано и добавлено в лог: {bot.account_data["WORK_MODE"]}/{exception_name}')
-
-    @staticmethod
-    def shuffle_parce_file(bot):
+    def shuffle_parce_file():
         print(f'Файл {BaseClass.parameters["parce_url_path"]} - перемешан.')
 
     @staticmethod
-    def shuffle_filter_file(bot):
+    def shuffle_filter_file():
         print(f'Файл {BaseClass.parameters["non_filtered_path"]} - перемешан.')
 
     @staticmethod
-    def cookie_accept(bot):
+    def cookie_accept():
         print('Приняты настройки cookie. ')
 
 

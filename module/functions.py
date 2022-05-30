@@ -1,7 +1,7 @@
 from module import exception, message_text
 from settings import Parce, Unsubscribe, FilterLimits
 
-from module.service import Check, Tools, Print
+from module.service import Check, Tools, Text
 from module.base_module import BaseClass
 from module.support import Support
 from module.filters import Filter
@@ -75,7 +75,7 @@ class Function(BaseClass):
         for self.count_iteration in range(self.count_limit):
             try:
                 if self.count_iteration % 50 == 0:
-                    Print.print_statistics_on_filtration(self)
+                    Text.print_statistics_on_filtration(self)
 
                 Tools.get_user_url_from_file(self, self.parameters['non_filtered_path'])
                 Support.go_to_user_page(self)

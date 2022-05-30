@@ -82,7 +82,10 @@ class BaseClass:
     def get_accounts_list(self):
         match self.account_data['WORK_MODE']:
             case 'subscribe' | 'unsubscribe' | 'test':
-                return input('Введите ID аккаунта: ')
+                accounts_key_number_list = list()
+                account = input('Введите ID аккаунта: ')
+                accounts_key_number_list.append(account)
+                return accounts_key_number_list
             case 'parce' | 'filter':
                 accounts_key_number_list = data_base.get_accounts_id_on_status('bot')
                 random.shuffle(accounts_key_number_list)
