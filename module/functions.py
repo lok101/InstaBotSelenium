@@ -1,5 +1,5 @@
 from module import exception, message_text
-from module.exception import LoginError
+from module.exception import NotCookie
 from settings import Parce, Unsubscribe, FilterLimits
 
 from module.service import Check, Tools, Text
@@ -20,13 +20,12 @@ class Function(BaseClass):
                     Check.check_proxy_ip(self)
                 Login.cookie_login(self)
 
-            except FileNotFoundError:
-                print('Логин через cookie на удался. Попытка логина через login-pass.')
+            except NotCookie:
                 Login.not_cookie_login(self)
 
         except Exception as ex:
             self.account_data['exception'] = ex
-            Support.standard_exception_handling(self)
+            Tools.standard_exception_handling(self)
 
     def unsubscribe(self):
         while True:
@@ -47,7 +46,7 @@ class Function(BaseClass):
 
             except Exception as ex:
                 self.account_data['exception'] = ex
-                Support.standard_exception_handling(self)
+                Tools.standard_exception_handling(self)
                 self.count_iteration += 1
 
     def subscribe(self):
@@ -65,7 +64,7 @@ class Function(BaseClass):
 
             except Exception as ex:
                 self.account_data['exception'] = ex
-                Support.standard_exception_handling(self)
+                Tools.standard_exception_handling(self)
 
         raise exception.BotFinishTask(self, message_text.InformationMessage.task_finish)
 
@@ -99,7 +98,7 @@ class Function(BaseClass):
 
             except Exception as ex:
                 self.account_data['exception'] = ex
-                Support.standard_exception_handling(self)
+                Tools.standard_exception_handling(self)
 
             finally:
                 time.sleep(FilterLimits.timeout)
@@ -120,4 +119,4 @@ class Function(BaseClass):
 
             except Exception as ex:
                 self.account_data['exception'] = ex
-                Support.standard_exception_handling(self)
+                Tools.standard_exception_handling(self)

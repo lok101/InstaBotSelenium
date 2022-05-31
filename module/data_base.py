@@ -45,6 +45,7 @@ def get_account_field_data(account_id):
     return_dict['email_name'] = entry.email_name
     return_dict['email_pass'] = entry.email_pass
     return_dict['email_codeword'] = entry.email_codeword
+    return_dict['cookie'] = entry.cookie
     return_dict['user_agent'] = entry.user_agent
     return return_dict
 
@@ -65,4 +66,10 @@ def delete_entry(account_id):
 def set_value_user_agent_field(account_id, new_user_agent):
     entry = DataBase.get(DataBase.account_id == account_id)
     entry.user_agent = new_user_agent
+    entry.save()
+
+
+def set_cookie_path(account_id, cookie_path):
+    entry = DataBase.get(DataBase.account_id == account_id)
+    entry.cookie = cookie_path
     entry.save()

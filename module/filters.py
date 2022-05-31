@@ -27,7 +27,11 @@ class Filter:
     @staticmethod
     def should_be_subscribe(bot):
         try:
-            BaseClass.search_element(bot, selectors.UserPage.button_unsubscribe, timeout=1)
+            BaseClass.search_element(bot, selectors.UserPage.all_buttons)  # выполняет роль проверки на загрузку
+            buttons = bot.browser.find_elements(*selectors.UserPage.all_buttons)
+            for button in buttons[:10]:
+                if 'подписаться' in button.text.lower():
+                    return
             raise FilteredOut(bot, FilterMessage.already_subscribe)
         except TimeoutException:
             pass
@@ -120,7 +124,7 @@ class Filter:
         subs_max = FilterLimits.subs_max
         subs_min = FilterLimits.subs_min
         break_limit = FilterLimits.break_limit
-        data_dict = BaseClass.return_amount_posts_subscribes_and_subscribers(bot)
+        data_dict = Filter.return_amount_posts_subscribes_and_subscribers(bot)
         coefficient = data_dict['subs'] / data_dict['follow']
 
         if not posts_max >= data_dict['posts'] >= posts_min:
@@ -156,12 +160,16 @@ class Filter:
                 timeout=3
             )
             if ',' in followers_field.text:
-                dict_return['follow'] = int(
-                    followers_field.text.replace(" ", "").replace(',', '').replace('тыс.', '00').replace('млн',
-                                                                                                         '00000'))
+                dict_return['follow'] = int(followers_field.text.lower().
+                                            replace(" ", "").
+                                            replace(',', '').
+                                            replace('тыс.', '00').
+                                            replace('млн', '00000'))
             else:
-                dict_return['follow'] = int(
-                    followers_field.text.replace(" ", "").replace('тыс.', '000').replace('млн', '000000'))
+                dict_return['follow'] = int(followers_field.text.lower().
+                                            replace(" ", "").
+                                            replace('тыс.', '000').
+                                            replace('млн', '000000'))
         except TimeoutException:
             dict_return['follow'] = 1
 

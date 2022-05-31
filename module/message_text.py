@@ -30,6 +30,7 @@ class LoginErrorMessage:
     error_pass = 'Неверный пароль.'
     not_login = 'Не получилось залогиниться.'
     broke_cookie = 'Авторизация через куки не удалась.'
+    no_cookie_file = 'Куки файл ещё не создан. Логин через email-pass.'
     not_login_cookies = 'Не получилось залогиниться через Cookies.'
     not_login_page = 'Не загрузил домашнюю страницу.'
     verification_email_form = 'Поступил запрос на верификацию через Email.'

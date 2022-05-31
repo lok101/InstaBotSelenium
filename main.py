@@ -28,6 +28,6 @@ class StartBot(Function):
 
 
 if __name__ == '__main__':
-    # Tools.add_accounts_to_data_base()
+    Tools.add_accounts_to_data_base()
     my_bot = StartBot()
     my_bot.start()

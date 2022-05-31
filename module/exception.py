@@ -1,3 +1,5 @@
+import os
+
 from module import data_base
 from module.service import Tools
 from datetime import datetime
@@ -24,7 +26,7 @@ class BotCriticalException(BotException):
     def __init__(self, bot, message):
         super(BotCriticalException, self).__init__(bot, message)
         self.path = f'logs/{self.__class__.__name__}.txt'
-        self.log_text = self.date + ' -- ' + self.bot.account_data["user_name"].split("\n")[
+        self.log_text = '\n\n' + self.date + ' -- ' + self.bot.account_data["user_name"].split("\n")[
             0] + ' -- ' + str(self.message)
 
     def __str__(self):
@@ -35,6 +37,10 @@ class LoginError(BotCriticalException):
     def __str__(self):
         self.save_log_exception()
         return self.log_text
+
+
+class NotCookie(LoginError):
+    pass
 
 
 class ActivBlocking(BotCriticalException):
@@ -50,8 +56,9 @@ class VerificationError(BotCriticalException):
 class CriticalVerificationError(BotCriticalException):
     def __str__(self):
         self.save_log_exception()
+        os.remove(self.bot.account_data["cookie"])
         data_base.delete_entry(self.bot.account_data['account_id'])
-        return f'{self.log_text} Аккаунт удалён из БД.'
+        return f'{self.log_text} Аккаунт удалён из БД. Куки файл удалён.'
 
 
 class BotNonCriticalException(BotException):

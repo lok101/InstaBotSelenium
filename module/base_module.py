@@ -119,7 +119,7 @@ class BaseClass:
     def input_username_and_userpass(self):
         username_input = self.search_element(selectors.Login.username)
         username_input.clear()
-        username_input.send_keys(self.account_data["user_name"])
+        username_input.send_keys(self.account_data["email_name"])
 
         password_input = self.search_element(selectors.Login.password)
         password_input.clear()

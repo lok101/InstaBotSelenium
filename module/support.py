@@ -1,9 +1,7 @@
-from datetime import datetime
-import traceback
 import random
 import time
 
-from settings import Subscribe, Unsubscribe, StartSettings, Parce
+from settings import Subscribe, Unsubscribe, Parce
 from module import exception, message_text, selectors
 
 from module.base_module import BaseClass
@@ -56,7 +54,7 @@ class Support:
 
     @staticmethod
     def press_to_unsubscribe_button_and_set_timeouts(bot, user):
-        user.find_element(selectors.UserPage.all_buttons).click()  # нажать кнопку отписки
+        user.find_element(*selectors.UserPage.all_buttons).click()  # нажать кнопку отписки
         time.sleep(random.randrange(Unsubscribe.min_sleep, Unsubscribe.max_sleep))
         BaseClass.search_element(bot,
                                  selectors.UserPage.button_confirm_unsubscribe).click()  # нажать кнопку подтверждения
@@ -120,36 +118,6 @@ class Support:
             time.sleep(int(bot.account_data["timer"]) * 60)
 
     @staticmethod
-    def standard_exception_handling(bot):
-        exception.BotException(bot, bot.account_data['exception']).save_log_exception()
-        if bot.account_data["WORK_MODE"] == bot.parameters['fil'] \
-                and isinstance(bot.account_data['exception'], KeyError):
-            raise exception.BotFinishTask(
-                bot, message_text.FilterMessage.list_empty)
-        Print.to_console(
-            Text(bot).exception_info()
-        )
-
-    @staticmethod
-    def save_log_exception(bot):
-        exception_name = str(type(bot.account_data['exception'])).split("'")[1].split('.')[-1]
-        path = f'logs/{bot.account_data["WORK_MODE"]}/{exception_name}.txt'
-
-        date = datetime.now().strftime("%d-%m %H:%M:%S")
-        exception_text = traceback.format_exc()
-        log_text = f'{date}\n{exception_text}\n\n'
-
-        Tools.file_write(path, log_text)
-
-        if 'CONNECTION_FAILED' in exception_text:
-            Print.to_console(
-                Text(bot).current_time(),
-                Text(bot).account_name(),
-                Text(bot).connection_failed()
-            )
-            time.sleep(StartSettings.err_proxy_timeout)
-
-    @staticmethod
     def shaffle_file_for_task(bot):
         if bot.account_data["WORK_MODE"] == BaseClass.parameters['par']:
             Tools.shaffle_file(BaseClass.parameters['parce_url_path'])
@@ -173,7 +141,7 @@ class Support:
         BaseClass.search_element(bot,
                                  selectors.UserPage.button_to_open_subscriptions_list).click()  # открыть список подписок
         subscriptions_div_block = BaseClass.search_element(bot, selectors.UserPage.subscriptions_list_div_block)
-        subscriptions_users = subscriptions_div_block.find_elements(selectors.Technical.tag_li)
+        subscriptions_users = subscriptions_div_block.find_elements(*selectors.Technical.tag_li)
         return subscriptions_users
 
     @staticmethod

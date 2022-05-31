@@ -2,7 +2,9 @@ from selenium.common.exceptions import TimeoutException, StaleElementReferenceEx
 from selenium.webdriver.support import expected_conditions as ec
 
 from datetime import datetime
+import traceback
 import random
+import time
 
 from module import exception, message_text, selectors
 from settings import Subscribe, StartSettings
@@ -53,6 +55,20 @@ class Check:
                 bot, message_text.LoginErrorMessage.not_login_page)
 
     @staticmethod
+    def should_be_login_button(bot, mode='login-pass'):
+        try:
+            BaseClass.search_element(bot, selectors.UserPage.home_button,
+                                     timeout=10,
+                                     type_wait=ec.presence_of_element_located)
+
+        except TimeoutException:
+            if mode == 'cookie':
+                message = message_text.LoginErrorMessage.broke_cookie
+            else:
+                message = message_text.LoginErrorMessage.not_login
+            raise exception.LoginError(bot, message)
+
+    @staticmethod
     def should_be_verification_forms(bot):
         Check.search_verification_for_email_form(bot)
         Check.search_any_verification_form(bot)
@@ -60,7 +76,7 @@ class Check:
     @staticmethod
     def search_verification_for_email_form(bot):
         try:
-            BaseClass.search_element(bot, selectors.Technical.red_label_danger_login, timeout=2)
+            BaseClass.search_element(bot, selectors.Technical.red_label_danger_login, timeout=4)
             raise exception.VerificationError(
                 bot, message_text.LoginErrorMessage.verification_email_form)
 
@@ -94,20 +110,6 @@ class Check:
                 bot, message_text.LoginErrorMessage.login_form_error)
         except TimeoutException:
             pass
-
-    @staticmethod
-    def should_be_login_button(bot, mode='login-pass'):
-        try:
-            BaseClass.search_element(bot, selectors.UserPage.home_button,
-                                     timeout=10,
-                                     type_wait=ec.presence_of_element_located)
-
-        except TimeoutException:
-            if mode == 'cookie':
-                message = message_text.LoginErrorMessage.broke_cookie
-            else:
-                message = message_text.LoginErrorMessage.not_login
-            raise exception.LoginError(bot, message)
 
     @staticmethod
     def should_be_subscribe_and_unsubscribe_blocking(bot):
@@ -232,9 +234,9 @@ class Text:
         exception_name = str(type(self.bot.account_data['exception'])).split("'")[1].split('.')[-1]
         print(f'\nИсключение обработано и добавлено в лог: {self.bot.account_data["WORK_MODE"]}/{exception_name}')
 
-    def login_not_cookie(self):
-        print(f'Залогинился и создал cookie-файл ===> '
-              f'data/cookies/{self.bot.account_data["user_name"]}_cookies.')
+    @staticmethod
+    def login_not_cookie(cookie_path):
+        print(f'Залогинился и создал cookie-файл ===> {cookie_path}')
 
     def print_timer(self):
         print(f'Установлен таймер {self.bot.account_data["timer"]} минут.')
@@ -280,6 +282,10 @@ class Text:
     @staticmethod
     def cookie_accept():
         print('Приняты настройки cookie. ')
+
+    @staticmethod
+    def accounts_addition_for_db(amount_accounts):
+        print(f'{amount_accounts} аккаунтов успешно добавлено в БД.')
 
 
 class Tools:
@@ -335,9 +341,14 @@ class Tools:
     def add_accounts_to_data_base():
         accounts_list = list()
         Tools.file_read('accounts', accounts_list)
-        for entry in accounts_list:
-            user_name, user_pass, email_name, email_pass, email_codeword = entry.split(':')
-            data_base.create_entry_db(user_name, user_pass, email_name, email_pass, email_codeword)
+        if accounts_list:
+            for entry in accounts_list:
+                user_name, user_pass, email_name, email_pass, email_codeword = entry.split(':')
+                data_base.create_entry_db(user_name, user_pass, email_name, email_pass, email_codeword)
+            Print.to_console(
+                Text('text').current_time(),
+                Text('text').accounts_addition_for_db(len(accounts_list))
+            )
 
     @staticmethod
     def get_user_url_from_file(bot, file_path, difference_ignore_list=True):
@@ -352,3 +363,33 @@ class Tools:
         except IndexError:
             raise exception.BotFinishTask(
                 bot, message_text.InformationMessage.task_finish)
+
+    @staticmethod
+    def standard_exception_handling(bot):
+        Tools.save_exception_to_log(bot)
+        if bot.account_data["WORK_MODE"] == bot.parameters['fil'] \
+                and isinstance(bot.account_data['exception'], KeyError):
+            raise exception.BotFinishTask(
+                bot, message_text.FilterMessage.list_empty)
+        Print.to_console(
+            Text(bot).exception_info()
+        )
+
+    @staticmethod
+    def save_exception_to_log(bot):
+        exception_name = str(type(bot.account_data['exception'])).split("'")[1].split('.')[-1]
+        path = f'logs/{bot.account_data["WORK_MODE"]}/{exception_name}.txt'
+
+        date = datetime.now().strftime("%d-%m %H:%M:%S")
+        exception_text = traceback.format_exc()
+        log_text = f'{date}\n{exception_text}\n\n'
+
+        Tools.file_write(path, log_text)
+
+        if 'CONNECTION_FAILED' in exception_text:
+            Print.to_console(
+                Text(bot).current_time(),
+                Text(bot).account_name(),
+                Text(bot).connection_failed()
+            )
+            time.sleep(StartSettings.err_proxy_timeout)
