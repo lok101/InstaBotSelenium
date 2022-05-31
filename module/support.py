@@ -121,7 +121,7 @@ class Support:
 
     @staticmethod
     def standard_exception_handling(bot):
-        exception.BotException.save_log_exception(bot)
+        exception.BotException(bot, bot.account_data['exception']).save_log_exception()
         if bot.account_data["WORK_MODE"] == bot.parameters['fil'] \
                 and isinstance(bot.account_data['exception'], KeyError):
             raise exception.BotFinishTask(

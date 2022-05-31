@@ -1,4 +1,5 @@
 from module import exception, message_text
+from module.exception import LoginError
 from settings import Parce, Unsubscribe, FilterLimits
 
 from module.service import Check, Tools, Text
