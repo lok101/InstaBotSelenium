@@ -75,7 +75,7 @@ class Function(BaseClass):
         for self.count_iteration in range(self.count_limit):
             try:
                 if self.count_iteration % 50 == 0:
-                    Text.print_statistics_on_filtration(self)
+                    Text(self).print_statistics_on_filtration()
 
                 Tools.get_user_url_from_file(self, self.parameters['non_filtered_path'])
                 Support.go_to_user_page(self)

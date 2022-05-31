@@ -4,13 +4,9 @@ from selenium.webdriver.support import expected_conditions as ec
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.common.keys import Keys
 
-import data
-import settings
+
 from module import selectors, data_base, user_agents
-from settings import Subscribe, StartSettings
-
-
-from data import my_ip
+from settings import Subscribe, StartSettings, my_ip, proxy_list
 
 import random
 import time
@@ -52,7 +48,7 @@ class BaseClass:
         self.set_working_parameters(user_input)
 
     def set_working_parameters(self, user_input):
-        user_input = f'{user_input} {settings.StartSettings.default_parameters}'
+        user_input = f'{user_input} {StartSettings.default_parameters}'
         for param in user_input.split(' '):
             if '-p' in param:
                 self.account_data['proxy'] = not self.account_data['proxy']
@@ -75,7 +71,7 @@ class BaseClass:
         if self.account_data['headless'] is True:
             self.account_data['chrome_option'].add_argument("--headless")
         if self.account_data['proxy'] is True:
-            self.account_data['chrome_option'].add_argument(f'--proxy-server={data.proxy_list}')
+            self.account_data['chrome_option'].add_argument(f'--proxy-server={proxy_list}')
         if self.account_data['load_strategy'] is True:
             self.account_data['chrome_option'].page_load_strategy = 'eager'
 

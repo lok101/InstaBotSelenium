@@ -1,6 +1,10 @@
 ﻿import enum
 
 
+proxy_list = '100.100.100.100'
+my_ip = '100.100.100.100'
+
+
 class StartSettings:
 
     web_driver_wait = 30
